@@ -1,0 +1,23 @@
+name: CASPER DSP HDL CI
+
+on:
+  push:
+    branches: [ master, dev]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  casper-dps-build-and-test:
+    name: CASPER DPS Modules Integration Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Run CASPER DSP Docker Compose Tests
+        run: |
+          cd container
+          # Run the compose stack.
+          # --abort-on-container-exit: stops Redis/Influx once pytest finishes
+          # --exit-code-from test_runner: fails the CI job if pytest fails
+          docker compose -f docker-compose.test.yml up --build --abort-on-container-exit --exit-code-from test-runner
