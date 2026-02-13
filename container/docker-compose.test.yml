@@ -1,0 +1,6 @@
+services:
+  test-runner:
+    build:
+      context: ../
+      dockerfile: container/Dockerfile
+    command: ["make", "TARGET_DIR=BasicModules", "TOP=adder"]
