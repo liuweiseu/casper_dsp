@@ -1,0 +1,4 @@
+# config.toml
+[[simulations]]
+dir = "BasicModules"
+top = "adder"

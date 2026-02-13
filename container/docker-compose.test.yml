@@ -3,4 +3,4 @@ services:
     build:
       context: ../
       dockerfile: container/Dockerfile
-    command: ["make", "TARGET_DIR=BasicModules", "TOP=adder"]
+    command: ["python3", "run_sim.py"]
