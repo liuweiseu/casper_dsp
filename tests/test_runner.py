@@ -25,13 +25,17 @@ def test_runner(cfg):
     rtl_path = Path(f"../rtl/{target_dir}")
     sources = list(rtl_path.glob("*.v"))
 
+    # get the runner
     runner = get_runner(sim)
+    # build the verilog modules
     runner.build(
         sources=sources,
         hdl_toplevel=top,
         waves=True,
+        defines={'SIM': ''},
         build_dir=f"sim_build/{target_dir}/{top}"
     )
+    # run the tests
     runner.test(hdl_toplevel=top,
                 test_module=f"testbench.{target_dir}.{top}.test_{top},",
                 results_xml=top_result,

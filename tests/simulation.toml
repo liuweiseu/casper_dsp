@@ -1,8 +1,4 @@
 # config.toml
 [[simulations]]
-dir = "BasicModules"
-top = "adder"
-
-[[simulations]]
-dir = "BasicModules"
-top = "test"
+dir = "Templates"
+top = "simple_adder"

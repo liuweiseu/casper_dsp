@@ -1,5 +1,5 @@
-// test.v
-module test (
+// simle_adder.v
+module simple_adder (
     input  wire rst,
     input  wire clk,
     input  wire [3:0] a,
