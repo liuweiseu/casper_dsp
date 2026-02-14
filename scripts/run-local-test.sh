@@ -2,7 +2,7 @@
 set -e
 
 # Define the compose file to use
-COMPOSE_FILE="container/docker-compose.test.yml"
+COMPOSE_FILE="container/docker-compose.local.yml"
 
 echo "--- Building CI Environment ---"
 # Build the test runner image and pull database images

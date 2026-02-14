@@ -1,0 +1,6 @@
+services:
+  test-runner:
+    image: test-runner:ci
+    volumes:
+      - ../tests/results:/work/tests/results
+    command: ["/bin/sh", "run_test.sh"]
