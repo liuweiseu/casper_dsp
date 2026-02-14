@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Run CASPER DSP Docker Compose Tests
         run: |
@@ -21,9 +21,10 @@ jobs:
           # --abort-on-container-exit: stops Redis/Influx once pytest finishes
           # --exit-code-from test_runner: fails the CI job if pytest fails
           docker compose -f docker-compose.test.yml up --build --abort-on-container-exit --exit-code-from test-runner
+
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: test-results
-          path: results
+          path: tests/results
