@@ -19,6 +19,8 @@ def test_runner(cfg):
     result_path = Path("results")
     result_path.mkdir(parents=True, exist_ok=True)
     result_path = result_path.resolve()
+    top_result = result_path/f"{target_dir}/{top}/{top}.xml"
+    top_result.parent.mkdir(parents=True, exist_ok=True)
     # get the sources
     rtl_path = Path(f"../rtl/{target_dir}")
     sources = list(rtl_path.glob("*.v"))
@@ -32,7 +34,7 @@ def test_runner(cfg):
     )
     runner.test(hdl_toplevel=top,
                 test_module=f"testbench.test_{top},",
-                results_xml=result_path/f"{target_dir}/{top}/{top}.xml",
+                results_xml=top_result,
                 waves=True,
                 plusargs=['--trace --trace-structs']
                 )

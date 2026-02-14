@@ -5,4 +5,5 @@ module adder (
     output wire [4:0] sum
 );
     assign sum = a + b;
+
 endmodule

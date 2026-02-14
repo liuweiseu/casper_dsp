@@ -14,4 +14,5 @@ begin
     else
         sum <= a + b;
 end
+
 endmodule

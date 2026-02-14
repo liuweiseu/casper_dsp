@@ -3,4 +3,6 @@ services:
     build:
       context: ../
       dockerfile: container/Dockerfile
-    command: ["pytest", "-v", "test_runner.py"]
+    volumes:
+    - ../tests/results:/work/tests/results
+    command: ["/bin/sh", "run_test.sh"]
