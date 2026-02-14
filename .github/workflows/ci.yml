@@ -7,8 +7,8 @@ on:
     branches: [ master ]
 
 jobs:
-  casper-dps-build-and-test:
-    name: CASPER DPS Modules Integration Tests
+  casper-dsp-build-and-test:
+    name: CASPER DSP Modules Integration Tests
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -23,7 +23,7 @@ jobs:
           docker compose -f docker-compose.test.yml up --build --abort-on-container-exit --exit-code-from test-runner
       - name: Upload test results
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: test-results
           path: results
