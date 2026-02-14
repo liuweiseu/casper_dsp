@@ -1,17 +1,25 @@
 import cocotb
-from cocotb.triggers import Timer
+from cocotb.clock import Clock
+from cocotb.triggers import RisingEdge, Timer
 
 @cocotb.test()
 async def adder_basic_test(dut):
     """
     test if 2 + 3 = 5
     """
+    clock = Clock(dut.clk, 10, units="ns")
+    cocotb.start_soon(clock.start())
 
     dut.a.value = 2
     dut.b.value = 3
 
-    await Timer(10, units="ns")
+    dut.rst.value = 1
+    await Timer(20, units="ns")
+    dut.rst.value = 0
 
+    await RisingEdge(dut.clk)
+    await RisingEdge(dut.clk)
+    
     sum_val = int(dut.sum.value)
     print(f"Result: {dut.a.value} + {dut.b.value} = {sum_val}")
     

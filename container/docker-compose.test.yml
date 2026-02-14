@@ -3,4 +3,4 @@ services:
     build:
       context: ../
       dockerfile: container/Dockerfile
-    command: ["python3", "run_sim.py"]
+    command: ["pytest", "-v", "test_runner.py"]
