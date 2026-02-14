@@ -1,46 +1,38 @@
-# test_runner.py
 import tomllib
 import pytest
-from cocotb_test.simulator import run
 from pathlib import Path
 import os
+from cocotb_tools.runner import get_runner
 
 # read the toml file
 with open("simulation.toml", "rb") as f:
     config = tomllib.load(f)["simulations"]
 
+# generate id list
 ids = [f"{c['dir']}/{c['top']}" for c in config]
 
 @pytest.mark.parametrize("cfg", config, ids=ids)
-def test_module(cfg):
-    # get target
+def test_runner(cfg):
     target_dir = cfg["dir"]
     top = cfg["top"]
-    # create sim build dir
-    sim_build_path = Path(f"sim_results/{target_dir}/{top}")
-    sim_build_path.mkdir(parents=True, exist_ok=True)
-    # define the result files
-    vcd_file = sim_build_path / f"{top}.vcd"
-    results_xml = sim_build_path / "results.xml"
-    os.environ["COCOTB_RESULTS_FILE"] = str(results_xml.absolute())
+    sim = os.getenv("SIM", "verilator")
+    result_path = Path("results")
+    result_path.mkdir(parents=True, exist_ok=True)
+    result_path = result_path.resolve()
     # get the sources
     rtl_path = Path(f"../rtl/{target_dir}")
     sources = list(rtl_path.glob("*.v"))
-    # start simulation
-    run(
-        verilog_sources=sources,
-        toplevel=top,
-        module=f"test_{top}",
-        simulator="verilator",
-        sim_build=sim_build_path,
+
+    runner = get_runner(sim)
+    runner.build(
+        sources=sources,
+        hdl_toplevel=top,
         waves=True,
-        compile_args=[
-            "--trace", 
-            "--trace-structs",
-            "-Wno-fatal",
-            "-DVM_TRACE=1"
-        ],
-        sim_args=[
-            f"--trace-file={vcd_file.absolute()}"
-        ]
-)
+        build_dir=f"sim_build/{target_dir}/{top}"
+    )
+    runner.test(hdl_toplevel=top,
+                test_module=f"testbench.test_{top},",
+                results_xml=result_path/f"{target_dir}/{top}/{top}.xml",
+                waves=True,
+                plusargs=['--trace --trace-structs']
+                )
