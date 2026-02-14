@@ -1,2 +1,1 @@
-tests/sim_results/*
-tests/dump.vcd
+tests/results/*
