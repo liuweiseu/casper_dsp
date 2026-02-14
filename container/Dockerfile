@@ -49,6 +49,7 @@ ENV VERILATOR_ROOT=/usr/local/share/verilator
 WORKDIR /work
 COPY rtl ./rtl/
 COPY tests ./tests/
+COPY testbench ./tests/testbench/
 
 WORKDIR /work/tests
 

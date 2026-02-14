@@ -1,7 +1,7 @@
 import tomllib
 import pytest
 from pathlib import Path
-import os
+import os, sys
 from cocotb_tools.runner import get_runner
 
 # read the toml file
@@ -33,7 +33,7 @@ def test_runner(cfg):
         build_dir=f"sim_build/{target_dir}/{top}"
     )
     runner.test(hdl_toplevel=top,
-                test_module=f"testbench.test_{top},",
+                test_module=f"testbench.{target_dir}.{top}.test_{top},",
                 results_xml=top_result,
                 waves=True,
                 plusargs=['--trace --trace-structs']
