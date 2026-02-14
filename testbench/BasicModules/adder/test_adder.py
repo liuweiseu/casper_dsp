@@ -1,12 +1,16 @@
 import cocotb
 from cocotb.triggers import Timer
+from pathlib import Path
+
+# testdir is used for getting the path for the input and output data file
+testdir = Path(__file__).resolve().parent
+
 
 @cocotb.test()
 async def adder_basic_test(dut):
     """
     test if 2 + 3 = 5
     """
-
     dut.a.value = 2
     dut.b.value = 3
 
@@ -14,5 +18,4 @@ async def adder_basic_test(dut):
 
     sum_val = int(dut.sum.value)
     print(f"Result: {dut.a.value} + {dut.b.value} = {sum_val}")
-    
     assert sum_val == 5, f"Adder result is wrong: {sum_val} != 5"

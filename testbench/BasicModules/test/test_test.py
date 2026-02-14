@@ -1,6 +1,9 @@
 import cocotb
 from cocotb.clock import Clock
 from cocotb.triggers import RisingEdge, Timer
+from pathlib import Path
+# testdir is used for getting the path for the input and output data file
+testdir = Path(__file__).resolve().parent
 
 @cocotb.test()
 async def adder_basic_test(dut):
