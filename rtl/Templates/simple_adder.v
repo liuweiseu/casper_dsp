@@ -2,9 +2,9 @@
 module simple_adder (
     input  wire rst,
     input  wire clk,
-    input  wire [3:0] a,
-    input  wire [3:0] b,
-    output reg [4:0] sum = 0
+    input  wire [7:0] a,
+    input  wire [7:0] b,
+    output reg [8:0] sum = 0
 );
 
 always @(posedge clk)

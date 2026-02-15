@@ -42,7 +42,7 @@ RUN python3 -m venv /opt/venv
 
 ENV PATH="/opt/venv/bin:$PATH"
 
-RUN pip install --no-cache-dir cocotb cocotb-test pytest
+RUN pip install --no-cache-dir cocotb cocotb-test pytest numpy
 
 ENV VERILATOR_ROOT=/usr/local/share/verilator
 
