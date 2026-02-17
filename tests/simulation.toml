@@ -1,4 +1,13 @@
 # config.toml
+# test simple_addr
 [[simulations]]
 dir = "Templates"
 top = "simple_adder"
+
+# test bus_create
+[[simulations]]
+dir = "FlowControl"
+top = "bus_create"
+[simulations.parameters]
+NBITS = 8
+NINPUTS = 2
