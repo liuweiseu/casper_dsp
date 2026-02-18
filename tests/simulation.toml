@@ -8,6 +8,6 @@ top = "simple_adder"
 [[simulations]]
 dir = "FlowControl"
 top = "bus_create"
-[simulations.parameters]
+[[simulations.parameters]]
 NBITS = 8
 NINPUTS = 2

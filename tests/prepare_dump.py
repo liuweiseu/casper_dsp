@@ -1,8 +1,10 @@
 from pathlib import Path
-import re
+import re, os
 import argparse
+from typing import Optional, Union
+PathLike = Union[str, os.PathLike]
 
-def process_verilog_file(v_file: Path):
+def process_verilog_file(v_file: Path, id=-1):
     text = v_file.read_text()
 
     # 1. get the module name
@@ -27,7 +29,10 @@ def process_verilog_file(v_file: Path):
     # the vcd file will be written to tests/results/xxx
     vpath = Path(v_file)
     tmppath = Path(*("tests/results" if part == "rtl" else part for part in vpath.parts))
-    vcd_path = tmppath.parent / tmppath.stem / f"{tmppath.stem}.vcd"
+    if id == -1:
+        vcd_path = tmppath.parent / tmppath.stem / f"{tmppath.stem}.vcd"
+    else:
+        vcd_path = tmppath.parent / tmppath.stem / f"{tmppath.stem}_{id}.vcd"
     vcd_path.parent.mkdir(parents=True, exist_ok=True)
     vcd_path = str(vcd_path)
     dump_block = [
@@ -52,7 +57,28 @@ def process_verilog_file(v_file: Path):
 def scan_directory(target_dir: Path):
     for v_file in target_dir.rglob("*.v"):
         process_verilog_file(v_file)
+    for sv_file in target_dir.rglob("*.sv"):
+        process_verilog_file(sv_file)
 
+from pathlib import Path
+
+from pathlib import Path
+import os
+from typing import List
+
+def find_file(keyword: str, root: str | os.PathLike = ".") -> List[Path]:
+    root_path = Path(root)
+    results: List[Path] = []
+    for path in root_path.rglob("*"):
+        if path.is_file() and keyword in path.name:
+            results.append(path.resolve())
+    return results
+
+def replace_vcd_filename(filepath: str | os.PathLike, new_filename: str):
+    path = Path(filepath)
+    text = path.read_text()
+    new_text = re.sub(r"\b[\w\-.]+\.vcd\b", new_filename, text)
+    path.write_text(new_text)
 
 def main():
     parser = argparse.ArgumentParser(
