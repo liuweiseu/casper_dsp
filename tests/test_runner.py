@@ -72,7 +72,7 @@ def test_runner(cfg):
             )
             # run the tests
             runner.test(hdl_toplevel=top,
-                        test_module=f"testbench.{target_dir}.{top}.test_{top}_{i},",
+                        test_module=f"testbench.{target_dir}.{top}.test_{top},",
                         results_xml=top_result,
                         waves=True,
                         plusargs=['--trace --trace-structs']
