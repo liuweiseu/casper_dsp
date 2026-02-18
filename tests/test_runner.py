@@ -1,9 +1,13 @@
 import tomllib
 import pytest
 from pathlib import Path
-import os, sys
+import os
+import logging
 from cocotb_tools.runner import get_runner
 from prepare_dump import replace_vcd_filename, find_file
+
+logger = logging.getLogger(__name__)
+
 # read the toml file
 with open("simulation.toml", "rb") as f:
     config = tomllib.load(f)["simulations"]
@@ -54,6 +58,7 @@ def test_runner(cfg):
             top_result.parent.mkdir(parents=True, exist_ok=True)
             # 1. find the file
             fn = find_file(f'{top}.', '../rtl')
+            logger.info(f'Found file names: {fn}')
             # 2. replace the vcd file name to the new one
             replace_vcd_filename(fn[0], f'{top}_{i}.vcd')
             # 3. build the verilog modules with the parameters
