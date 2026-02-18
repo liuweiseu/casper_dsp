@@ -11,3 +11,6 @@ top = "bus_create"
 [[simulations.parameters]]
 NBITS = 8
 NINPUTS = 2
+[[simulations.parameters]]
+NBITS = 10
+NINPUTS = 4
