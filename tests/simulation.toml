@@ -22,3 +22,11 @@ NINPUTS = 2
 [[simulations.parameters]]
 NBITS = 10
 NINPUTS = 4
+
+# test bus_expand
+[[simulations]]
+dir = "FlowControl"
+top = "bus_expand"
+[[simulations.parameters]]
+NOUT = 4
+WIDTH = 8

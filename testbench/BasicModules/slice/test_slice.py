@@ -9,7 +9,7 @@ import numpy as np
 testdir = Path(__file__).resolve().parent
 
 @cocotb.test()
-async def bus_create_test_0(dut):
+async def module_test(dut):
     """test bus_create """
     start_bit = int(dut.START_BIT.value)
     width = int(dut.WIDTH.value)
