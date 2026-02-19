@@ -4,6 +4,14 @@
 dir = "Templates"
 top = "simple_adder"
 
+# test slice
+[[simulations]]
+dir = "BasicModules"
+top = "slice"
+[[simulations.parameters]]
+START_BIT = 2
+WIDTH = 2
+
 # test bus_create
 [[simulations]]
 dir = "FlowControl"
