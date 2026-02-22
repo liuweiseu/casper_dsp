@@ -1,0 +1,8 @@
+services:
+  test-runner:
+    build:
+      context: ../
+      dockerfile: container/Dockerfile
+    volumes:
+    - ../tests/results:/work/tests/results
+    command: ["/bin/sh", "run_test.sh"]

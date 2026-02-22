@@ -1,0 +1,32 @@
+# config.toml
+# test simple_addr
+[[simulations]]
+dir = "Templates"
+top = "simple_adder"
+
+# test slice
+[[simulations]]
+dir = "BasicModules"
+top = "slice"
+[[simulations.parameters]]
+START_BIT = 2
+WIDTH = 2
+
+# test bus_create
+[[simulations]]
+dir = "FlowControl"
+top = "bus_create"
+[[simulations.parameters]]
+NBITS = 8
+NINPUTS = 2
+[[simulations.parameters]]
+NBITS = 10
+NINPUTS = 4
+
+# test bus_expand
+[[simulations]]
+dir = "FlowControl"
+top = "bus_expand"
+[[simulations.parameters]]
+NOUT = 4
+WIDTH = 8

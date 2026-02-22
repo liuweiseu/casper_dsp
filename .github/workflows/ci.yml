@@ -1,0 +1,53 @@
+name: CASPER DSP HDL CI
+
+on:
+  push:
+    branches: [ master, dev]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  casper-dsp-build-and-test:
+    name: CASPER DSP Modules Integration Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      
+      - name: Cache Docker layers
+        uses: actions/cache@v4
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-buildx-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-
+      
+      - name: Build Docker image
+        run: |
+          docker buildx build \
+            --cache-from=type=local,src=/tmp/.buildx-cache \
+            --cache-to=type=local,dest=/tmp/.buildx-cache,mode=max \
+            -f container/Dockerfile \
+            -t test-runner:ci \
+            --load \
+            .
+
+      - name: Run CASPER DSP Docker Compose Tests
+        run: |
+          cd container
+          # Run the compose stack.
+          # --abort-on-container-exit: stops Redis/Influx once pytest finishes
+          # --exit-code-from test_runner: fails the CI job if pytest fails
+          docker compose -f docker-compose.ci.yml up --build --abort-on-container-exit --exit-code-from test-runner
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: tests/results

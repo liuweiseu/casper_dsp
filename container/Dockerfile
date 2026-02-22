@@ -32,6 +32,7 @@ RUN apt-get update && apt-get install -y \
     libgoogle-perftools4 \
     numactl \
     ca-certificates \
+    vim \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder /usr/local/bin/verilator* /usr/local/bin/
@@ -41,13 +42,14 @@ RUN python3 -m venv /opt/venv
 
 ENV PATH="/opt/venv/bin:$PATH"
 
-RUN pip install --no-cache-dir cocotb cocotb-test pytest
+RUN pip install --no-cache-dir cocotb cocotb-test pytest numpy
 
 ENV VERILATOR_ROOT=/usr/local/share/verilator
 
 WORKDIR /work
 COPY rtl ./rtl/
 COPY tests ./tests/
+COPY testbench ./tests/testbench/
 
 WORKDIR /work/tests
 
