@@ -12,7 +12,7 @@ The testbench has to be created under the `testbench` directory. There are a few
 1. The structure of the testbench directory has to be the same as that of the rtl structure.  
     For example, if the rtl module is `rtl/Templates/simple_adder.v`, the testbench has to be in `testbench/Templates/simple_addr`.
 2. (Optional) The test script name has to be started with `test_`.  
-    For example, if the testbench is written for `simple_adder.v`, the testbench script has to be `test_simple_addr.py`.
+    For example, if the testbench is written for `simple_adder.v`, the testbench script has to be [test_simple_addr.py](testbench/Templates/simple_adder/test_simple_adder.py).
    
 **Note:**   
 (1) As we use `cocotb`, the testbench is written in Python, which is easy and convenient to use.  
