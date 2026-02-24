@@ -20,4 +20,4 @@ echo "--- Cleaning Up ---"
 # Ensure all containers and networks are removed
 docker compose -f $COMPOSE_FILE down
 
-echo "--- Daq Control CI Run Completed Successfully ---"
+echo "--- CASPER DSP CI Run Completed Successfully ---"
