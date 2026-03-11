@@ -12,6 +12,14 @@ top = "slice"
 START_BIT = 2
 WIDTH = 2
 
+# test delay
+[[simulations]]
+dir = "BasicModules"
+top = "delay"
+[[simulations.parameters]]
+LATENCY = 1
+BITWIDTH = 3
+
 # test bus_create
 [[simulations]]
 dir = "FlowControl"
