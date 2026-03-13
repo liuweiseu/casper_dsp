@@ -38,3 +38,48 @@ top = "bus_expand"
 [[simulations.parameters]]
 NOUT = 4
 WIDTH = 8
+
+# test counter
+[[simulations]]
+dir = "BasicModules"
+top = "counter"
+# free_running(0), up(0), step=1 — basic increment with wrap-around
+[[simulations.parameters]]
+NBITS = 8
+STEP = 1
+INIT_VAL = 0
+COUNT_TO_VAL = 0
+COUNTER_TYPE = 0
+COUNT_DIR = 0
+# free_running(0), up(0), step=3 — non-unit step with wrap-around
+[[simulations.parameters]]
+NBITS = 8
+STEP = 3
+INIT_VAL = 0
+COUNT_TO_VAL = 0
+COUNTER_TYPE = 0
+COUNT_DIR = 0
+# free_running(0), down(1), step=1 — decrement with wrap-around
+[[simulations.parameters]]
+NBITS = 8
+STEP = 1
+INIT_VAL = 255
+COUNT_TO_VAL = 0
+COUNTER_TYPE = 0
+COUNT_DIR = 1
+# count_limit(1), up(0) — count to 20 then hold
+[[simulations.parameters]]
+NBITS = 8
+STEP = 1
+INIT_VAL = 0
+COUNT_TO_VAL = 20
+COUNTER_TYPE = 1
+COUNT_DIR = 0
+# count_limit(1), down(1) — count down to 0 then hold
+[[simulations.parameters]]
+NBITS = 8
+STEP = 1
+INIT_VAL = 20
+COUNT_TO_VAL = 0
+COUNTER_TYPE = 1
+COUNT_DIR = 1

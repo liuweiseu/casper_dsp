@@ -1,14 +1,14 @@
 module counter #(
-    /* COUNTER_TYPE: free_running or count_limit */
-    parameter COUNTER_TYPE = "free_running",
+    /* COUNTER_TYPE: 0=free_running, 1=count_limit */
+    parameter int COUNTER_TYPE = 0,
     /* NBITS: counter bit width */
     parameter NBITS = 8,
     /* COUNT_TO_VAL: only valid when COUNTER_TYPE is count_limit */
-    parameter [NBITS-1:0] COUNT_TO_VAL = 0,
-    /* COUNTER_DIR: up or down or up/down */
-    parameter COUNT_DIR = "up",
+    parameter int COUNT_TO_VAL = 0,
+    /* COUNT_DIR: 0=up, 1=down, 2=up_down */
+    parameter int COUNT_DIR = 0,
     /* INIT_VAL: counter initial value */
-    parameter [NBITS-1:0] INIT_VAL = '0,
+    parameter int INIT_VAL = 0,
     /* STEP: up or down step */
     parameter int STEP = 1,
     /* BIN_P: binary point*/
@@ -26,64 +26,72 @@ module counter #(
     output [NBITS - 1: 0] dout
 );
 
-/* check the parameters with string type */
-initial 
+localparam int FREE_RUNNING = 0;
+localparam int COUNT_LIMIT  = 1;
+localparam int DIR_UP       = 0;
+localparam int DIR_DOWN     = 1;
+localparam int DIR_UP_DOWN  = 2;
+
+/* check the parameters */
+initial
 begin
-    if (COUNTER_TYPE != "free_running" && COUNTER_TYPE != "count_limit") 
+    if (COUNTER_TYPE != FREE_RUNNING && COUNTER_TYPE != COUNT_LIMIT)
     begin
-        $fatal(1, "Error：Invalid 'COUNTER_TYPE - %s'. ", COUNTER_TYPE);
+        $fatal(1, "Error: Invalid COUNTER_TYPE = %0d. (0=free_running, 1=count_limit)", COUNTER_TYPE);
     end
-    if (COUNT_DIR != "up" && COUNT_DIR != "down" && COUNT_DIR != "up/down")
+    if (COUNT_DIR != DIR_UP && COUNT_DIR != DIR_DOWN && COUNT_DIR != DIR_UP_DOWN)
     begin
-        $fatal(1, "Error：Invalid 'COUNT_DIR - %s'. ", COUNT_DIR);
+        $fatal(1, "Error: Invalid COUNT_DIR = %0d. (0=up, 1=down, 2=up_down)", COUNT_DIR);
     end
 end
 
-localparam [NBITS-1:0] STEP_VAL = NBITS'(STEP);
-logic [ NBITS-1: 0 ] cnt = INIT_VAL;
+localparam [NBITS-1:0] STEP_VAL  = NBITS'(STEP);
+localparam [NBITS-1:0] INIT_VAL_ = NBITS'(INIT_VAL);
+logic [NBITS-1:0] cnt;
+initial cnt = INIT_VAL_;
 assign dout = cnt;
 
 generate
-    if (COUNTER_TYPE == "free_running") 
+    if (COUNTER_TYPE == FREE_RUNNING)
     begin: GEN_FREE_RUNNING
-        if (COUNT_DIR == "up")
+        if (COUNT_DIR == DIR_UP)
         begin: UP
             always_ff @(posedge clk)
                 cnt <= cnt + STEP_VAL;
         end
-        else if (COUNT_DIR == "down")
+        else if (COUNT_DIR == DIR_DOWN)
         begin: DOWN
             always_ff @(posedge clk)
                 cnt <= cnt - STEP_VAL;
         end
-        else if (COUNT_DIR == "up/down")
+        else if (COUNT_DIR == DIR_UP_DOWN)
         begin:  UP_DOWN
             // TODO: what's up/down??
         end
     end
-    else if (COUNTER_TYPE == "count_limit") 
+    else if (COUNTER_TYPE == COUNT_LIMIT)
     begin: GEN_COUNT_LIMIT
-        if (COUNT_DIR == "up")
+        if (COUNT_DIR == DIR_UP)
         begin: UP
             always_ff @(posedge clk)
                 begin
-                    if (cnt == COUNT_TO_VAL[NBITS-1:0])
+                    if (cnt == NBITS'(COUNT_TO_VAL))
                         cnt <= cnt;
                     else
                         cnt <= cnt + STEP_VAL;
                 end
         end
-        else if (COUNT_DIR == "down")
+        else if (COUNT_DIR == DIR_DOWN)
         begin: DOWN
             always_ff @(posedge clk)
                 begin
-                    if (cnt == COUNT_TO_VAL[NBITS-1:0])
+                    if (cnt == NBITS'(COUNT_TO_VAL))
                         cnt <= cnt;
                     else
                         cnt <= cnt - STEP_VAL;
                 end
         end
-        else if (COUNT_DIR == "up/down")
+        else if (COUNT_DIR == DIR_UP_DOWN)
         begin:  UP_DOWN
             // TODO: what's up/down??
         end
@@ -91,4 +99,3 @@ generate
 endgenerate
 
 endmodule
-
