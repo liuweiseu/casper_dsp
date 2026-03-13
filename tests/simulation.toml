@@ -83,3 +83,12 @@ INIT_VAL = 20
 COUNT_TO_VAL = 0
 COUNTER_TYPE = 1
 COUNT_DIR = 1
+
+# test bit_reverse
+[[simulations]]
+dir = "Misc"
+top = "bit_reverse"
+[[simulations.parameters]]
+NBITS = 8
+[[simulations.parameters]]
+NBITS = 16
