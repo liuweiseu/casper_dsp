@@ -92,3 +92,24 @@ top = "bit_reverse"
 NBITS = 8
 [[simulations.parameters]]
 NBITS = 16
+
+# test edge_detect
+[[simulations]]
+dir = "Misc"
+top = "edge_detect"
+# rising edge, active high
+[[simulations.parameters]]
+EDGE_TYPE = 0
+OUTPUT_POL = 0
+# rising edge, active low
+[[simulations.parameters]]
+EDGE_TYPE = 0
+OUTPUT_POL = 1
+# falling edge, active high
+[[simulations.parameters]]
+EDGE_TYPE = 1
+OUTPUT_POL = 0
+# falling edge, active low
+[[simulations.parameters]]
+EDGE_TYPE = 1
+OUTPUT_POL = 1
