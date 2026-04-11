@@ -5,8 +5,9 @@ from cocotb.triggers import RisingEdge
 from pathlib import Path
 import numpy as np
 
-# testdir is used for getting the path for the input and output data file
-testdir = Path(__file__).resolve().parent
+# testdatadir points to the corresponding test_data subdirectory
+_tb = Path(__file__).resolve().parent
+testdatadir = _tb.parents[2] / "test_data" / _tb.parent.name / _tb.name
 
 # Must match localparam values in edge_detect.v
 RISING  = 0
@@ -36,13 +37,13 @@ async def module_test(dut):
     cocotb.log.info(f"Testing with EDGE_TYPE={edge_type}, OUTPUT_POL={output_pol}")
 
     if   edge_type == RISING  and output_pol == ACTIVE_HIGH:
-        datadir = testdir / "simdata0"
+        datadir = testdatadir / "simdata0"
     elif edge_type == RISING  and output_pol == ACTIVE_LOW:
-        datadir = testdir / "simdata1"
+        datadir = testdatadir / "simdata1"
     elif edge_type == FALLING and output_pol == ACTIVE_HIGH:
-        datadir = testdir / "simdata2"
+        datadir = testdatadir / "simdata2"
     elif edge_type == FALLING and output_pol == ACTIVE_LOW:
-        datadir = testdir / "simdata3"
+        datadir = testdatadir / "simdata3"
     else:
         cocotb.log.warning(
             f"No test data for EDGE_TYPE={edge_type}, OUTPUT_POL={output_pol}. Skipping."

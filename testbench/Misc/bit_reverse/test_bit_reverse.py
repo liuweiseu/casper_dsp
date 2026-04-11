@@ -4,8 +4,9 @@ from cocotb.triggers import Timer
 from pathlib import Path
 import numpy as np
 
-# testdir is used for getting the path for the input and output data file
-testdir = Path(__file__).resolve().parent
+# testdatadir points to the corresponding test_data subdirectory
+_tb = Path(__file__).resolve().parent
+testdatadir = _tb.parents[2] / "test_data" / _tb.parent.name / _tb.name
 
 
 @cocotb.test()
@@ -23,9 +24,9 @@ async def module_test(dut):
     cocotb.log.info(f"Testing with NBITS={nbits}")
 
     if nbits == 8:
-        datadir = testdir / "simdata0"
+        datadir = testdatadir / "simdata0"
     elif nbits == 16:
-        datadir = testdir / "simdata1"
+        datadir = testdatadir / "simdata1"
     else:
         cocotb.log.warning(f"No test data for NBITS={nbits}. Skipping.")
         return

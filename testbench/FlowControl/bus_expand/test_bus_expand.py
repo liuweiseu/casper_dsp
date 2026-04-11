@@ -5,8 +5,9 @@ from cocotb.triggers import RisingEdge, Timer
 from pathlib import Path
 import numpy as np
 
-# testdir is used for getting the path for the input and output data file
-testdir = Path(__file__).resolve().parent
+# testdatadir points to the corresponding test_data subdirectory
+_tb = Path(__file__).resolve().parent
+testdatadir = _tb.parents[2] / "test_data" / _tb.parent.name / _tb.name
 
 @cocotb.test()
 async def module_test(dut):
@@ -16,12 +17,12 @@ async def module_test(dut):
     cocotb.log.info(f"Testing with NOUT={nout}, WIDTH={width}")
     if nout == 4 and width == 8:
         # load the input and expected output data 
-        sim_in = np.loadtxt(testdir/'simdata0/sim_in.csv', dtype=int).tolist()
+        sim_in = np.loadtxt(testdatadir/'simdata0/sim_in.csv', dtype=int).tolist()
         expected_results = np.zeros(nout, dtype=object)
-        expected_results[0] = np.loadtxt(testdir/'simdata0/sim_out1.csv', dtype=int).tolist()
-        expected_results[1] = np.loadtxt(testdir/'simdata0/sim_out2.csv', dtype=int).tolist()
-        expected_results[2] = np.loadtxt(testdir/'simdata0/sim_out3.csv', dtype=int).tolist()
-        expected_results[3] = np.loadtxt(testdir/'simdata0/sim_out4.csv', dtype=int).tolist()
+        expected_results[0] = np.loadtxt(testdatadir/'simdata0/sim_out1.csv', dtype=int).tolist()
+        expected_results[1] = np.loadtxt(testdatadir/'simdata0/sim_out2.csv', dtype=int).tolist()
+        expected_results[2] = np.loadtxt(testdatadir/'simdata0/sim_out3.csv', dtype=int).tolist()
+        expected_results[3] = np.loadtxt(testdatadir/'simdata0/sim_out4.csv', dtype=int).tolist()
         for i in range(len(sim_in)):
             dut.bus_in.value = sim_in[i]
             # wait for the logic to be stable

@@ -5,12 +5,13 @@ from cocotb.triggers import RisingEdge, Timer
 from pathlib import Path
 import numpy as np
 
-# testdir is used for getting the path for the input and output data file
-testdir = Path(__file__).resolve().parent
-# load the input and expected output data 
-sim_a = np.loadtxt(testdir/'sim_a.csv', dtype=int).tolist()
-sim_b = np.loadtxt(testdir/'sim_b.csv', dtype=int).tolist()
-expected_results = np.loadtxt(testdir/'sim_sum.csv', dtype=int).tolist()
+# testdatadir points to the corresponding test_data subdirectory
+_tb = Path(__file__).resolve().parent
+testdatadir = _tb.parents[2] / "test_data" / _tb.parent.name / _tb.name
+# load the input and expected output data
+sim_a = np.loadtxt(testdatadir/'sim_a.csv', dtype=int).tolist()
+sim_b = np.loadtxt(testdatadir/'sim_b.csv', dtype=int).tolist()
+expected_results = np.loadtxt(testdatadir/'sim_sum.csv', dtype=int).tolist()
 
 @cocotb.test()
 async def simple_adder_test(dut):

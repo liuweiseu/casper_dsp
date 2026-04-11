@@ -5,8 +5,9 @@ from cocotb.triggers import RisingEdge
 from pathlib import Path
 import numpy as np
 
-# testdir is used for getting the path for the input and output data file
-testdir = Path(__file__).resolve().parent
+# testdatadir points to the corresponding test_data subdirectory
+_tb = Path(__file__).resolve().parent
+testdatadir = _tb.parents[2] / "test_data" / _tb.parent.name / _tb.name
 
 # Must match localparam values in counter.sv
 FREE_RUNNING = 0
@@ -45,15 +46,15 @@ async def module_test(dut):
     )
 
     if   counter_type == FREE_RUNNING and count_dir == DIR_UP   and step == 1 and init_val == 0   and count_to_val == 0:
-        datadir = testdir / "simdata0"   # free_running, up, step=1
+        datadir = testdatadir / "simdata0"   # free_running, up, step=1
     elif counter_type == FREE_RUNNING and count_dir == DIR_UP   and step == 3 and init_val == 0   and count_to_val == 0:
-        datadir = testdir / "simdata1"   # free_running, up, step=3
+        datadir = testdatadir / "simdata1"   # free_running, up, step=3
     elif counter_type == FREE_RUNNING and count_dir == DIR_DOWN and step == 1 and init_val == 255 and count_to_val == 0:
-        datadir = testdir / "simdata2"   # free_running, down, step=1
+        datadir = testdatadir / "simdata2"   # free_running, down, step=1
     elif counter_type == COUNT_LIMIT  and count_dir == DIR_UP   and step == 1 and init_val == 0   and count_to_val == 20:
-        datadir = testdir / "simdata3"   # count_limit, up
+        datadir = testdatadir / "simdata3"   # count_limit, up
     elif counter_type == COUNT_LIMIT  and count_dir == DIR_DOWN and step == 1 and init_val == 20  and count_to_val == 0:
-        datadir = testdir / "simdata4"   # count_limit, down
+        datadir = testdatadir / "simdata4"   # count_limit, down
     else:
         cocotb.log.warning(
             f"No test data for COUNTER_TYPE={counter_type}, COUNT_DIR={count_dir}, "

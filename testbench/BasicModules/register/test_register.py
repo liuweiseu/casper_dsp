@@ -5,8 +5,9 @@ from cocotb.triggers import RisingEdge
 from pathlib import Path
 import numpy as np
 
-# testdir is used for getting the path for the input and output data file
-testdir = Path(__file__).resolve().parent
+# testdatadir points to the corresponding test_data subdirectory
+_tb = Path(__file__).resolve().parent
+testdatadir = _tb.parents[2] / "test_data" / _tb.parent.name / _tb.name
 
 
 @cocotb.test()
@@ -30,10 +31,10 @@ async def module_test(dut):
     bitwidth = int(dut.BITWIDTH.value)
     cocotb.log.info(f"Testing with BITWIDTH={bitwidth}")
 
-    sim_d    = np.loadtxt(testdir / "sim_d.csv",   dtype=int).tolist()
-    sim_en   = np.loadtxt(testdir / "sim_en.csv",  dtype=int).tolist()
-    sim_rst  = np.loadtxt(testdir / "sim_rst.csv", dtype=int).tolist()
-    expected = np.loadtxt(testdir / "sim_out.csv", dtype=int).tolist()
+    sim_d    = np.loadtxt(testdatadir / "sim_d.csv",   dtype=int).tolist()
+    sim_en   = np.loadtxt(testdatadir / "sim_en.csv",  dtype=int).tolist()
+    sim_rst  = np.loadtxt(testdatadir / "sim_rst.csv", dtype=int).tolist()
+    expected = np.loadtxt(testdatadir / "sim_out.csv", dtype=int).tolist()
 
     for i, (d_val, en_val, rst_val, exp) in enumerate(
         zip(sim_d, sim_en, sim_rst, expected)

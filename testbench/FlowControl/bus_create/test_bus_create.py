@@ -5,8 +5,9 @@ from cocotb.triggers import RisingEdge, Timer
 from pathlib import Path
 import numpy as np
 
-# testdir is used for getting the path for the input and output data file
-testdir = Path(__file__).resolve().parent
+# testdatadir points to the corresponding test_data subdirectory
+_tb = Path(__file__).resolve().parent
+testdatadir = _tb.parents[2] / "test_data" / _tb.parent.name / _tb.name
 
 @cocotb.test()
 async def module_test(dut):
@@ -17,9 +18,9 @@ async def module_test(dut):
     if nbits == 8 and ninputs == 2:
         # test NBITS = 8 and NINPUTS = 2
         # load the input and expected output data 
-        sim_in1 = np.loadtxt(testdir/'simdata0/sim_in1.csv', dtype=int).tolist()
-        sim_in2 = np.loadtxt(testdir/'simdata0/sim_in2.csv', dtype=int).tolist()
-        expected_results = np.loadtxt(testdir/'simdata0/sim_out.csv', dtype=int).tolist()
+        sim_in1 = np.loadtxt(testdatadir/'simdata0/sim_in1.csv', dtype=int).tolist()
+        sim_in2 = np.loadtxt(testdatadir/'simdata0/sim_in2.csv', dtype=int).tolist()
+        expected_results = np.loadtxt(testdatadir/'simdata0/sim_out.csv', dtype=int).tolist()
         for i in range(len(sim_in1)):
             dut.din.value = [sim_in2[i], sim_in1[i]]
             # wait for the logic to be stable
@@ -30,11 +31,11 @@ async def module_test(dut):
     elif nbits == 10 and ninputs == 4:
         # test NBITS = 10 and NINPUTS = 4
         # load the input and expected output data 
-        sim_in1 = np.loadtxt(testdir/'simdata1/sim_in1.csv', dtype=int).tolist()
-        sim_in2 = np.loadtxt(testdir/'simdata1/sim_in2.csv', dtype=int).tolist()
-        sim_in3 = np.loadtxt(testdir/'simdata1/sim_in3.csv', dtype=int).tolist()
-        sim_in4 = np.loadtxt(testdir/'simdata1/sim_in4.csv', dtype=int).tolist()
-        expected_results = np.loadtxt(testdir/'simdata1/sim_out.csv', dtype=np.int64).tolist()
+        sim_in1 = np.loadtxt(testdatadir/'simdata1/sim_in1.csv', dtype=int).tolist()
+        sim_in2 = np.loadtxt(testdatadir/'simdata1/sim_in2.csv', dtype=int).tolist()
+        sim_in3 = np.loadtxt(testdatadir/'simdata1/sim_in3.csv', dtype=int).tolist()
+        sim_in4 = np.loadtxt(testdatadir/'simdata1/sim_in4.csv', dtype=int).tolist()
+        expected_results = np.loadtxt(testdatadir/'simdata1/sim_out.csv', dtype=np.int64).tolist()
         for i in range(len(sim_in1)):
             dut.din.value = [sim_in4[i], sim_in3[i], sim_in2[i], sim_in1[i]]
             # wait for the logic to be stable
