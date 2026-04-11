@@ -18,7 +18,7 @@ VCD waveforms can be viewed at https://app.surfer-project.org.
 
 ## Adding a New Module
 
-1. **RTL**: Place the Verilog/SystemVerilog file under `rtl/<Category>/`. Categories: `BasicModules`, `FlowControl`, `Misc`, `Templates`.
+1. **RTL**: Place the Verilog/SystemVerilog file under `rtl/<Category>/`. See existing directories under `rtl/` for available categories.
 
 2. **Testbench**: Create `testbench/<Category>/<module_name>/test_<module_name>.py`. The directory hierarchy must mirror `rtl/`.
    - Input/expected-output data goes in CSV files alongside the test script (e.g., `sim_in.csv`, `sim_out.csv`). Multiple parameter sets use subdirectories (`simdata0/`, `simdata1/`, …).
@@ -47,7 +47,4 @@ VCD waveforms can be viewed at https://app.surfer-project.org.
 
 ## Module Categories
 
-- **Templates** — reference example (`simple_adder`)
-- **BasicModules** — building blocks: `counter.sv`, `delay.v`, `slice.v`
-- **FlowControl** — bus manipulation: `bus_create.sv`, `bus_expand.sv`
-- **Misc** — utility modules: `bit_reverse.v`, `edge_detect.v`
+Categories are organized by function. See the `rtl/` directory for the current set of categories and their contents.
