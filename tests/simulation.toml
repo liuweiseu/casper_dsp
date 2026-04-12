@@ -29,6 +29,31 @@ VAL = 7
 NBITS = 12
 VAL = 4095
 
+# test multiplexer
+[[simulations]]
+dir = "BasicModules"
+top = "multiplexer"
+# 2-input, single pipeline stage
+[[simulations.parameters]]
+NBITS = 8
+NINPUTS = 2
+LATENCY = 1
+# 4-input, single pipeline stage
+[[simulations.parameters]]
+NBITS = 8
+NINPUTS = 4
+LATENCY = 1
+# 2-input, combinational
+[[simulations.parameters]]
+NBITS = 8
+NINPUTS = 2
+LATENCY = 0
+# 2-input, two pipeline stages
+[[simulations.parameters]]
+NBITS = 8
+NINPUTS = 2
+LATENCY = 2
+
 # test slice
 [[simulations]]
 dir = "BasicModules"
