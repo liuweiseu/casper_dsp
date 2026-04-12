@@ -109,6 +109,23 @@ BITWIDTH = 4
 USE_RST = 0
 USE_ENABLE = 0
 
+# test inverter
+[[simulations]]
+dir = "BasicModules"
+top = "inverter"
+# LATENCY=0 — combinational output (default)
+[[simulations.parameters]]
+NBITS = 4
+LATENCY = 0
+# LATENCY=1 — single pipeline stage
+[[simulations.parameters]]
+NBITS = 4
+LATENCY = 1
+# LATENCY=2 — two pipeline stages
+[[simulations.parameters]]
+NBITS = 4
+LATENCY = 2
+
 # test logical
 [[simulations]]
 dir = "BasicModules"
