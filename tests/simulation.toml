@@ -208,3 +208,11 @@ OUTPUT_POL = 0
 [[simulations.parameters]]
 EDGE_TYPE = 1
 OUTPUT_POL = 1
+# both edges, active high
+[[simulations.parameters]]
+EDGE_TYPE = 2
+OUTPUT_POL = 0
+# both edges, active low
+[[simulations.parameters]]
+EDGE_TYPE = 2
+OUTPUT_POL = 1

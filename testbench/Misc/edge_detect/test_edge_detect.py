@@ -12,6 +12,7 @@ testdatadir = (_here / "../../../test_data" / _here.parent.name / _here.name).re
 # Must match localparam values in edge_detect.v
 RISING  = 0
 FALLING = 1
+BOTH    = 2
 ACTIVE_HIGH = 0
 ACTIVE_LOW  = 1
 
@@ -28,6 +29,8 @@ async def module_test(dut):
         simdata1 : EDGE_TYPE=0(rising),  OUTPUT_POL=1(active_low)
         simdata2 : EDGE_TYPE=1(falling), OUTPUT_POL=0(active_high)
         simdata3 : EDGE_TYPE=1(falling), OUTPUT_POL=1(active_low)
+        simdata4 : EDGE_TYPE=2(both),    OUTPUT_POL=0(active_high)
+        simdata5 : EDGE_TYPE=2(both),    OUTPUT_POL=1(active_low)
     """
     clock = Clock(dut.clk, 10, units="ns")
     cocotb.start_soon(clock.start())
@@ -44,6 +47,10 @@ async def module_test(dut):
         datadir = testdatadir / "simdata2"
     elif edge_type == FALLING and output_pol == ACTIVE_LOW:
         datadir = testdatadir / "simdata3"
+    elif edge_type == BOTH    and output_pol == ACTIVE_HIGH:
+        datadir = testdatadir / "simdata4"
+    elif edge_type == BOTH    and output_pol == ACTIVE_LOW:
+        datadir = testdatadir / "simdata5"
     else:
         cocotb.log.warning(
             f"No test data for EDGE_TYPE={edge_type}, OUTPUT_POL={output_pol}. Skipping."
