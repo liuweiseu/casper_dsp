@@ -54,12 +54,21 @@ NBITS = 10
 NINPUTS = 4
 ```
 ### Local simulation
-Once docker is installed, simulation can be done automatically by running
+
+**Run all tests:**
 ```
 sudo ./scripts/run-local-test.sh
 ```
-**Note:** It may take a while when you run the script first time.  
-  
+**Note:** It may take a while when you run the script first time.
+
+**Run a single module or subset:**
+```
+sudo ./scripts/run-module-test.sh BasicModules/logical   # exact match
+sudo ./scripts/run-module-test.sh logical                # substring match
+sudo ./scripts/run-module-test.sh BasicModules           # entire category
+```
+The argument matches against the `<Category>/<module>` test IDs defined in `tests/simulation.toml`.
+
 If the simulation runs successfully, you should see
 ```
 test-runner-1  | test_runner.py::test_runner[Templates/simple_adder] PASSED               [ 25%]

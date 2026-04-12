@@ -88,8 +88,79 @@ COUNT_DIR = 1
 [[simulations]]
 dir = "BasicModules"
 top = "register"
+# USE_RST=1, USE_ENABLE=1 — synchronous reset + enable (default behaviour)
 [[simulations.parameters]]
 BITWIDTH = 4
+USE_RST = 1
+USE_ENABLE = 1
+# USE_RST=1, USE_ENABLE=0 — synchronous reset only, always latches d when not in reset
+[[simulations.parameters]]
+BITWIDTH = 4
+USE_RST = 1
+USE_ENABLE = 0
+# USE_RST=0, USE_ENABLE=1 — enable only, no reset
+[[simulations.parameters]]
+BITWIDTH = 4
+USE_RST = 0
+USE_ENABLE = 1
+# USE_RST=0, USE_ENABLE=0 — direct register, always latches d
+[[simulations.parameters]]
+BITWIDTH = 4
+USE_RST = 0
+USE_ENABLE = 0
+
+# test logical
+[[simulations]]
+dir = "BasicModules"
+top = "logical"
+# AND, 2-input — basic bitwise AND with pipeline
+[[simulations.parameters]]
+NBITS = 4
+NINPUTS = 2
+LATENCY = 1
+FUNC = 0
+# NAND, 2-input
+[[simulations.parameters]]
+NBITS = 4
+NINPUTS = 2
+LATENCY = 1
+FUNC = 1
+# OR, 2-input
+[[simulations.parameters]]
+NBITS = 4
+NINPUTS = 2
+LATENCY = 1
+FUNC = 2
+# NOR, 2-input
+[[simulations.parameters]]
+NBITS = 4
+NINPUTS = 2
+LATENCY = 1
+FUNC = 3
+# XOR, 2-input
+[[simulations.parameters]]
+NBITS = 4
+NINPUTS = 2
+LATENCY = 1
+FUNC = 4
+# XNOR, 2-input
+[[simulations.parameters]]
+NBITS = 4
+NINPUTS = 2
+LATENCY = 1
+FUNC = 5
+# AND, 3-input — verifies NINPUTS reduction chain
+[[simulations.parameters]]
+NBITS = 4
+NINPUTS = 3
+LATENCY = 1
+FUNC = 0
+# XOR, 2-input, LATENCY=2 — verifies multi-stage pipeline
+[[simulations.parameters]]
+NBITS = 4
+NINPUTS = 2
+LATENCY = 2
+FUNC = 4
 
 # test bit_reverse
 [[simulations]]

@@ -12,9 +12,16 @@ CASPER DSP Blocks — a library of Verilog/SystemVerilog RTL modules for radio a
 ```bash
 sudo ./scripts/run-local-test.sh
 ```
-This builds the Docker image, runs all tests, and cleans up. Test results (`.vcd`, `.xml`) land in `tests/results/`.
 
-VCD waveforms can be viewed at https://app.surfer-project.org.
+**Single module (or subset):**
+```bash
+sudo ./scripts/run-module-test.sh BasicModules/logical   # exact match
+sudo ./scripts/run-module-test.sh logical                # substring match
+sudo ./scripts/run-module-test.sh BasicModules           # entire category
+```
+The argument is passed to pytest's `-k` filter. Test IDs follow the `<Category>/<module>` format from `simulation.toml`.
+
+Test results (`.vcd`, `.xml`) land in `tests/results/`. VCD waveforms can be viewed at https://app.surfer-project.org.
 
 ## Adding a New Module
 
