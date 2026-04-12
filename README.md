@@ -4,19 +4,34 @@ This is the respo for the [CASPER](https://casper-astro.github.io) DSP blocks in
 The simulation is based on [Verilator](https://www.veripool.org/verilator/) and [Cocotb](https://www.cocotb.org), which are widely used, open-source tools.
 
 ## 🚀 Add new modules
-### RTL Modules
-The RTL code has to be added under the `rtl` directory, and subdirectories could be created for the new RTL modules.  
-An example is [rtl/Templates/simple_adder.v](rtl/Templates/simple_adder.v).
-### Testbench
-The testbench has to be created under the `testbench` directory. There are a few rules for the testbench:
-1. The structure of the testbench directory has to be the same as that of the rtl structure.  
-    For example, if the rtl module is `rtl/Templates/simple_adder.v`, the testbench has to be in `testbench/Templates/simple_addr`.
-2. (Optional) The test script name has to be started with `test_`.  
-    For example, if the testbench is written for `simple_adder.v`, the testbench script has to be [test_simple_addr.py](testbench/Templates/simple_adder/test_simple_adder.py).
-   
-**Note:**   
-(1) As we use `cocotb`, the testbench is written in Python, which is easy and convenient to use.  
-(2) If you want to test the new module, please make sure the modue info is added to `tests/simulation.toml`. (See the `Simulation Config` section)
+
+The repository uses four parallel directory trees, all mirroring `rtl/` structure:
+
+| Directory | Purpose |
+|-----------|---------|
+| `rtl/` | RTL source files |
+| `testbench/` | Cocotb testbench scripts |
+| `test_data/` | CSV simulation input/output data |
+| `Description/` | Per-module documentation |
+
+### Steps
+
+1. **RTL** — add the Verilog/SystemVerilog file under `rtl/<Category>/`.  
+   Example: [rtl/Templates/simple_adder.v](rtl/Templates/simple_adder.v)
+
+2. **Test data** — create `test_data/<Category>/<module>/` and place CSV files there (e.g. `sim_in.csv`, `sim_out.csv`). For multiple parameter sets use subdirectories `simdata0/`, `simdata1/`, …
+
+3. **Testbench** — create `testbench/<Category>/<module>/test_<module>.py`.  
+   Derive the data path dynamically from `__file__` so no path is hardcoded:
+   ```python
+   _tb = Path(__file__).resolve().parent
+   testdatadir = _tb.parents[2] / "test_data" / _tb.parent.name / _tb.name
+   ```
+   Example: [testbench/Templates/simple_adder/test_simple_adder.py](testbench/Templates/simple_adder/test_simple_adder.py)
+
+4. **Simulation config** — add a `[[simulations]]` entry to `tests/simulation.toml`. (See the `Simulation Config` section below.)
+
+5. **Documentation** — create `Description/<Category>/<module>.md` describing the module's function, parameters, and ports.
 
 ## 📦 Run Simulation
 ### Requirements

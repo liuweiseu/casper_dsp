@@ -20,16 +20,28 @@ VCD waveforms can be viewed at https://app.surfer-project.org.
 
 1. **RTL**: Place the Verilog/SystemVerilog file under `rtl/<Category>/`. See existing directories under `rtl/` for available categories.
 
-2. **Testbench**: Create `testbench/<Category>/<module_name>/test_<module_name>.py`. The directory hierarchy must mirror `rtl/`.
-   - Input/expected-output data goes in CSV files alongside the test script (e.g., `sim_in.csv`, `sim_out.csv`). Multiple parameter sets use subdirectories (`simdata0/`, `simdata1/`, …).
-   - Tests are `async` cocotb functions decorated with `@cocotb.test()`. Load CSV data with `np.loadtxt`, drive inputs before `RisingEdge`, sample outputs after.
+2. **Test data**: Create `test_data/<Category>/<module_name>/` and place CSV input/output files there (e.g., `sim_in.csv`, `sim_out.csv`). Multiple parameter sets use subdirectories (`simdata0/`, `simdata1/`, …).
 
-3. **Register in `tests/simulation.toml`**: Add a `[[simulations]]` entry. If the module is parameterized, add one `[[simulations.parameters]]` block per parameter combination.
+3. **Testbench**: Create `testbench/<Category>/<module_name>/test_<module_name>.py`. The directory hierarchy must mirror `rtl/`.
+   - Tests are `async` cocotb functions decorated with `@cocotb.test()`. Load CSV data with `np.loadtxt`, drive inputs before `RisingEdge`, sample outputs after.
+   - Derive the test data path from `__file__` — do not hardcode it:
+     ```python
+     _tb = Path(__file__).resolve().parent
+     testdatadir = _tb.parents[2] / "test_data" / _tb.parent.name / _tb.name
+     ```
+
+4. **Register in `tests/simulation.toml`**: Add a `[[simulations]]` entry. If the module is parameterized, add one `[[simulations.parameters]]` block per parameter combination.
+
+5. **Documentation**: Create `Description/<Category>/<module_name>.md` summarising the module's function, parameters, and ports.
 
 ## Key Infrastructure
 
 | Path | Purpose |
 |------|---------|
+| `rtl/` | RTL source files, organised by category |
+| `testbench/` | Cocotb testbench scripts, mirroring `rtl/` structure |
+| `test_data/` | CSV simulation input/output data, mirroring `rtl/` structure |
+| `Description/` | Per-module documentation (function, parameters, ports), mirroring `rtl/` structure |
 | `tests/simulation.toml` | Declares which modules are tested and with what parameters |
 | `tests/test_runner.py` | pytest entry point — reads `simulation.toml`, calls cocotb runner |
 | `tests/prepare_dump.py` | Pre-test script that injects `$dumpfile`/`$dumpvars` into RTL source to produce VCD output |
