@@ -26,8 +26,8 @@ VCD waveforms can be viewed at https://app.surfer-project.org.
    - Tests are `async` cocotb functions decorated with `@cocotb.test()`. Load CSV data with `np.loadtxt`, drive inputs before `RisingEdge`, sample outputs after.
    - Derive the test data path from `__file__` — do not hardcode it:
      ```python
-     _tb = Path(__file__).resolve().parent
-     testdatadir = _tb.parents[2] / "test_data" / _tb.parent.name / _tb.name
+     _here = Path(__file__).parent
+     testdatadir = (_here / "../../../test_data" / _here.parent.name / _here.name).resolve()
      ```
 
 4. **Register in `tests/simulation.toml`**: Add a `[[simulations]]` entry. If the module is parameterized, add one `[[simulations.parameters]]` block per parameter combination.

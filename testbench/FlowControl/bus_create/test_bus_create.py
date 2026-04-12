@@ -6,8 +6,8 @@ from pathlib import Path
 import numpy as np
 
 # testdatadir points to the corresponding test_data subdirectory
-_tb = Path(__file__).resolve().parent
-testdatadir = _tb.parents[2] / "test_data" / _tb.parent.name / _tb.name
+_here = Path(__file__).parent
+testdatadir = (_here / "../../../test_data" / _here.parent.name / _here.name).resolve()
 
 @cocotb.test()
 async def module_test(dut):

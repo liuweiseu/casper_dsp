@@ -47,9 +47,10 @@ RUN pip install --no-cache-dir cocotb cocotb-test pytest numpy
 ENV VERILATOR_ROOT=/usr/local/share/verilator
 
 WORKDIR /work
-COPY rtl ./rtl/
-COPY tests ./tests/
+COPY rtl       ./rtl/
+COPY tests     ./tests/
 COPY testbench ./tests/testbench/
+COPY test_data ./tests/test_data/
 
 WORKDIR /work/tests
 

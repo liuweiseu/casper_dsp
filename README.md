@@ -24,8 +24,8 @@ The repository uses four parallel directory trees, all mirroring `rtl/` structur
 3. **Testbench** — create `testbench/<Category>/<module>/test_<module>.py`.  
    Derive the data path dynamically from `__file__` so no path is hardcoded:
    ```python
-   _tb = Path(__file__).resolve().parent
-   testdatadir = _tb.parents[2] / "test_data" / _tb.parent.name / _tb.name
+   _here = Path(__file__).parent
+   testdatadir = (_here / "../../../test_data" / _here.parent.name / _here.name).resolve()
    ```
    Example: [testbench/Templates/simple_adder/test_simple_adder.py](testbench/Templates/simple_adder/test_simple_adder.py)
 
