@@ -4,6 +4,31 @@
 dir = "Templates"
 top = "simple_adder"
 
+# test constant
+[[simulations]]
+dir = "BasicModules"
+top = "constant"
+# zero output
+[[simulations.parameters]]
+NBITS = 8
+VAL = 0
+# alternating bits (0xAA)
+[[simulations.parameters]]
+NBITS = 8
+VAL = 170
+# maximum 8-bit value
+[[simulations.parameters]]
+NBITS = 8
+VAL = 255
+# 4-bit output
+[[simulations.parameters]]
+NBITS = 4
+VAL = 7
+# maximum 12-bit value
+[[simulations.parameters]]
+NBITS = 12
+VAL = 4095
+
 # test slice
 [[simulations]]
 dir = "BasicModules"
