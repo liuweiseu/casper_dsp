@@ -1,8 +1,7 @@
-# config.toml
-# test simple_addr
-[[simulations]]
-dir = "Templates"
-top = "simple_adder"
+# simulation.toml
+# Entries sorted by directory then by module name.
+
+# ── BasicModules ─────────────────────────────────────────────────────────────
 
 # test constant
 [[simulations]]
@@ -28,66 +27,6 @@ VAL = 7
 [[simulations.parameters]]
 NBITS = 12
 VAL = 4095
-
-# test multiplexer
-[[simulations]]
-dir = "BasicModules"
-top = "multiplexer"
-# 2-input, single pipeline stage
-[[simulations.parameters]]
-NBITS = 8
-NINPUTS = 2
-LATENCY = 1
-# 4-input, single pipeline stage
-[[simulations.parameters]]
-NBITS = 8
-NINPUTS = 4
-LATENCY = 1
-# 2-input, combinational
-[[simulations.parameters]]
-NBITS = 8
-NINPUTS = 2
-LATENCY = 0
-# 2-input, two pipeline stages
-[[simulations.parameters]]
-NBITS = 8
-NINPUTS = 2
-LATENCY = 2
-
-# test slice
-[[simulations]]
-dir = "BasicModules"
-top = "slice"
-[[simulations.parameters]]
-START_BIT = 2
-WIDTH = 2
-
-# test delay
-[[simulations]]
-dir = "BasicModules"
-top = "delay"
-[[simulations.parameters]]
-LATENCY = 1
-BITWIDTH = 3
-
-# test bus_create
-[[simulations]]
-dir = "FlowControl"
-top = "bus_create"
-[[simulations.parameters]]
-NBITS = 8
-NINPUTS = 2
-[[simulations.parameters]]
-NBITS = 10
-NINPUTS = 4
-
-# test bus_expand
-[[simulations]]
-dir = "FlowControl"
-top = "bus_expand"
-[[simulations.parameters]]
-NOUT = 4
-WIDTH = 8
 
 # test counter
 [[simulations]]
@@ -134,42 +73,13 @@ COUNT_TO_VAL = 0
 COUNTER_TYPE = 1
 COUNT_DIR = 1
 
-# test register
+# test delay
 [[simulations]]
 dir = "BasicModules"
-top = "register"
-# USE_RST=1, USE_ENABLE=1 — synchronous reset + enable (default behaviour)
+top = "delay"
 [[simulations.parameters]]
-BITWIDTH = 4
-USE_RST = 1
-USE_ENABLE = 1
-# USE_RST=1, USE_ENABLE=0 — synchronous reset only, always latches d when not in reset
-[[simulations.parameters]]
-BITWIDTH = 4
-USE_RST = 1
-USE_ENABLE = 0
-# USE_RST=0, USE_ENABLE=1 — enable only, no reset
-[[simulations.parameters]]
-BITWIDTH = 4
-USE_RST = 0
-USE_ENABLE = 1
-# USE_RST=0, USE_ENABLE=0 — direct register, always latches d
-[[simulations.parameters]]
-BITWIDTH = 4
-USE_RST = 0
-USE_ENABLE = 0
-# USE_RST=1, USE_ENABLE=1, INIT_VAL=7 — reset + enable, reset loads 7
-[[simulations.parameters]]
-BITWIDTH = 4
-USE_RST = 1
-USE_ENABLE = 1
-INIT_VAL = 7
-# USE_RST=1, USE_ENABLE=0, INIT_VAL=10 — reset only, reset loads 10
-[[simulations.parameters]]
-BITWIDTH = 4
-USE_RST = 1
-USE_ENABLE = 0
-INIT_VAL = 10
+LATENCY = 1
+BITWIDTH = 3
 
 # test inverter
 [[simulations]]
@@ -241,6 +151,104 @@ NINPUTS = 2
 LATENCY = 2
 FUNC = 4
 
+# test multiplexer
+[[simulations]]
+dir = "BasicModules"
+top = "multiplexer"
+# 2-input, single pipeline stage
+[[simulations.parameters]]
+NBITS = 8
+NINPUTS = 2
+LATENCY = 1
+# 4-input, single pipeline stage
+[[simulations.parameters]]
+NBITS = 8
+NINPUTS = 4
+LATENCY = 1
+# 2-input, combinational
+[[simulations.parameters]]
+NBITS = 8
+NINPUTS = 2
+LATENCY = 0
+# 2-input, two pipeline stages
+[[simulations.parameters]]
+NBITS = 8
+NINPUTS = 2
+LATENCY = 2
+
+# test register
+[[simulations]]
+dir = "BasicModules"
+top = "register"
+# USE_RST=1, USE_ENABLE=1, INIT_VAL=0 — reset + enable, reset to 0
+[[simulations.parameters]]
+BITWIDTH = 4
+USE_RST = 1
+USE_ENABLE = 1
+# USE_RST=1, USE_ENABLE=0, INIT_VAL=0 — reset only, always latches d when not in reset
+[[simulations.parameters]]
+BITWIDTH = 4
+USE_RST = 1
+USE_ENABLE = 0
+# USE_RST=0, USE_ENABLE=1 — enable only, no reset
+[[simulations.parameters]]
+BITWIDTH = 4
+USE_RST = 0
+USE_ENABLE = 1
+# USE_RST=0, USE_ENABLE=0 — direct register, always latches d
+[[simulations.parameters]]
+BITWIDTH = 4
+USE_RST = 0
+USE_ENABLE = 0
+# USE_RST=1, USE_ENABLE=1, INIT_VAL=7 — reset + enable, reset loads 7
+[[simulations.parameters]]
+BITWIDTH = 4
+USE_RST = 1
+USE_ENABLE = 1
+INIT_VAL = 7
+# USE_RST=1, USE_ENABLE=0, INIT_VAL=10 — reset only, reset loads 10
+[[simulations.parameters]]
+BITWIDTH = 4
+USE_RST = 1
+USE_ENABLE = 0
+INIT_VAL = 10
+
+# test slice
+[[simulations]]
+dir = "BasicModules"
+top = "slice"
+[[simulations.parameters]]
+START_BIT = 2
+WIDTH = 2
+
+# ── FlowControl ──────────────────────────────────────────────────────────────
+
+# test bus_create
+[[simulations]]
+dir = "FlowControl"
+top = "bus_create"
+[[simulations.parameters]]
+NBITS = 8
+NINPUTS = 2
+[[simulations.parameters]]
+NBITS = 10
+NINPUTS = 4
+
+# test bus_expand
+[[simulations]]
+dir = "FlowControl"
+top = "bus_expand"
+[[simulations.parameters]]
+NOUT = 4
+WIDTH = 8
+
+# ── Misc ─────────────────────────────────────────────────────────────────────
+
+# test armed_trigger
+[[simulations]]
+dir = "Misc"
+top = "armed_trigger"
+
 # test bit_reverse
 [[simulations]]
 dir = "Misc"
@@ -279,7 +287,9 @@ OUTPUT_POL = 0
 EDGE_TYPE = 2
 OUTPUT_POL = 1
 
-# test armed_trigger
+# ── Templates ────────────────────────────────────────────────────────────────
+
+# test simple_adder
 [[simulations]]
-dir = "Misc"
-top = "armed_trigger"
+dir = "Templates"
+top = "simple_adder"
