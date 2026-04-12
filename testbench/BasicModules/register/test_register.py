@@ -18,10 +18,12 @@ async def module_test(dut):
     against the expected value in simdata<N>/sim_out.csv after the edge.
 
     Parameter sets:
-        simdata0 : USE_RST=1, USE_ENABLE=1, BITWIDTH=4 — reset + enable
-        simdata1 : USE_RST=1, USE_ENABLE=0, BITWIDTH=4 — reset only, always latches d
-        simdata2 : USE_RST=0, USE_ENABLE=1, BITWIDTH=4 — enable only, no reset
-        simdata3 : USE_RST=0, USE_ENABLE=0, BITWIDTH=4 — direct register, always latches d
+        simdata0 : USE_RST=1, USE_ENABLE=1, INIT_VAL=0,  BITWIDTH=4 — reset + enable, reset to 0
+        simdata1 : USE_RST=1, USE_ENABLE=0, INIT_VAL=0,  BITWIDTH=4 — reset only, reset to 0
+        simdata2 : USE_RST=0, USE_ENABLE=1, INIT_VAL=0,  BITWIDTH=4 — enable only, no reset
+        simdata3 : USE_RST=0, USE_ENABLE=0, INIT_VAL=0,  BITWIDTH=4 — direct register
+        simdata4 : USE_RST=1, USE_ENABLE=1, INIT_VAL=7,  BITWIDTH=4 — reset + enable, reset to 7
+        simdata5 : USE_RST=1, USE_ENABLE=0, INIT_VAL=10, BITWIDTH=4 — reset only, reset to 10
     """
     clock = Clock(dut.clk, 10, units="ns")
     cocotb.start_soon(clock.start())
@@ -29,18 +31,30 @@ async def module_test(dut):
     bitwidth   = int(dut.BITWIDTH.value)
     use_rst    = int(dut.USE_RST.value)
     use_enable = int(dut.USE_ENABLE.value)
+    init_val   = int(dut.INIT_VAL.value)
     cocotb.log.info(
-        f"Testing with BITWIDTH={bitwidth}, USE_RST={use_rst}, USE_ENABLE={use_enable}"
+        f"Testing with BITWIDTH={bitwidth}, USE_RST={use_rst}, "
+        f"USE_ENABLE={use_enable}, INIT_VAL={init_val}"
     )
 
-    if   use_rst == 1 and use_enable == 1:
+    if   use_rst == 1 and use_enable == 1 and init_val == 0:
         datadir = testdatadir / "simdata0"
-    elif use_rst == 1 and use_enable == 0:
+    elif use_rst == 1 and use_enable == 0 and init_val == 0:
         datadir = testdatadir / "simdata1"
     elif use_rst == 0 and use_enable == 1:
         datadir = testdatadir / "simdata2"
-    else:
+    elif use_rst == 0 and use_enable == 0:
         datadir = testdatadir / "simdata3"
+    elif use_rst == 1 and use_enable == 1 and init_val == 7:
+        datadir = testdatadir / "simdata4"
+    elif use_rst == 1 and use_enable == 0 and init_val == 10:
+        datadir = testdatadir / "simdata5"
+    else:
+        cocotb.log.warning(
+            f"No test data for USE_RST={use_rst}, USE_ENABLE={use_enable}, "
+            f"INIT_VAL={init_val}. Skipping."
+        )
+        return
 
     sim_d    = np.loadtxt(datadir / "sim_d.csv",   dtype=int).tolist()
     expected = np.loadtxt(datadir / "sim_out.csv", dtype=int).tolist()

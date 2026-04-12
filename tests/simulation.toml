@@ -108,6 +108,18 @@ USE_ENABLE = 1
 BITWIDTH = 4
 USE_RST = 0
 USE_ENABLE = 0
+# USE_RST=1, USE_ENABLE=1, INIT_VAL=7 — reset + enable, reset loads 7
+[[simulations.parameters]]
+BITWIDTH = 4
+USE_RST = 1
+USE_ENABLE = 1
+INIT_VAL = 7
+# USE_RST=1, USE_ENABLE=0, INIT_VAL=10 — reset only, reset loads 10
+[[simulations.parameters]]
+BITWIDTH = 4
+USE_RST = 1
+USE_ENABLE = 0
+INIT_VAL = 10
 
 # test inverter
 [[simulations]]
@@ -216,3 +228,8 @@ OUTPUT_POL = 0
 [[simulations.parameters]]
 EDGE_TYPE = 2
 OUTPUT_POL = 1
+
+# test armed_trigger
+[[simulations]]
+dir = "Misc"
+top = "armed_trigger"
