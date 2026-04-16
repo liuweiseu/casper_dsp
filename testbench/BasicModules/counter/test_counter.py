@@ -65,14 +65,7 @@ async def module_test(dut):
     expected_results = np.loadtxt(datadir / "sim_out.csv", dtype=int).tolist()
     cocotb.log.info(f"Loaded {len(expected_results)} expected values from {datadir.name}/sim_out.csv")
 
-    # Check initial value before any clock edge
-    actual = int(dut.dout.value)
-    assert actual == expected_results[0], (
-        f"Cycle 0 (initial): expected dout={expected_results[0]} ({hex(expected_results[0])}), "
-        f"got {actual} ({hex(actual)})"
-    )
-
-    for i, expected in enumerate(expected_results[1:], start=1):
+    for i, expected in enumerate(expected_results):
         await RisingEdge(dut.clk)
         actual = int(dut.dout.value)
         assert actual == expected, (

@@ -36,6 +36,13 @@ Test results (`.vcd`, `.xml`) land in `tests/results/`. VCD waveforms can be vie
      _here = Path(__file__).parent
      testdatadir = (_here / "../../../test_data" / _here.parent.name / _here.name).resolve()
      ```
+   - The standard loop pattern is `await RisingEdge` then read — never read an output before the first clock edge. `expected[0]` must correspond to the value read after the first rising edge (which, due to cocotb's pre-NB-read convention, reflects the module's initial state):
+     ```python
+     for i in range(len(sim_out)):
+         await RisingEdge(dut.clk)
+         actual = int(dut.out.value)
+         assert actual == sim_out[i]
+     ```
 
 4. **Register in `tests/simulation.toml`**: Add a `[[simulations]]` entry. If the module is parameterized, add one `[[simulations.parameters]]` block per parameter combination.
    - Entries are sorted **alphabetically by directory name, then alphabetically by module name** within each directory. Always insert in the correct sorted position rather than appending to the end.
