@@ -7,7 +7,7 @@ module counter #(
     parameter int COUNT_TO_VAL = 0,
     /* COUNT_DIR: 0=up, 1=down, 2=up_down */
     parameter int COUNT_DIR = 0,
-    /* INIT_VAL: counter initial value */
+    /* INIT_VAL: power-on initial value */
     parameter int INIT_VAL = 0,
     /* STEP: up or down step */
     parameter int STEP = 1,
@@ -15,9 +15,9 @@ module counter #(
     parameter BIN_P = 0,
     /* ENABLE_LOAD: provide load port, 0 or 1 */
     parameter ENABLE_LOAD = 0,
-    /* ENABLE_SYNC_RST: provide sync reset port, 0 or 1 */
+    /* ENABLE_SYNC_RST: synchronous clear to zero when rst=1 (1=enabled) */
     parameter ENABLE_SYNC_RST = 0,
-    /* ENABLE_ENABLE: provide enable port, 0 or 1 */
+    /* ENABLE_ENABLE: gate counting on enable signal (1=enabled) */
     parameter ENABLE_ENABLE = 0
 )(
     input clk,
@@ -57,12 +57,18 @@ generate
         if (COUNT_DIR == DIR_UP)
         begin: UP
             always_ff @(posedge clk)
-                cnt <= cnt + STEP_VAL;
+                if (ENABLE_SYNC_RST && rst)
+                    cnt <= {NBITS{1'b0}};
+                else if (!ENABLE_ENABLE || enable)
+                    cnt <= cnt + STEP_VAL;
         end
         else if (COUNT_DIR == DIR_DOWN)
         begin: DOWN
             always_ff @(posedge clk)
-                cnt <= cnt - STEP_VAL;
+                if (ENABLE_SYNC_RST && rst)
+                    cnt <= {NBITS{1'b0}};
+                else if (!ENABLE_ENABLE || enable)
+                    cnt <= cnt - STEP_VAL;
         end
         else if (COUNT_DIR == DIR_UP_DOWN)
         begin:  UP_DOWN
@@ -74,22 +80,28 @@ generate
         if (COUNT_DIR == DIR_UP)
         begin: UP
             always_ff @(posedge clk)
-                begin
-                    if (cnt == NBITS'(COUNT_TO_VAL))
-                        cnt <= cnt;
-                    else
-                        cnt <= cnt + STEP_VAL;
-                end
+                if (ENABLE_SYNC_RST && rst)
+                    cnt <= {NBITS{1'b0}};
+                else if (!ENABLE_ENABLE || enable)
+                    begin
+                        if (cnt == NBITS'(COUNT_TO_VAL))
+                            cnt <= cnt;
+                        else
+                            cnt <= cnt + STEP_VAL;
+                    end
         end
         else if (COUNT_DIR == DIR_DOWN)
         begin: DOWN
             always_ff @(posedge clk)
-                begin
-                    if (cnt == NBITS'(COUNT_TO_VAL))
-                        cnt <= cnt;
-                    else
-                        cnt <= cnt - STEP_VAL;
-                end
+                if (ENABLE_SYNC_RST && rst)
+                    cnt <= {NBITS{1'b0}};
+                else if (!ENABLE_ENABLE || enable)
+                    begin
+                        if (cnt == NBITS'(COUNT_TO_VAL))
+                            cnt <= cnt;
+                        else
+                            cnt <= cnt - STEP_VAL;
+                    end
         end
         else if (COUNT_DIR == DIR_UP_DOWN)
         begin:  UP_DOWN

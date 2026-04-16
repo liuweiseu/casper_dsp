@@ -213,6 +213,51 @@ USE_RST = 1
 USE_ENABLE = 0
 INIT_VAL = 10
 
+# test relational
+[[simulations]]
+dir = "BasicModules"
+top = "relational"
+# eq, NBITS=4, LATENCY=1
+[[simulations.parameters]]
+NBITS = 4
+COMP = 0
+LATENCY = 1
+# ne, NBITS=4, LATENCY=1
+[[simulations.parameters]]
+NBITS = 4
+COMP = 1
+LATENCY = 1
+# lt, NBITS=4, LATENCY=1
+[[simulations.parameters]]
+NBITS = 4
+COMP = 2
+LATENCY = 1
+# gt, NBITS=4, LATENCY=1
+[[simulations.parameters]]
+NBITS = 4
+COMP = 3
+LATENCY = 1
+# le, NBITS=4, LATENCY=1
+[[simulations.parameters]]
+NBITS = 4
+COMP = 4
+LATENCY = 1
+# ge, NBITS=4, LATENCY=1
+[[simulations.parameters]]
+NBITS = 4
+COMP = 5
+LATENCY = 1
+# lt, NBITS=4, LATENCY=0 — combinational
+[[simulations.parameters]]
+NBITS = 4
+COMP = 2
+LATENCY = 0
+# eq, NBITS=8, LATENCY=2 — multi-stage pipeline
+[[simulations.parameters]]
+NBITS = 8
+COMP = 0
+LATENCY = 2
+
 # test slice
 [[simulations]]
 dir = "BasicModules"
@@ -286,6 +331,20 @@ OUTPUT_POL = 0
 [[simulations.parameters]]
 EDGE_TYPE = 2
 OUTPUT_POL = 1
+
+# test pulse_ext
+[[simulations]]
+dir = "Misc"
+top = "pulse_ext"
+# PULSE_LEN=3 — single rising edge
+[[simulations.parameters]]
+PULSE_LEN = 3
+# PULSE_LEN=5 — two separated rising edges
+[[simulations.parameters]]
+PULSE_LEN = 5
+# PULSE_LEN=4 — second trigger during active pulse (re-arm)
+[[simulations.parameters]]
+PULSE_LEN = 4
 
 # ── Templates ────────────────────────────────────────────────────────────────
 

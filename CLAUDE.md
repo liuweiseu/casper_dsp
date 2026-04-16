@@ -58,6 +58,17 @@ Test results (`.vcd`, `.xml`) land in `tests/results/`. VCD waveforms can be vie
 
 **Important:** `prepare_dump.py` mutates RTL source files in-place before simulation to inject VCD dump blocks. This is expected behavior — the injected lines are not committed.
 
+## Reusing BasicModules
+
+When implementing a module outside of `BasicModules`, prefer instantiating existing `BasicModules` primitives rather than duplicating logic. For example:
+
+- Use `register` for any flip-flop storage or pipeline register stage.
+- Use `logical` for bitwise AND/OR/XOR/etc. reduction with optional pipelining.
+- Use `delay` to add a fixed number of pipeline stages to a signal.
+- Use `counter`, `constant`, `multiplexer`, `inverter`, `slice`, etc. where applicable.
+
+Check `rtl/BasicModules/` for the current set of available primitives before writing new RTL.
+
 ## RTL Module Conventions
 
 - Parameterized modules use `parameter` / `parameter int` at the top.
