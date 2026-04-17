@@ -7,4 +7,4 @@ This directory contains one parameter set tested against `simulation.toml`.
 | `START_BIT` | 2 |
 | `WIDTH` | 2 |
 
-Extracts a 2-bit field starting at bit 2 from the input bus.
+Extracts a 2-bit field starting at bit 2 from the input bus. Each file contains **513 cycles**.
