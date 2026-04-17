@@ -85,7 +85,7 @@ generate
                 else if (!ENABLE_ENABLE || enable)
                     begin
                         if (cnt == NBITS'(COUNT_TO_VAL))
-                            cnt <= cnt;
+                            cnt <= INIT_VAL_;
                         else
                             cnt <= cnt + STEP_VAL;
                     end
@@ -98,7 +98,7 @@ generate
                 else if (!ENABLE_ENABLE || enable)
                     begin
                         if (cnt == NBITS'(COUNT_TO_VAL))
-                            cnt <= cnt;
+                            cnt <= INIT_VAL_;
                         else
                             cnt <= cnt - STEP_VAL;
                     end
