@@ -2,6 +2,8 @@
 
 Each subdirectory corresponds to one parameter set. `USE_RST`: 1 = synchronous reset enabled, 0 = disabled. `USE_ENABLE`: 1 = enable pin active, 0 = disabled. `INIT_VAL`: value loaded into `q` when reset is asserted.
 
+**CSV data exported from the corresponding MATLAB Simulink block.**
+
 | Test # | Directory | BITWIDTH | USE_RST | USE_ENABLE | INIT_VAL | Cycles | Description |
 |--------|-----------|----------|---------|------------|----------|--------|-------------|
 | 0 | `simdata0` | 4 | 1 | 1 | 0  | 11 | Reset + enable — reset clears to 0 |
