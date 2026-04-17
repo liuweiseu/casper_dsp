@@ -29,6 +29,17 @@ Test results (`.vcd`, `.xml`) land in `tests/results/`. VCD waveforms can be vie
 
 2. **Test data**: Create `test_data/<Category>/<module_name>/` and place CSV input/output files there (e.g., `sim_in.csv`, `sim_out.csv`). Multiple parameter sets use subdirectories (`simdata0/`, `simdata1/`, …).
 
+   Also create a `test_data.md` in that directory documenting the test configurations:
+   - Start with `# <module_name> test data` and a brief prose description.
+   - For modules with multiple `simdataN` subdirectories, include a Markdown table with these columns **in order**:
+     1. `Test #` — 0-indexed integer matching the `simdataN` number (first column)
+     2. `Directory` — backtick-quoted name, e.g. `` `simdata0` ``
+     3. One column per module parameter
+     4. `Cycles` — number of simulation cycles in that data set (if applicable)
+     5. `Description` — brief plain-English summary (last column)
+   - For modules with a single fixed configuration (no subdirectories), use a two-column `Parameter` / `Value` table instead, and describe the data set in prose.
+   - If the testbench derives expected output directly from DUT parameters and requires no CSV files, state this in prose and list the parameter combinations exercised via `simulation.toml` in a table with a `Test #` first column.
+
 3. **Testbench**: Create `testbench/<Category>/<module_name>/test_<module_name>.py`. The directory hierarchy must mirror `rtl/`.
    - Tests are `async` cocotb functions decorated with `@cocotb.test()`. Load CSV data with `np.loadtxt`, drive inputs before `RisingEdge`, sample outputs after.
    - Derive the test data path from `__file__` — do not hardcode it:
