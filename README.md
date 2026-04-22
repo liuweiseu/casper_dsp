@@ -81,13 +81,15 @@ sudo ./scripts/run-local-test.sh
 ```
 **Note:** It may take a while when you run the script first time.
 
-**Run a single module or subset:**
+**Run a single module or an entire category:**
+
+Besides running all tests at once, you can also simulate a single module or an entire category independently. The argument is matched against the `<Category>/<module>` test IDs defined in `tests/simulation.toml`:
+
 ```
-sudo ./scripts/run-module-test.sh BasicModules/logical   # exact match
-sudo ./scripts/run-module-test.sh logical                # substring match
+sudo ./scripts/run-module-test.sh BasicModules/logical   # single module (exact match)
+sudo ./scripts/run-module-test.sh logical                # any module whose ID contains "logical"
 sudo ./scripts/run-module-test.sh BasicModules           # entire category
 ```
-The argument matches against the `<Category>/<module>` test IDs defined in `tests/simulation.toml`.
 
 If the simulation runs successfully, you should see
 ```
