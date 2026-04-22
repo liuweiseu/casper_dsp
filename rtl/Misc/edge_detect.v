@@ -11,21 +11,19 @@ module edge_detect #(
 
 localparam RISING   = 0;
 localparam FALLING  = 1;
-localparam both     = 2;
+localparam BOTH     = 2;
 
 reg din_prev;
-reg dout_reg;
 
 always @(posedge clk) begin
     din_prev <= din;
-    if (EDGE_TYPE == RISING)
-        dout_reg <= din & ~din_prev;
-    else if(EDGE_TYPE == FALLING)
-        dout_reg <= ~din & din_prev;
-    else
-        dout_reg <= din ^ din_prev;
 end
 
-assign dout = (OUTPUT_POL == 0) ? dout_reg : ~dout_reg;
+wire detect;
+assign detect = (EDGE_TYPE == RISING)  ? ( din & ~din_prev) :
+                (EDGE_TYPE == FALLING) ? (~din &  din_prev) :
+                                         ( din ^   din_prev);
+
+assign dout = (OUTPUT_POL == 0) ? detect : ~detect;
 
 endmodule

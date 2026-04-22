@@ -2,7 +2,7 @@
 
 ## Description
 
-Detects rising edges, falling edges, or any transition on a single-bit input signal. On each clock cycle, the module compares the current input with the previous cycle's value to identify the configured edge type. The output polarity is also configurable. The output is registered (one cycle latency).
+Detects rising edges, falling edges, or any transition on a single-bit input signal. The previous input value is captured in a register on each rising clock edge; the comparison against the current input is combinational, so `dout` is valid in the same clock cycle that the transition is applied. Output polarity is configurable.
 
 ## Parameters
 
