@@ -3,7 +3,7 @@
 This is the respo for the [CASPER](https://casper-astro.github.io) DSP blocks in Verilog/Systemverilog, which contains the RTL modules and testbenches.  
 The simulation is based on [Verilator](https://www.veripool.org/verilator/) and [Cocotb](https://www.cocotb.org), which are widely used, open-source tools.
 
-## ✅ Tested Modules
+## ✅ Simulation-Verified Modules
 
 | # | Category | Module | Description |
 |---|----------|--------|-------------|
