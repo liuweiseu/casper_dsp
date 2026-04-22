@@ -1,6 +1,18 @@
 # simulation.toml
 # Entries sorted by directory then by module name.
 
+# ── Vendor IP simulation libraries ───────────────────────────────────────────
+# lib_path: path to vendor behavioural models (.v/.sv).
+# Relative paths are resolved from the project root.
+# Default points to the local platform/ directory so no EDA installation is
+# required. Override with an absolute path when Vivado/Quartus is installed.
+
+[xilinx]
+lib_path = "platform/xilinx"
+
+[altera]
+lib_path = "platform/altera"
+
 # ── BasicModules ─────────────────────────────────────────────────────────────
 
 # test constant

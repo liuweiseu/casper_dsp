@@ -68,6 +68,8 @@ Test results (`.vcd`, `.xml`) land in `tests/results/`. VCD waveforms can be vie
 | `testbench/` | Cocotb testbench scripts, mirroring `rtl/` structure |
 | `test_data/` | CSV simulation input/output data, mirroring `rtl/` structure |
 | `docs/` | Per-module documentation (function, parameters, ports), mirroring `rtl/` structure |
+| `platform/xilinx/` | Xilinx UNISIM behavioural simulation models (.v/.sv) |
+| `platform/altera/` | Altera behavioural simulation models (.v/.sv) |
 | `tests/simulation.toml` | Declares which modules are tested and with what parameters |
 | `tests/test_runner.py` | pytest entry point — reads `simulation.toml`, calls cocotb runner |
 | `tests/prepare_dump.py` | Pre-test script that injects `$dumpfile`/`$dumpvars` into RTL source to produce VCD output |
