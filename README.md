@@ -12,7 +12,7 @@ The repository uses four parallel directory trees, all mirroring `rtl/` structur
 | `rtl/` | RTL source files |
 | `testbench/` | Cocotb testbench scripts |
 | `test_data/` | CSV simulation input/output data |
-| `Description/` | Per-module documentation |
+| `Docs/` | Per-module documentation |
 
 ### Steps
 
@@ -31,7 +31,7 @@ The repository uses four parallel directory trees, all mirroring `rtl/` structur
 
 4. **Simulation config** — add a `[[simulations]]` entry to `tests/simulation.toml`. (See the `Simulation Config` section below.)
 
-5. **Documentation** — create `Description/<Category>/<module>.md` describing the module's function, parameters, and ports.
+5. **Documentation** — create `Docs/<Category>/<module>.md` describing the module's function, parameters, and ports.
 
 ## 📦 Run Simulation
 ### Requirements
