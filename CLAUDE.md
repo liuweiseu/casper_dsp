@@ -58,7 +58,7 @@ Test results (`.vcd`, `.xml`) land in `tests/results/`. VCD waveforms can be vie
 4. **Register in `tests/simulation.toml`**: Add a `[[simulations]]` entry. If the module is parameterized, add one `[[simulations.parameters]]` block per parameter combination.
    - Entries are sorted **alphabetically by directory name, then alphabetically by module name** within each directory. Always insert in the correct sorted position rather than appending to the end.
 
-5. **Documentation**: Create `Docs/<Category>/<module_name>.md` summarising the module's function, parameters, and ports.
+5. **Documentation**: Create `docs/<Category>/<module_name>.md` summarising the module's function, parameters, and ports.
 
 ## Key Infrastructure
 
@@ -67,7 +67,7 @@ Test results (`.vcd`, `.xml`) land in `tests/results/`. VCD waveforms can be vie
 | `rtl/` | RTL source files, organised by category |
 | `testbench/` | Cocotb testbench scripts, mirroring `rtl/` structure |
 | `test_data/` | CSV simulation input/output data, mirroring `rtl/` structure |
-| `Docs/` | Per-module documentation (function, parameters, ports), mirroring `rtl/` structure |
+| `docs/` | Per-module documentation (function, parameters, ports), mirroring `rtl/` structure |
 | `tests/simulation.toml` | Declares which modules are tested and with what parameters |
 | `tests/test_runner.py` | pytest entry point — reads `simulation.toml`, calls cocotb runner |
 | `tests/prepare_dump.py` | Pre-test script that injects `$dumpfile`/`$dumpvars` into RTL source to produce VCD output |
