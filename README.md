@@ -22,7 +22,6 @@ The simulation is based on [Verilator](https://www.veripool.org/verilator/) and 
 | 13 | Misc | [`bit_reverse`](docs/Misc/bit_reverse.md) | Combinational bit-order reversal |
 | 14 | Misc | [`edge_detect`](docs/Misc/edge_detect.md) | Rising/falling/both-edge detector with configurable output polarity |
 | 15 | Misc | [`pulse_ext`](docs/Misc/pulse_ext.md) | Rising-edge triggered pulse extender |
-| 16 | Templates | [`simple_adder`](docs/Templates/simple_adder.md) | Reference template: registered adder |
 
 ## 🚀 Add new modules
 
