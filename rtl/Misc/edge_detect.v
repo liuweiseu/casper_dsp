@@ -22,7 +22,7 @@ end
 wire detect;
 assign detect = (EDGE_TYPE == RISING)  ? ( din & ~din_prev) :
                 (EDGE_TYPE == FALLING) ? (~din &  din_prev) :
-                                         ( din ^   din_prev);
+                                         ( din ^  din_prev) ;
 
 assign dout = (OUTPUT_POL == 0) ? detect : ~detect;
 

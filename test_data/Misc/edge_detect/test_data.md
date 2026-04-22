@@ -1,6 +1,6 @@
 # edge_detect test data
 
-Each subdirectory corresponds to one parameter set. `EDGE_TYPE`: 0 = rising edge, 1 = falling edge, 2 = both edges. `OUTPUT_POL`: 0 = active high, 1 = active low.
+Input sequences (`sim_in.csv`) and expected outputs (`sim_out.csv`) are exported from a MATLAB Simulink model of the edge_detect block. Each subdirectory corresponds to one parameter set. `EDGE_TYPE`: 0 = rising edge, 1 = falling edge, 2 = both edges. `OUTPUT_POL`: 0 = active high, 1 = active low.
 
 | Test # | Directory | EDGE_TYPE | OUTPUT_POL | Cycles | Description |
 |--------|-----------|-----------|------------|--------|-------------|

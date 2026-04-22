@@ -21,11 +21,13 @@ Detects rising edges, falling edges, or any transition on a single-bit input sig
 
 ## Behavior
 
+`dout` is combinational with respect to `din` and the registered `din_prev`, so the pulse is visible in the **same clock cycle** that the transition is sampled (no extra register stage on the output).
+
 | `EDGE_TYPE` | `OUTPUT_POL` | Behaviour |
 |-------------|--------------|-----------|
-| 0 (rising)  | 0 (active high) | `dout` pulses high for one cycle after a 0→1 transition |
-| 0 (rising)  | 1 (active low)  | `dout` pulses low for one cycle after a 0→1 transition |
-| 1 (falling) | 0 (active high) | `dout` pulses high for one cycle after a 1→0 transition |
-| 1 (falling) | 1 (active low)  | `dout` pulses low for one cycle after a 1→0 transition |
-| 2 (both)    | 0 (active high) | `dout` pulses high for one cycle after any transition |
-| 2 (both)    | 1 (active low)  | `dout` pulses low for one cycle after any transition |
+| 0 (rising)  | 0 (active high) | `dout` pulses high for one cycle when a 0→1 transition is sampled |
+| 0 (rising)  | 1 (active low)  | `dout` pulses low for one cycle when a 0→1 transition is sampled |
+| 1 (falling) | 0 (active high) | `dout` pulses high for one cycle when a 1→0 transition is sampled |
+| 1 (falling) | 1 (active low)  | `dout` pulses low for one cycle when a 1→0 transition is sampled |
+| 2 (both)    | 0 (active high) | `dout` pulses high for one cycle when any transition is sampled |
+| 2 (both)    | 1 (active low)  | `dout` pulses low for one cycle when any transition is sampled |
