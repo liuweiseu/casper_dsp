@@ -8,7 +8,7 @@
 # required. Override with an absolute path when Vivado/Quartus is installed.
 
 [xilinx]
-lib_path = "platform/xilinx"
+lib_path = "platform/xilinx/2021.1/unisims"
 
 [altera]
 lib_path = "platform/altera"
