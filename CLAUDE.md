@@ -31,6 +31,7 @@ Test results (`.vcd`, `.xml`) land in `tests/results/`. VCD waveforms can be vie
 
    Also create a `test_data.md` in that directory documenting the test configurations:
    - Start with `# <module_name> test data` and a brief prose description.
+   - If the CSV data was exported from a MATLAB Simulink block, add the line **`CSV data exported from the corresponding MATLAB Simulink block.`** (bold, on its own line) after the prose description and before the table.
    - For modules with multiple `simdataN` subdirectories, include a Markdown table with these columns **in order**:
      1. `Test #` — 0-indexed integer matching the `simdataN` number (first column)
      2. `Directory` — backtick-quoted name, e.g. `` `simdata0` ``
