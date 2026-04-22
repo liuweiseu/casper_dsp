@@ -2,6 +2,8 @@
 
 Each subdirectory corresponds to one parameter set. Input files are named `sim_in1.csv`, `sim_in2.csv`, … (one per input port).
 
+**CSV data exported from the corresponding MATLAB Simulink block.**
+
 | Test # | Directory | NBITS | NINPUTS | Cycles | Description |
 |--------|-----------|-------|---------|--------|-------------|
 | 0 | `simdata0` | 8  | 2 | 513 | Concatenate 2 × 8-bit inputs into a 16-bit output bus |
