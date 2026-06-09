@@ -306,6 +306,19 @@ WIDTH = 8
 dir = "Misc"
 top = "armed_trigger"
 
+# test c_to_ri
+[[simulations]]
+dir = "Misc"
+top = "c_to_ri"
+# NBITS=8, BIN_PT=7 — unpack 16-bit complex into two 8-bit parts
+[[simulations.parameters]]
+NBITS = 8
+BIN_PT = 7
+# NBITS=16, BIN_PT=15 — unpack 32-bit complex into two 16-bit parts
+[[simulations.parameters]]
+NBITS = 16
+BIN_PT = 15
+
 # test bit_reverse
 [[simulations]]
 dir = "Misc"
@@ -362,14 +375,12 @@ PULSE_LEN = 4
 [[simulations]]
 dir = "Misc"
 top = "ri_to_c"
-# RE_WIDTH=8, IM_WIDTH=8 — equal-width packing
+# NBITS=8 — pack two 8-bit words into 16-bit complex
 [[simulations.parameters]]
-RE_WIDTH = 8
-IM_WIDTH = 8
-# RE_WIDTH=16, IM_WIDTH=8 — asymmetric-width packing
+NBITS = 8
+# NBITS=16 — pack two 16-bit words into 32-bit complex
 [[simulations.parameters]]
-RE_WIDTH = 16
-IM_WIDTH = 8
+NBITS = 16
 
 # ── Templates ────────────────────────────────────────────────────────────────
 

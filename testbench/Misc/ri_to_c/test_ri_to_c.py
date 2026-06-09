@@ -16,19 +16,18 @@ async def module_test(dut):
     verify that the packed output c == {re, im} matches sim_out.csv.
 
     Parameter sets:
-        simdata0 : RE_WIDTH=8,  IM_WIDTH=8  — equal-width packing
-        simdata1 : RE_WIDTH=16, IM_WIDTH=8  — asymmetric-width packing
+        simdata0 : NBITS=8  — pack two 8-bit words into 16-bit complex
+        simdata1 : NBITS=16 — pack two 16-bit words into 32-bit complex
     """
-    re_width = int(dut.RE_WIDTH.value)
-    im_width = int(dut.IM_WIDTH.value)
-    cocotb.log.info(f"Testing with RE_WIDTH={re_width}, IM_WIDTH={im_width}")
+    nbits = int(dut.NBITS.value)
+    cocotb.log.info(f"Testing with NBITS={nbits}")
 
-    if re_width == 8 and im_width == 8:
+    if nbits == 8:
         datadir = testdatadir / "simdata0"
-    elif re_width == 16 and im_width == 8:
+    elif nbits == 16:
         datadir = testdatadir / "simdata1"
     else:
-        cocotb.log.warning(f"No test data for RE_WIDTH={re_width}, IM_WIDTH={im_width}. Skipping.")
+        cocotb.log.warning(f"No test data for NBITS={nbits}. Skipping.")
         return
 
     sim_in_re = np.loadtxt(datadir / "sim_in_re.csv", dtype=int).tolist()
