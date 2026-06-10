@@ -11,7 +11,14 @@ testdatadir = (_here / "../../../test_data" / _here.parent.name / _here.name).re
 
 @cocotb.test()
 async def module_test(dut):
-    """test bus_create """
+    """Test bus_expand module.
+
+    Drives bus_in with values from sim_in.csv and verifies that each
+    bus_out[j] matches the corresponding sim_out{j+1}.csv slice.
+
+    Parameter sets:
+        simdata0 : NOUT=4, WIDTH=8 — equal-size, 4 × 8-bit outputs
+    """
     nout = int(dut.NOUT.value)
     width = int(dut.WIDTH.value)
     cocotb.log.info(f"Testing with NOUT={nout}, WIDTH={width}")
