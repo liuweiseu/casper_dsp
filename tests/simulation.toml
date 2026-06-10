@@ -15,6 +15,50 @@ lib_path = "platform/altera"
 
 # ── BasicModules ─────────────────────────────────────────────────────────────
 
+# test addersubtracter
+[[simulations]]
+dir = "BasicModules"
+top = "addersubtracter"
+# MODE=1 subtract, signed 18/17, LATENCY=1 — form used inside cmult (addsub_re)
+[[simulations.parameters]]
+N_BITS_A = 18
+BIN_PT_A = 17
+TYPE_A = 1
+N_BITS_B = 18
+BIN_PT_B = 17
+TYPE_B = 1
+MODE = 1
+USE_CARRY_IN = 0
+USE_CARRY_OUT = 0
+ASYNC = 0
+LATENCY = 1
+# MODE=0 add, signed 8/7, LATENCY=2, carry-in + carry-out
+[[simulations.parameters]]
+N_BITS_A = 8
+BIN_PT_A = 7
+TYPE_A = 1
+N_BITS_B = 8
+BIN_PT_B = 7
+TYPE_B = 1
+MODE = 0
+USE_CARRY_IN = 1
+USE_CARRY_OUT = 1
+ASYNC = 0
+LATENCY = 2
+# MODE=2 runtime sub, signed 8/7, LATENCY=2, ASYNC=1 — en-gated pipeline
+[[simulations.parameters]]
+N_BITS_A = 8
+BIN_PT_A = 7
+TYPE_A = 1
+N_BITS_B = 8
+BIN_PT_B = 7
+TYPE_B = 1
+MODE = 2
+USE_CARRY_IN = 0
+USE_CARRY_OUT = 0
+ASYNC = 1
+LATENCY = 2
+
 # test constant
 [[simulations]]
 dir = "BasicModules"
