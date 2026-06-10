@@ -188,6 +188,49 @@ NBITS = 8
 NINPUTS = 2
 LATENCY = 2
 
+# test multiplier
+[[simulations]]
+dir = "BasicModules"
+top = "multiplier"
+# Full precision, signed 18x18 -> 36, LATENCY=2 — form used inside cmult
+[[simulations.parameters]]
+N_BITS_A = 18
+BIN_PT_A = 17
+N_BITS_B = 18
+BIN_PT_B = 17
+TYPE_A = 1
+TYPE_B = 1
+PRECISION = 0
+ASYNC = 0
+LATENCY = 2
+# User defined, 8x8 -> 8 (SHIFT=7), Round +/-Inf, Saturate, LATENCY=2
+[[simulations.parameters]]
+N_BITS_A = 8
+BIN_PT_A = 7
+N_BITS_B = 8
+BIN_PT_B = 7
+TYPE_A = 1
+TYPE_B = 1
+PRECISION = 1
+N_BITS_OUT = 8
+BIN_PT_OUT = 7
+TYPE_OUT = 1
+QUANTIZATION = 1
+OVERFLOW = 1
+ASYNC = 0
+LATENCY = 2
+# Full precision, signed 8x8, LATENCY=2, ASYNC=1 — en-gated pipeline
+[[simulations.parameters]]
+N_BITS_A = 8
+BIN_PT_A = 7
+N_BITS_B = 8
+BIN_PT_B = 7
+TYPE_A = 1
+TYPE_B = 1
+PRECISION = 0
+ASYNC = 1
+LATENCY = 2
+
 # test register
 [[simulations]]
 dir = "BasicModules"
