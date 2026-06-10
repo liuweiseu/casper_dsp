@@ -9,21 +9,22 @@ The simulation is based on [Verilator](https://www.veripool.org/verilator/) and 
 |---|----------|--------|-------------|
 | 1 | BasicModules | [`addersubtracter`](docs/BasicModules/addersubtracter.md) | Fixed-point pipelined adder/subtracter (Xilinx Sysgen AddSub equivalent) with optional carry-in/carry-out/enable ports |
 | 2 | BasicModules | [`constant`](docs/BasicModules/constant.md) | Fixed compile-time constant output |
-| 3 | BasicModules | [`counter`](docs/BasicModules/counter.md) | Configurable up/down counter with free-running and count-limit modes |
-| 4 | BasicModules | [`delay`](docs/BasicModules/delay.md) | Shift-register pipeline delay |
-| 5 | BasicModules | [`inverter`](docs/BasicModules/inverter.md) | Bitwise inverter with optional pipeline delay |
-| 6 | BasicModules | [`logical`](docs/BasicModules/logical.md) | Bitwise logical reduction (AND/OR/XOR/etc.) with optional pipeline delay |
-| 7 | BasicModules | [`multiplexer`](docs/BasicModules/multiplexer.md) | N-input multiplexer with optional pipeline delay |
-| 8 | BasicModules | [`multiplier`](docs/BasicModules/multiplier.md) | Fixed-point pipelined multiplier (Xilinx Sysgen Mult equivalent) with full/user-defined precision, rounding and saturation |
-| 9 | BasicModules | [`register`](docs/BasicModules/register.md) | Parameterized synchronous register with optional reset and enable |
-| 10 | BasicModules | [`relational`](docs/BasicModules/relational.md) | Unsigned comparator (==, !=, <, >, <=, >=) with optional pipeline delay |
-| 11 | BasicModules | [`slice`](docs/BasicModules/slice.md) | Combinational bit-field extractor |
-| 12 | FlowControl | [`bus_create`](docs/FlowControl/bus_create.md) | Pack multiple equal-width words into a single concatenated bus |
-| 13 | FlowControl | [`bus_expand`](docs/FlowControl/bus_expand.md) | Split a wide bus into an array of equal-width words |
-| 14 | Misc | [`armed_trigger`](docs/Misc/armed_trigger.md) | One-shot trigger with explicit arm step |
-| 15 | Misc | [`bit_reverse`](docs/Misc/bit_reverse.md) | Combinational bit-order reversal |
-| 16 | Misc | [`edge_detect`](docs/Misc/edge_detect.md) | Rising/falling/both-edge detector with configurable output polarity |
-| 17 | Misc | [`pulse_ext`](docs/Misc/pulse_ext.md) | Rising-edge triggered pulse extender |
+| 3 | BasicModules | [`convert`](docs/BasicModules/convert.md) | Fixed-point format converter (Xilinx Sysgen Convert equivalent) with truncate/round quantization and wrap/saturate overflow |
+| 4 | BasicModules | [`counter`](docs/BasicModules/counter.md) | Configurable up/down counter with free-running and count-limit modes |
+| 5 | BasicModules | [`delay`](docs/BasicModules/delay.md) | Shift-register pipeline delay |
+| 6 | BasicModules | [`inverter`](docs/BasicModules/inverter.md) | Bitwise inverter with optional pipeline delay |
+| 7 | BasicModules | [`logical`](docs/BasicModules/logical.md) | Bitwise logical reduction (AND/OR/XOR/etc.) with optional pipeline delay |
+| 8 | BasicModules | [`multiplexer`](docs/BasicModules/multiplexer.md) | N-input multiplexer with optional pipeline delay |
+| 9 | BasicModules | [`multiplier`](docs/BasicModules/multiplier.md) | Fixed-point pipelined multiplier (Xilinx Sysgen Mult equivalent) with full/user-defined precision, rounding and saturation |
+| 10 | BasicModules | [`register`](docs/BasicModules/register.md) | Parameterized synchronous register with optional reset and enable |
+| 11 | BasicModules | [`relational`](docs/BasicModules/relational.md) | Unsigned comparator (==, !=, <, >, <=, >=) with optional pipeline delay |
+| 12 | BasicModules | [`slice`](docs/BasicModules/slice.md) | Combinational bit-field extractor |
+| 13 | FlowControl | [`bus_create`](docs/FlowControl/bus_create.md) | Pack multiple equal-width words into a single concatenated bus |
+| 14 | FlowControl | [`bus_expand`](docs/FlowControl/bus_expand.md) | Split a wide bus into an array of equal-width words |
+| 15 | Misc | [`armed_trigger`](docs/Misc/armed_trigger.md) | One-shot trigger with explicit arm step |
+| 16 | Misc | [`bit_reverse`](docs/Misc/bit_reverse.md) | Combinational bit-order reversal |
+| 17 | Misc | [`edge_detect`](docs/Misc/edge_detect.md) | Rising/falling/both-edge detector with configurable output polarity |
+| 18 | Misc | [`pulse_ext`](docs/Misc/pulse_ext.md) | Rising-edge triggered pulse extender |
 
 ## 🚀 Add new modules
 

@@ -84,6 +84,59 @@ VAL = 7
 NBITS = 12
 VAL = 4095
 
+# test convert
+[[simulations]]
+dir = "BasicModules"
+top = "convert"
+# 18/17 -> 8/7 (SHIFT=10), Truncate + Wrap, LATENCY=1
+[[simulations.parameters]]
+N_BITS_IN = 18
+BIN_PT_IN = 17
+TYPE_IN = 1
+N_BITS_OUT = 8
+BIN_PT_OUT = 7
+TYPE_OUT = 1
+QUANTIZATION = 0
+OVERFLOW = 0
+ASYNC = 0
+LATENCY = 1
+# 18/17 -> 8/7 (SHIFT=10), Round +/-Inf + Saturate, LATENCY=1 — cmult convert form
+[[simulations.parameters]]
+N_BITS_IN = 18
+BIN_PT_IN = 17
+TYPE_IN = 1
+N_BITS_OUT = 8
+BIN_PT_OUT = 7
+TYPE_OUT = 1
+QUANTIZATION = 1
+OVERFLOW = 1
+ASYNC = 0
+LATENCY = 1
+# 12/8 -> 8/4 (SHIFT=4), Round even + Saturate, LATENCY=2, ASYNC=1 — en-gated
+[[simulations.parameters]]
+N_BITS_IN = 12
+BIN_PT_IN = 8
+TYPE_IN = 1
+N_BITS_OUT = 8
+BIN_PT_OUT = 4
+TYPE_OUT = 1
+QUANTIZATION = 2
+OVERFLOW = 1
+ASYNC = 1
+LATENCY = 2
+# 16/8 -> 16/12 (SHIFT=-4, left shift), Saturate, LATENCY=1
+[[simulations.parameters]]
+N_BITS_IN = 16
+BIN_PT_IN = 8
+TYPE_IN = 1
+N_BITS_OUT = 16
+BIN_PT_OUT = 12
+TYPE_OUT = 1
+QUANTIZATION = 0
+OVERFLOW = 1
+ASYNC = 0
+LATENCY = 1
+
 # test counter
 [[simulations]]
 dir = "BasicModules"
