@@ -25,6 +25,7 @@ The simulation is based on [Verilator](https://www.veripool.org/verilator/) and 
 | 16 | Misc | [`bit_reverse`](docs/Misc/bit_reverse.md) | Combinational bit-order reversal |
 | 17 | Misc | [`edge_detect`](docs/Misc/edge_detect.md) | Rising/falling/both-edge detector with configurable output polarity |
 | 18 | Misc | [`pulse_ext`](docs/Misc/pulse_ext.md) | Rising-edge triggered pulse extender |
+| 19 | Multipliers | [`cmult`](docs/Multipliers/cmult.md) | Pipelined complex multiplier (4-real-multiply form) built structurally from multiplier/addersubtracter/convert |
 
 ## 🚀 Add new modules
 

@@ -522,6 +522,78 @@ NBITS = 8
 [[simulations.parameters]]
 NBITS = 16
 
+# ── Multipliers ──────────────────────────────────────────────────────────────
+
+# test cmult
+[[simulations]]
+dir = "Multipliers"
+top = "cmult"
+# 8/7 x 8/7 -> 17/14 (SHIFT=0), Truncate + Wrap — full-width pass-through
+[[simulations.parameters]]
+N_BITS_A = 8
+BIN_PT_A = 7
+N_BITS_B = 8
+BIN_PT_B = 7
+N_BITS_AB = 17
+BIN_PT_AB = 14
+QUANTIZATION = 0
+OVERFLOW = 0
+IN_LATENCY = 0
+MULT_LATENCY = 2
+ADD_LATENCY = 1
+CONV_LATENCY = 1
+CONJUGATED = 0
+ASYNC = 0
+# 8/7 x 8/7 -> 8/7 (SHIFT=7), Round +/-Inf + Saturate
+[[simulations.parameters]]
+N_BITS_A = 8
+BIN_PT_A = 7
+N_BITS_B = 8
+BIN_PT_B = 7
+N_BITS_AB = 8
+BIN_PT_AB = 7
+QUANTIZATION = 1
+OVERFLOW = 1
+IN_LATENCY = 0
+MULT_LATENCY = 2
+ADD_LATENCY = 1
+CONV_LATENCY = 1
+CONJUGATED = 0
+ASYNC = 0
+# async pipelined enable, IN_LATENCY=1, random en — checks dvalid alignment
+[[simulations.parameters]]
+N_BITS_A = 8
+BIN_PT_A = 7
+N_BITS_B = 8
+BIN_PT_B = 7
+N_BITS_AB = 17
+BIN_PT_AB = 14
+QUANTIZATION = 0
+OVERFLOW = 0
+IN_LATENCY = 1
+MULT_LATENCY = 2
+ADD_LATENCY = 1
+CONV_LATENCY = 1
+CONJUGATED = 0
+ASYNC = 1
+PIPELINED_ENABLE = 1
+# conjugated mode — computes a * conj(b) (matches mlib_devel implementation)
+[[simulations.parameters]]
+N_BITS_A = 8
+BIN_PT_A = 7
+N_BITS_B = 8
+BIN_PT_B = 7
+N_BITS_AB = 17
+BIN_PT_AB = 14
+QUANTIZATION = 0
+OVERFLOW = 0
+IN_LATENCY = 0
+MULT_LATENCY = 2
+ADD_LATENCY = 1
+CONV_LATENCY = 1
+CONJUGATED = 1
+ASYNC = 0
+
 # ── Templates ────────────────────────────────────────────────────────────────
 
 # test simple_adder
