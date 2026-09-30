@@ -843,6 +843,642 @@ ADDR_WIDTH = 3
 DATA_WIDTH = 32
 ADDR_WIDTH = 8
 
+# test sync_delay
+[[simulations]]
+dir = "Delays"
+top = "sync_delay"
+# DELAY_LEN = 0: pass-through
+[[simulations.parameters]]
+DELAY_LEN = 0
+# one cycle
+[[simulations.parameters]]
+DELAY_LEN = 1
+# 5 cycles
+[[simulations.parameters]]
+DELAY_LEN = 5
+# 16 cycles (counter needs 5 bits)
+[[simulations.parameters]]
+DELAY_LEN = 16
+# 100 cycles
+[[simulations.parameters]]
+DELAY_LEN = 100
+
+# ── FFTs ─────────────────────────────────────────────────────────────────────
+
+# test biplex_core
+[[simulations]]
+dir = "FFTs"
+top = "biplex_core"
+# 8-point, casper defaults, dynamic shift
+[[simulations.parameters]]
+N_INPUTS = 1
+FFT_SIZE = 3
+INPUT_BIT_WIDTH = 18
+BIN_PT_IN = 17
+COEFF_BIT_WIDTH = 18
+ADD_LATENCY = 1
+MULT_LATENCY = 2
+BRAM_LATENCY = 2
+CONV_LATENCY = 1
+QUANTIZATION = 1
+OVERFLOW = 0
+DELAYS_BIT_LIMIT = 8
+MAX_FANOUT = 4
+BITGROWTH = 0
+MAX_BITS = 20
+HARDCODE_SHIFTS = 0
+SHIFT_SCHEDULE = 3
+COEFF_DIR = "../../../test_data/FFTs/biplex_core/simdata0/"
+# 16-point, RAM delays in stages 1–2 (DELAYS_BIT_LIMIT 1), round even + saturate
+[[simulations.parameters]]
+N_INPUTS = 1
+FFT_SIZE = 4
+INPUT_BIT_WIDTH = 18
+BIN_PT_IN = 17
+COEFF_BIT_WIDTH = 18
+ADD_LATENCY = 1
+MULT_LATENCY = 2
+BRAM_LATENCY = 1
+CONV_LATENCY = 1
+QUANTIZATION = 2
+OVERFLOW = 1
+DELAYS_BIT_LIMIT = 1
+MAX_FANOUT = 1
+BITGROWTH = 0
+MAX_BITS = 20
+HARDCODE_SHIFTS = 0
+SHIFT_SCHEDULE = 0
+COEFF_DIR = "../../../test_data/FFTs/biplex_core/simdata1/"
+# 16-point, 2 lanes, bit growth capped at MAX_BITS 14
+[[simulations.parameters]]
+N_INPUTS = 2
+FFT_SIZE = 4
+INPUT_BIT_WIDTH = 12
+BIN_PT_IN = 11
+COEFF_BIT_WIDTH = 12
+ADD_LATENCY = 1
+MULT_LATENCY = 1
+BRAM_LATENCY = 1
+CONV_LATENCY = 0
+QUANTIZATION = 1
+OVERFLOW = 0
+DELAYS_BIT_LIMIT = 8
+MAX_FANOUT = 4
+BITGROWTH = 1
+MAX_BITS = 14
+HARDCODE_SHIFTS = 0
+SHIFT_SCHEDULE = 0
+COEFF_DIR = "../../../test_data/FFTs/biplex_core/simdata2/"
+# 32-point, hardcoded shift schedule 10101, RAM delays in stages 1–2
+[[simulations.parameters]]
+N_INPUTS = 1
+FFT_SIZE = 5
+INPUT_BIT_WIDTH = 16
+BIN_PT_IN = 15
+COEFF_BIT_WIDTH = 18
+ADD_LATENCY = 2
+MULT_LATENCY = 3
+BRAM_LATENCY = 2
+CONV_LATENCY = 2
+QUANTIZATION = 1
+OVERFLOW = 1
+DELAYS_BIT_LIMIT = 2
+MAX_FANOUT = 2
+BITGROWTH = 0
+MAX_BITS = 20
+HARDCODE_SHIFTS = 1
+SHIFT_SCHEDULE = 21
+COEFF_DIR = "../../../test_data/FFTs/biplex_core/simdata3/"
+
+# test butterfly_direct
+[[simulations]]
+dir = "FFTs"
+top = "butterfly_direct"
+# pass_through (biplex stage 1), dynamic shift, round + wrap
+[[simulations.parameters]]
+N_INPUTS = 1
+BIPLEX = 1
+FFT_SIZE = 5
+N_COEFFS = 1
+COEFF_0 = 0
+COEFF_1 = 0
+STEP_PERIOD = 4
+COEFF_BIT_WIDTH = 18
+INPUT_BIT_WIDTH = 18
+BIN_PT_IN = 17
+BITGROWTH = 0
+DOWNSHIFT = 0
+HARDCODE_SHIFTS = 0
+ADD_LATENCY = 1
+MULT_LATENCY = 2
+BRAM_LATENCY = 1
+CONV_LATENCY = 1
+QUANTIZATION = 1
+OVERFLOW = 0
+MAX_FANOUT = 4
+# coeff_0 (non-biplex), 2 lanes, hardcoded downshift, truncate + saturate
+[[simulations.parameters]]
+N_INPUTS = 2
+BIPLEX = 0
+FFT_SIZE = 5
+N_COEFFS = 1
+COEFF_0 = 0
+COEFF_1 = 0
+STEP_PERIOD = 4
+COEFF_BIT_WIDTH = 18
+INPUT_BIT_WIDTH = 12
+BIN_PT_IN = 11
+BITGROWTH = 0
+DOWNSHIFT = 1
+HARDCODE_SHIFTS = 1
+ADD_LATENCY = 1
+MULT_LATENCY = 2
+BRAM_LATENCY = 1
+CONV_LATENCY = 1
+QUANTIZATION = 0
+OVERFLOW = 1
+MAX_FANOUT = 4
+# coeff_1, dynamic shift with MAX_FANOUT 1 (shift latency 2), round even + saturate
+[[simulations.parameters]]
+N_INPUTS = 1
+BIPLEX = 0
+FFT_SIZE = 5
+N_COEFFS = 1
+COEFF_0 = 1
+COEFF_1 = 0
+STEP_PERIOD = 4
+COEFF_BIT_WIDTH = 18
+INPUT_BIT_WIDTH = 16
+BIN_PT_IN = 15
+BITGROWTH = 0
+DOWNSHIFT = 0
+HARDCODE_SHIFTS = 0
+ADD_LATENCY = 2
+MULT_LATENCY = 1
+BRAM_LATENCY = 1
+CONV_LATENCY = 2
+QUANTIZATION = 2
+OVERFLOW = 1
+MAX_FANOUT = 1
+# stage_2 (biplex stage 2 of a 16-point FFT), dynamic shift
+[[simulations.parameters]]
+N_INPUTS = 1
+BIPLEX = 1
+FFT_SIZE = 4
+N_COEFFS = 2
+COEFF_0 = 0
+COEFF_1 = 1
+STEP_PERIOD = 2
+COEFF_BIT_WIDTH = 18
+INPUT_BIT_WIDTH = 18
+BIN_PT_IN = 17
+BITGROWTH = 0
+DOWNSHIFT = 0
+HARDCODE_SHIFTS = 0
+ADD_LATENCY = 1
+MULT_LATENCY = 2
+BRAM_LATENCY = 1
+CONV_LATENCY = 1
+QUANTIZATION = 1
+OVERFLOW = 0
+MAX_FANOUT = 4
+# general (stage 3 of 16-point: Coeffs 0..3, StepPeriod 1), round + saturate
+[[simulations.parameters]]
+N_INPUTS = 1
+BIPLEX = 1
+FFT_SIZE = 4
+N_COEFFS = 4
+COEFF_0 = 0
+COEFF_1 = 1
+STEP_PERIOD = 1
+COEFF_BIT_WIDTH = 18
+INPUT_BIT_WIDTH = 18
+BIN_PT_IN = 17
+BITGROWTH = 0
+DOWNSHIFT = 0
+HARDCODE_SHIFTS = 0
+ADD_LATENCY = 1
+MULT_LATENCY = 2
+BRAM_LATENCY = 1
+CONV_LATENCY = 1
+QUANTIZATION = 1
+OVERFLOW = 1
+MAX_FANOUT = 4
+INIT_FILE = "../../../test_data/FFTs/butterfly_direct/simdata4/twiddle.mem"
+# general, 2 lanes, bit growth (15-bit outputs), round even + wrap
+[[simulations.parameters]]
+N_INPUTS = 2
+BIPLEX = 1
+FFT_SIZE = 5
+N_COEFFS = 8
+COEFF_0 = 0
+COEFF_1 = 1
+STEP_PERIOD = 1
+COEFF_BIT_WIDTH = 16
+INPUT_BIT_WIDTH = 14
+BIN_PT_IN = 13
+BITGROWTH = 1
+DOWNSHIFT = 0
+HARDCODE_SHIFTS = 0
+ADD_LATENCY = 1
+MULT_LATENCY = 1
+BRAM_LATENCY = 1
+CONV_LATENCY = 0
+QUANTIZATION = 2
+OVERFLOW = 0
+MAX_FANOUT = 4
+INIT_FILE = "../../../test_data/FFTs/butterfly_direct/simdata5/twiddle.mem"
+# general, 3 lanes, hardcoded no shift, truncate + wrap (frequent overflow), minimal latency
+[[simulations.parameters]]
+N_INPUTS = 3
+BIPLEX = 1
+FFT_SIZE = 4
+N_COEFFS = 4
+COEFF_0 = 0
+COEFF_1 = 1
+STEP_PERIOD = 0
+COEFF_BIT_WIDTH = 12
+INPUT_BIT_WIDTH = 10
+BIN_PT_IN = 9
+BITGROWTH = 0
+DOWNSHIFT = 0
+HARDCODE_SHIFTS = 1
+ADD_LATENCY = 0
+MULT_LATENCY = 0
+BRAM_LATENCY = 1
+CONV_LATENCY = 0
+QUANTIZATION = 0
+OVERFLOW = 0
+MAX_FANOUT = 4
+INIT_FILE = "../../../test_data/FFTs/butterfly_direct/simdata6/twiddle.mem"
+# pass_through with bit growth and no latency: fully combinational data path
+[[simulations.parameters]]
+N_INPUTS = 1
+BIPLEX = 1
+FFT_SIZE = 3
+N_COEFFS = 1
+COEFF_0 = 0
+COEFF_1 = 0
+STEP_PERIOD = 2
+COEFF_BIT_WIDTH = 18
+INPUT_BIT_WIDTH = 8
+BIN_PT_IN = 7
+BITGROWTH = 1
+DOWNSHIFT = 0
+HARDCODE_SHIFTS = 0
+ADD_LATENCY = 0
+MULT_LATENCY = 2
+BRAM_LATENCY = 1
+CONV_LATENCY = 0
+QUANTIZATION = 0
+OVERFLOW = 0
+MAX_FANOUT = 4
+
+# test fft_stage_n
+[[simulations]]
+dir = "FFTs"
+top = "fft_stage_n"
+# 16-point stage 1 (pass_through), register delays, fan latency 1
+[[simulations.parameters]]
+N_INPUTS = 1
+FFT_SIZE = 4
+FFT_STAGE = 1
+INPUT_BIT_WIDTH = 18
+BIN_PT_IN = 17
+COEFF_BIT_WIDTH = 18
+BITGROWTH = 0
+DOWNSHIFT = 0
+HARDCODE_SHIFTS = 0
+ADD_LATENCY = 1
+MULT_LATENCY = 2
+BRAM_LATENCY = 1
+CONV_LATENCY = 1
+QUANTIZATION = 1
+OVERFLOW = 0
+DELAYS_BRAM = 0
+MAX_FANOUT = 1
+# stage 2 (twiddle_stage_2), 2 lanes, RAM delays
+[[simulations.parameters]]
+N_INPUTS = 2
+FFT_SIZE = 4
+FFT_STAGE = 2
+INPUT_BIT_WIDTH = 18
+BIN_PT_IN = 17
+COEFF_BIT_WIDTH = 18
+BITGROWTH = 0
+DOWNSHIFT = 0
+HARDCODE_SHIFTS = 0
+ADD_LATENCY = 1
+MULT_LATENCY = 2
+BRAM_LATENCY = 1
+CONV_LATENCY = 1
+QUANTIZATION = 1
+OVERFLOW = 0
+DELAYS_BRAM = 1
+MAX_FANOUT = 1
+# stage 3 (twiddle_general), RAM delays with BRAM_LATENCY 2, round even + saturate
+[[simulations.parameters]]
+N_INPUTS = 1
+FFT_SIZE = 4
+FFT_STAGE = 3
+INPUT_BIT_WIDTH = 18
+BIN_PT_IN = 17
+COEFF_BIT_WIDTH = 18
+BITGROWTH = 0
+DOWNSHIFT = 0
+HARDCODE_SHIFTS = 0
+ADD_LATENCY = 1
+MULT_LATENCY = 2
+BRAM_LATENCY = 2
+CONV_LATENCY = 1
+QUANTIZATION = 2
+OVERFLOW = 1
+DELAYS_BRAM = 1
+MAX_FANOUT = 1
+INIT_FILE = "../../../test_data/FFTs/fft_stage_n/simdata2/twiddle.mem"
+# last stage: ND = 1 < BRAM_LATENCY forces register delays, fan latency 0
+[[simulations.parameters]]
+N_INPUTS = 1
+FFT_SIZE = 4
+FFT_STAGE = 4
+INPUT_BIT_WIDTH = 18
+BIN_PT_IN = 17
+COEFF_BIT_WIDTH = 18
+BITGROWTH = 0
+DOWNSHIFT = 0
+HARDCODE_SHIFTS = 0
+ADD_LATENCY = 1
+MULT_LATENCY = 2
+BRAM_LATENCY = 2
+CONV_LATENCY = 1
+QUANTIZATION = 1
+OVERFLOW = 0
+DELAYS_BRAM = 1
+MAX_FANOUT = 4
+INIT_FILE = "../../../test_data/FFTs/fft_stage_n/simdata3/twiddle.mem"
+# 32-point stage 3, 3 lanes, bit growth, truncate
+[[simulations.parameters]]
+N_INPUTS = 3
+FFT_SIZE = 5
+FFT_STAGE = 3
+INPUT_BIT_WIDTH = 12
+BIN_PT_IN = 11
+COEFF_BIT_WIDTH = 12
+BITGROWTH = 1
+DOWNSHIFT = 0
+HARDCODE_SHIFTS = 0
+ADD_LATENCY = 1
+MULT_LATENCY = 1
+BRAM_LATENCY = 1
+CONV_LATENCY = 0
+QUANTIZATION = 0
+OVERFLOW = 0
+DELAYS_BRAM = 0
+MAX_FANOUT = 2
+INIT_FILE = "../../../test_data/FFTs/fft_stage_n/simdata4/twiddle.mem"
+# 4 lanes × 26 bits (> 200-bit datapath: mux latency 2), hardcoded downshift
+[[simulations.parameters]]
+N_INPUTS = 4
+FFT_SIZE = 5
+FFT_STAGE = 4
+INPUT_BIT_WIDTH = 26
+BIN_PT_IN = 25
+COEFF_BIT_WIDTH = 18
+BITGROWTH = 0
+DOWNSHIFT = 1
+HARDCODE_SHIFTS = 1
+ADD_LATENCY = 2
+MULT_LATENCY = 2
+BRAM_LATENCY = 1
+CONV_LATENCY = 1
+QUANTIZATION = 1
+OVERFLOW = 1
+DELAYS_BRAM = 1
+MAX_FANOUT = 1
+INIT_FILE = "../../../test_data/FFTs/fft_stage_n/simdata5/twiddle.mem"
+
+# ── FFTs/Twiddle ─────────────────────────────────────────────────────────────
+
+# test twiddle_coeff_0
+[[simulations]]
+dir = "FFTs/Twiddle"
+top = "twiddle_coeff_0"
+# casper-style latencies (total 5)
+[[simulations.parameters]]
+N_INPUTS = 1
+INPUT_BIT_WIDTH = 18
+MULT_LATENCY = 2
+ADD_LATENCY = 1
+BRAM_LATENCY = 1
+CONV_LATENCY = 1
+# 2 lanes, total latency 8 (BRAM_LATENCY unused)
+[[simulations.parameters]]
+N_INPUTS = 2
+INPUT_BIT_WIDTH = 12
+MULT_LATENCY = 3
+ADD_LATENCY = 2
+BRAM_LATENCY = 2
+CONV_LATENCY = 2
+# minimum latency 1
+[[simulations.parameters]]
+N_INPUTS = 1
+INPUT_BIT_WIDTH = 8
+MULT_LATENCY = 0
+ADD_LATENCY = 0
+BRAM_LATENCY = 1
+CONV_LATENCY = 0
+
+# test twiddle_coeff_1
+[[simulations]]
+dir = "FFTs/Twiddle"
+top = "twiddle_coeff_1"
+# casper-style latencies (total 5)
+[[simulations.parameters]]
+N_INPUTS = 1
+INPUT_BIT_WIDTH = 18
+BIN_PT_IN = 17
+MULT_LATENCY = 2
+ADD_LATENCY = 1
+BRAM_LATENCY = 1
+CONV_LATENCY = 1
+# 3 lanes, 8-bit, total latency 3
+[[simulations.parameters]]
+N_INPUTS = 3
+INPUT_BIT_WIDTH = 8
+BIN_PT_IN = 7
+MULT_LATENCY = 1
+ADD_LATENCY = 1
+BRAM_LATENCY = 2
+CONV_LATENCY = 0
+# 2 lanes, minimum latency 1
+[[simulations.parameters]]
+N_INPUTS = 2
+INPUT_BIT_WIDTH = 16
+BIN_PT_IN = 12
+MULT_LATENCY = 0
+ADD_LATENCY = 0
+BRAM_LATENCY = 1
+CONV_LATENCY = 0
+
+# test twiddle_general
+[[simulations]]
+dir = "FFTs/Twiddle"
+top = "twiddle_general"
+# 16-point stage coefficients 0..3, casper defaults (round ±inf, wrap)
+[[simulations.parameters]]
+N_INPUTS = 1
+FFT_SIZE = 4
+N_COEFFS = 4
+STEP_PERIOD = 0
+INPUT_BIT_WIDTH = 18
+BIN_PT_IN = 17
+COEFF_BIT_WIDTH = 18
+MULT_LATENCY = 2
+ADD_LATENCY = 1
+CONV_LATENCY = 1
+BRAM_LATENCY = 1
+QUANTIZATION = 1
+OVERFLOW = 0
+INIT_FILE = "../../../../test_data/FFTs/Twiddle/twiddle_general/simdata0/twiddle.mem"
+# 2 lanes, each coefficient held 4 cycles, round even + saturate
+[[simulations.parameters]]
+N_INPUTS = 2
+FFT_SIZE = 4
+N_COEFFS = 4
+STEP_PERIOD = 2
+INPUT_BIT_WIDTH = 18
+BIN_PT_IN = 17
+COEFF_BIT_WIDTH = 18
+MULT_LATENCY = 2
+ADD_LATENCY = 1
+CONV_LATENCY = 1
+BRAM_LATENCY = 1
+QUANTIZATION = 2
+OVERFLOW = 1
+INIT_FILE = "../../../../test_data/FFTs/Twiddle/twiddle_general/simdata1/twiddle.mem"
+# 12-bit data × 10-bit coefficients, truncate, combinational convert
+[[simulations.parameters]]
+N_INPUTS = 1
+FFT_SIZE = 5
+N_COEFFS = 8
+STEP_PERIOD = 1
+INPUT_BIT_WIDTH = 12
+BIN_PT_IN = 11
+COEFF_BIT_WIDTH = 10
+MULT_LATENCY = 1
+ADD_LATENCY = 1
+CONV_LATENCY = 0
+BRAM_LATENCY = 1
+QUANTIZATION = 0
+OVERFLOW = 1
+INIT_FILE = "../../../../test_data/FFTs/Twiddle/twiddle_general/simdata2/twiddle.mem"
+# 3 coefficients (not a power of two), held 2 cycles
+[[simulations.parameters]]
+N_INPUTS = 1
+FFT_SIZE = 4
+N_COEFFS = 3
+STEP_PERIOD = 1
+INPUT_BIT_WIDTH = 16
+BIN_PT_IN = 15
+COEFF_BIT_WIDTH = 16
+MULT_LATENCY = 2
+ADD_LATENCY = 1
+CONV_LATENCY = 1
+BRAM_LATENCY = 1
+QUANTIZATION = 1
+OVERFLOW = 0
+INIT_FILE = "../../../../test_data/FFTs/Twiddle/twiddle_general/simdata3/twiddle.mem"
+# single coefficient, 4 lanes, only the rom latency
+[[simulations.parameters]]
+N_INPUTS = 4
+FFT_SIZE = 3
+N_COEFFS = 1
+STEP_PERIOD = 0
+INPUT_BIT_WIDTH = 8
+BIN_PT_IN = 7
+COEFF_BIT_WIDTH = 8
+MULT_LATENCY = 0
+ADD_LATENCY = 0
+CONV_LATENCY = 0
+BRAM_LATENCY = 1
+QUANTIZATION = 1
+OVERFLOW = 1
+INIT_FILE = "../../../../test_data/FFTs/Twiddle/twiddle_general/simdata4/twiddle.mem"
+# 16 bit-reversed coefficients of a 64-point FFT, BRAM_LATENCY 2
+[[simulations.parameters]]
+N_INPUTS = 1
+FFT_SIZE = 6
+N_COEFFS = 16
+STEP_PERIOD = 0
+INPUT_BIT_WIDTH = 18
+BIN_PT_IN = 17
+COEFF_BIT_WIDTH = 18
+MULT_LATENCY = 3
+ADD_LATENCY = 2
+CONV_LATENCY = 2
+BRAM_LATENCY = 2
+QUANTIZATION = 1
+OVERFLOW = 0
+INIT_FILE = "../../../../test_data/FFTs/Twiddle/twiddle_general/simdata5/twiddle.mem"
+
+# test twiddle_pass_through
+[[simulations]]
+dir = "FFTs/Twiddle"
+top = "twiddle_pass_through"
+# 1 lane, 18-bit
+[[simulations.parameters]]
+N_INPUTS = 1
+INPUT_BIT_WIDTH = 18
+# 3 lanes, 8-bit
+[[simulations.parameters]]
+N_INPUTS = 3
+INPUT_BIT_WIDTH = 8
+
+# test twiddle_stage_2
+[[simulations]]
+dir = "FFTs/Twiddle"
+top = "twiddle_stage_2"
+# casper defaults (FFTSize 5, total latency 7)
+[[simulations.parameters]]
+N_INPUTS = 1
+FFT_SIZE = 5
+INPUT_BIT_WIDTH = 18
+BIN_PT_IN = 17
+ADD_LATENCY = 1
+MULT_LATENCY = 2
+BRAM_LATENCY = 2
+CONV_LATENCY = 2
+# 2 lanes, FFTSize 3 (w switches every 2 samples)
+[[simulations.parameters]]
+N_INPUTS = 2
+FFT_SIZE = 3
+INPUT_BIT_WIDTH = 12
+BIN_PT_IN = 11
+ADD_LATENCY = 1
+MULT_LATENCY = 1
+BRAM_LATENCY = 1
+CONV_LATENCY = 1
+# FFTSize 2 (w switches every sample), latency 1
+[[simulations.parameters]]
+N_INPUTS = 1
+FFT_SIZE = 2
+INPUT_BIT_WIDTH = 8
+BIN_PT_IN = 7
+ADD_LATENCY = 0
+MULT_LATENCY = 0
+BRAM_LATENCY = 1
+CONV_LATENCY = 0
+# 4 lanes, FFTSize 6, total latency 9
+[[simulations.parameters]]
+N_INPUTS = 4
+FFT_SIZE = 6
+INPUT_BIT_WIDTH = 16
+BIN_PT_IN = 15
+ADD_LATENCY = 2
+MULT_LATENCY = 3
+BRAM_LATENCY = 3
+CONV_LATENCY = 1
+
 # ── FlowControl ──────────────────────────────────────────────────────────────
 
 # test bus_create
@@ -871,6 +1507,15 @@ WIDTH = 8
 dir = "Misc"
 top = "armed_trigger"
 
+# test bit_reverse
+[[simulations]]
+dir = "Misc"
+top = "bit_reverse"
+[[simulations.parameters]]
+NBITS = 8
+[[simulations.parameters]]
+NBITS = 16
+
 # test c_to_ri
 [[simulations]]
 dir = "Misc"
@@ -884,14 +1529,55 @@ BIN_PT = 7
 NBITS = 16
 BIN_PT = 15
 
-# test bit_reverse
+# test convert_of
 [[simulations]]
 dir = "Misc"
-top = "bit_reverse"
+top = "convert_of"
+# Fix_16_8 → Fix_8_4, truncate + wrap, combinational
 [[simulations.parameters]]
-NBITS = 8
+N_BITS_IN = 16
+BIN_PT_IN = 8
+N_BITS_OUT = 8
+BIN_PT_OUT = 4
+QUANTIZATION = 0
+OVERFLOW = 0
+LATENCY = 0
+# Fix_16_12 → Fix_8_4, round + saturate
 [[simulations.parameters]]
-NBITS = 16
+N_BITS_IN = 16
+BIN_PT_IN = 12
+N_BITS_OUT = 8
+BIN_PT_OUT = 4
+QUANTIZATION = 1
+OVERFLOW = 1
+LATENCY = 1
+# same integer bits: overflow impossible, of = 0
+[[simulations.parameters]]
+N_BITS_IN = 12
+BIN_PT_IN = 10
+N_BITS_OUT = 12
+BIN_PT_OUT = 10
+QUANTIZATION = 0
+OVERFLOW = 0
+LATENCY = 2
+# one integer bit dropped (butterfly-style), round even
+[[simulations.parameters]]
+N_BITS_IN = 18
+BIN_PT_IN = 16
+N_BITS_OUT = 18
+BIN_PT_OUT = 17
+QUANTIZATION = 2
+OVERFLOW = 1
+LATENCY = 1
+# bit growth: of = 0
+[[simulations.parameters]]
+N_BITS_IN = 8
+BIN_PT_IN = 4
+N_BITS_OUT = 12
+BIN_PT_OUT = 4
+QUANTIZATION = 0
+OVERFLOW = 0
+LATENCY = 1
 
 # test edge_detect
 [[simulations]]

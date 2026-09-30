@@ -44,6 +44,8 @@ def test_runner(cfg):
     target_dir = cfg.get('dir')
     top = cfg.get('top')
     parameters = cfg.get('parameters', [])
+    # nested categories (dir = "FFTs/Twiddle") map to nested Python packages
+    tb_package = "testbench." + target_dir.replace("/", ".")
     
     sim = os.getenv("SIM", "verilator")
     result_path = Path("results")
@@ -71,7 +73,7 @@ def test_runner(cfg):
 
         # run the tests
         runner.test(hdl_toplevel=top,
-                    test_module=f"testbench.{target_dir}.{top}.test_{top},",
+                    test_module=f"{tb_package}.{top}.test_{top},",
                     results_xml=top_result,
                     waves=True,
                     plusargs=['--trace --trace-structs']
@@ -107,7 +109,7 @@ def test_runner(cfg):
             )
             # run the tests
             runner.test(hdl_toplevel=top,
-                        test_module=f"testbench.{target_dir}.{top}.test_{top},",
+                        test_module=f"{tb_package}.{top}.test_{top},",
                         results_xml=top_result,
                         waves=True,
                         plusargs=['--trace --trace-structs']

@@ -1,0 +1,29 @@
+{
+  "N_INPUTS": 2,
+  "FFT_SIZE": 4,
+  "FFT_STAGE": 2,
+  "INPUT_BIT_WIDTH": 18,
+  "BIN_PT_IN": 17,
+  "COEFF_BIT_WIDTH": 18,
+  "BITGROWTH": 0,
+  "DOWNSHIFT": 0,
+  "HARDCODE_SHIFTS": 0,
+  "ADD_LATENCY": 1,
+  "MULT_LATENCY": 2,
+  "BRAM_LATENCY": 1,
+  "CONV_LATENCY": 1,
+  "QUANTIZATION": 1,
+  "OVERFLOW": 0,
+  "DELAYS_BRAM": 1,
+  "MAX_FANOUT": 1,
+  "COEFFS": [
+    0,
+    1
+  ],
+  "DERIVED": {
+    "P": 2,
+    "ND": 4,
+    "MUX_LATENCY": 1,
+    "RAM_DELAYS": 1
+  }
+}
