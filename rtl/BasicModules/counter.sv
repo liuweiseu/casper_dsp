@@ -47,8 +47,10 @@ end
 
 localparam [NBITS-1:0] STEP_VAL  = NBITS'(STEP);
 localparam [NBITS-1:0] INIT_VAL_ = NBITS'(INIT_VAL);
-logic [NBITS-1:0] cnt;
-initial cnt = INIT_VAL_;
+// Power-on value is given as a declaration initializer rather than an
+// 'initial' block: newer Verilator rejects a variable written by both an
+// 'initial' process and an always_ff (MULTIDRIVEN).
+logic [NBITS-1:0] cnt = INIT_VAL_;
 assign dout = cnt;
 
 generate

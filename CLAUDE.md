@@ -59,7 +59,7 @@ Test results (`.vcd`, `.xml`) land in `tests/results/`. VCD waveforms can be vie
 4. **Register in `tests/simulation.toml`**: Add a `[[simulations]]` entry. If the module is parameterized, add one `[[simulations.parameters]]` block per parameter combination.
    - Entries are sorted **alphabetically by directory name, then alphabetically by module name** within each directory. Always insert in the correct sorted position rather than appending to the end.
 
-5. **Documentation**: Create `docs/<Category>/<module_name>.md` summarising the module's function, parameters, and ports.
+5. **Documentation**: Create `docs/<Category>/<module_name>.md` summarising the module's function, parameters, and ports. Also add a row to the "Simulation-Verified Modules" table in `README.md`.
 
 ## Key Infrastructure
 
@@ -77,7 +77,15 @@ Test results (`.vcd`, `.xml`) land in `tests/results/`. VCD waveforms can be vie
 | `container/Dockerfile` | Two-stage image: compiles Verilator from source, installs cocotb/pytest |
 | `container/docker-compose.local.yml` | Local compose; mounts `tests/results/` for output |
 
-**Important:** `prepare_dump.py` mutates RTL source files in-place before simulation to inject VCD dump blocks. This is expected behavior — the injected lines are not committed.
+### How a test run works (non-obvious details)
+
+- The Docker image **copies** `rtl/`, `tests/`, `testbench/` → `tests/testbench/`, and `test_data/` → `tests/test_data/` into `/work`. Only `tests/results/` is mounted back to the host, so source changes need an image rebuild (the scripts run `docker compose build` each time). `platform/` is **not** copied into the image, so a `PLATFORM` parameter would fail in the container until the Dockerfile is updated.
+- `tests/run_test.sh` runs `prepare_dump.py --dir ../rtl`, which injects a `$dumpfile`/`$dumpvars` block before `endmodule` in **every** RTL file. It edits the copies inside the container, never the host tree.
+- `test_runner.py` compiles **all** files under `rtl/` for every test, whatever `top` is. A syntax error or duplicate module name in any file breaks every test.
+- The testbench is imported as `testbench.<dir>.<top>.test_<top>`, so the directory and file names must match `dir`/`top` in `simulation.toml` exactly.
+- For parameterized entries, the runner finds the RTL file by filename (`<top>.` substring) and rewrites its `.vcd` filename to `<top>_<i>.vcd` before each build. RTL files must be named `<top>.v`/`<top>.sv`.
+- A `PLATFORM = "XILINX"` or `"ALTERA"` key in `[[simulations.parameters]]` adds the vendor models from `lib_path` (the `[xilinx]`/`[altera]` tables at the top of `simulation.toml`) to the sources.
+- CI (`.github/workflows/ci.yml`) runs the same container on pushes to `master`/`dev` and PRs to `master`, and uploads `tests/results/` as an artifact.
 
 ## Reusing BasicModules
 

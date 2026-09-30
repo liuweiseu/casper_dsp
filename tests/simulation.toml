@@ -278,6 +278,571 @@ top = "slice"
 START_BIT = 2
 WIDTH = 2
 
+# ── Bus ──────────────────────────────────────────────────────────────────────
+
+# test adder_subtractor
+[[simulations]]
+dir = "Bus"
+top = "adder_subtractor"
+# Fix_8_4 + Fix_8_4 → Fix_9_4, full precision, combinational
+[[simulations.parameters]]
+N_BITS_A = 8
+BIN_PT_A = 4
+TYPE_A = 1
+N_BITS_B = 8
+BIN_PT_B = 4
+TYPE_B = 1
+N_BITS_OUT = 9
+BIN_PT_OUT = 4
+TYPE_OUT = 1
+OPMODE = 0
+QUANTIZATION = 0
+OVERFLOW = 0
+LATENCY = 0
+# Fix_8_4 + Fix_8_4 → Fix_8_4, saturate
+[[simulations.parameters]]
+N_BITS_A = 8
+BIN_PT_A = 4
+TYPE_A = 1
+N_BITS_B = 8
+BIN_PT_B = 4
+TYPE_B = 1
+N_BITS_OUT = 8
+BIN_PT_OUT = 4
+TYPE_OUT = 1
+OPMODE = 0
+QUANTIZATION = 0
+OVERFLOW = 1
+LATENCY = 1
+# Fix_8_4 − Fix_10_7 → Fix_8_4, mixed binary points, round + saturate
+[[simulations.parameters]]
+N_BITS_A = 8
+BIN_PT_A = 4
+TYPE_A = 1
+N_BITS_B = 10
+BIN_PT_B = 7
+TYPE_B = 1
+N_BITS_OUT = 8
+BIN_PT_OUT = 4
+TYPE_OUT = 1
+OPMODE = 1
+QUANTIZATION = 1
+OVERFLOW = 1
+LATENCY = 1
+# UFix_8_0 − UFix_8_0 → Fix_9_0, unsigned subtract, 2-stage pipeline
+[[simulations.parameters]]
+N_BITS_A = 8
+BIN_PT_A = 0
+TYPE_A = 0
+N_BITS_B = 8
+BIN_PT_B = 0
+TYPE_B = 0
+N_BITS_OUT = 9
+BIN_PT_OUT = 0
+TYPE_OUT = 1
+OPMODE = 1
+QUANTIZATION = 0
+OVERFLOW = 0
+LATENCY = 2
+# Fix_16_15 + UFix_8_8 → Fix_12_10, signed + unsigned, round even + wrap
+[[simulations.parameters]]
+N_BITS_A = 16
+BIN_PT_A = 15
+TYPE_A = 1
+N_BITS_B = 8
+BIN_PT_B = 8
+TYPE_B = 0
+N_BITS_OUT = 12
+BIN_PT_OUT = 10
+TYPE_OUT = 1
+OPMODE = 0
+QUANTIZATION = 2
+OVERFLOW = 0
+LATENCY = 1
+# UFix_8_4 − UFix_8_4 → UFix_8_4, saturate (negatives clamp to 0)
+[[simulations.parameters]]
+N_BITS_A = 8
+BIN_PT_A = 4
+TYPE_A = 0
+N_BITS_B = 8
+BIN_PT_B = 4
+TYPE_B = 0
+N_BITS_OUT = 8
+BIN_PT_OUT = 4
+TYPE_OUT = 0
+OPMODE = 1
+QUANTIZATION = 0
+OVERFLOW = 1
+LATENCY = 1
+
+# test convert
+[[simulations]]
+dir = "Bus"
+top = "convert"
+# Fix_16_8 → Fix_8_4, truncate + wrap, combinational
+[[simulations.parameters]]
+N_BITS_IN = 16
+BIN_PT_IN = 8
+TYPE_IN = 1
+N_BITS_OUT = 8
+BIN_PT_OUT = 4
+TYPE_OUT = 1
+QUANTIZATION = 0
+OVERFLOW = 0
+LATENCY = 0
+# Fix_16_8 → Fix_8_4, round half away from zero + saturate
+[[simulations.parameters]]
+N_BITS_IN = 16
+BIN_PT_IN = 8
+TYPE_IN = 1
+N_BITS_OUT = 8
+BIN_PT_OUT = 4
+TYPE_OUT = 1
+QUANTIZATION = 1
+OVERFLOW = 1
+LATENCY = 1
+# Fix_16_8 → Fix_8_4, round half to even + saturate, 2-stage pipeline
+[[simulations.parameters]]
+N_BITS_IN = 16
+BIN_PT_IN = 8
+TYPE_IN = 1
+N_BITS_OUT = 8
+BIN_PT_OUT = 4
+TYPE_OUT = 1
+QUANTIZATION = 2
+OVERFLOW = 1
+LATENCY = 2
+# UFix_8_4 → Fix_10_6, exact bit growth (unsigned → signed)
+[[simulations.parameters]]
+N_BITS_IN = 8
+BIN_PT_IN = 4
+TYPE_IN = 0
+N_BITS_OUT = 10
+BIN_PT_OUT = 6
+TYPE_OUT = 1
+QUANTIZATION = 0
+OVERFLOW = 0
+LATENCY = 1
+# Fix_12_10 → UFix_8_4, round + saturate (negatives clamp to 0)
+[[simulations.parameters]]
+N_BITS_IN = 12
+BIN_PT_IN = 10
+TYPE_IN = 1
+N_BITS_OUT = 8
+BIN_PT_OUT = 4
+TYPE_OUT = 0
+QUANTIZATION = 1
+OVERFLOW = 1
+LATENCY = 1
+# Fix_16_12 → Fix_8_4, round half to even + wrap
+[[simulations.parameters]]
+N_BITS_IN = 16
+BIN_PT_IN = 12
+TYPE_IN = 1
+N_BITS_OUT = 8
+BIN_PT_OUT = 4
+TYPE_OUT = 1
+QUANTIZATION = 2
+OVERFLOW = 0
+LATENCY = 1
+# Fix_8_-2 → Fix_12_0, negative input binary point (exact ×4)
+[[simulations.parameters]]
+N_BITS_IN = 8
+BIN_PT_IN = -2
+TYPE_IN = 1
+N_BITS_OUT = 12
+BIN_PT_OUT = 0
+TYPE_OUT = 1
+QUANTIZATION = 0
+OVERFLOW = 0
+LATENCY = 0
+
+# test multiplier
+[[simulations]]
+dir = "Bus"
+top = "multiplier"
+# Fix_8_7 × Fix_8_7 → Fix_16_14, full precision, combinational
+[[simulations.parameters]]
+N_BITS_A = 8
+BIN_PT_A = 7
+TYPE_A = 1
+N_BITS_B = 8
+BIN_PT_B = 7
+TYPE_B = 1
+N_BITS_OUT = 16
+BIN_PT_OUT = 14
+TYPE_OUT = 1
+QUANTIZATION = 0
+OVERFLOW = 0
+LATENCY = 0
+# Fix_18_17 × Fix_18_17 → Fix_18_17, round even + saturate (−1×−1)
+[[simulations.parameters]]
+N_BITS_A = 18
+BIN_PT_A = 17
+TYPE_A = 1
+N_BITS_B = 18
+BIN_PT_B = 17
+TYPE_B = 1
+N_BITS_OUT = 18
+BIN_PT_OUT = 17
+TYPE_OUT = 1
+QUANTIZATION = 2
+OVERFLOW = 1
+LATENCY = 3
+# UFix_8_0 × Fix_8_4 → Fix_17_4, unsigned × signed, exact
+[[simulations.parameters]]
+N_BITS_A = 8
+BIN_PT_A = 0
+TYPE_A = 0
+N_BITS_B = 8
+BIN_PT_B = 4
+TYPE_B = 1
+N_BITS_OUT = 17
+BIN_PT_OUT = 4
+TYPE_OUT = 1
+QUANTIZATION = 0
+OVERFLOW = 0
+LATENCY = 1
+# Fix_12_11 × UFix_6_6 → Fix_8_7, round + wrap, 2-stage pipeline
+[[simulations.parameters]]
+N_BITS_A = 12
+BIN_PT_A = 11
+TYPE_A = 1
+N_BITS_B = 6
+BIN_PT_B = 6
+TYPE_B = 0
+N_BITS_OUT = 8
+BIN_PT_OUT = 7
+TYPE_OUT = 1
+QUANTIZATION = 1
+OVERFLOW = 0
+LATENCY = 2
+# Fix_8_4 × Fix_8_4 → Fix_8_4, truncate + saturate
+[[simulations.parameters]]
+N_BITS_A = 8
+BIN_PT_A = 4
+TYPE_A = 1
+N_BITS_B = 8
+BIN_PT_B = 4
+TYPE_B = 1
+N_BITS_OUT = 8
+BIN_PT_OUT = 4
+TYPE_OUT = 1
+QUANTIZATION = 0
+OVERFLOW = 1
+LATENCY = 1
+
+# test negate
+[[simulations]]
+dir = "Bus"
+top = "negate"
+# Fix_8_4 → Fix_8_4, wrap (−(−8) wraps to −8), combinational
+[[simulations.parameters]]
+N_BITS_IN = 8
+BIN_PT_IN = 4
+TYPE_IN = 1
+N_BITS_OUT = 8
+BIN_PT_OUT = 4
+TYPE_OUT = 1
+QUANTIZATION = 0
+OVERFLOW = 0
+LATENCY = 0
+# Fix_8_4 → Fix_8_4, saturate (−(−8) clamps to max)
+[[simulations.parameters]]
+N_BITS_IN = 8
+BIN_PT_IN = 4
+TYPE_IN = 1
+N_BITS_OUT = 8
+BIN_PT_OUT = 4
+TYPE_OUT = 1
+QUANTIZATION = 0
+OVERFLOW = 1
+LATENCY = 1
+# Fix_8_4 → Fix_9_4, full precision
+[[simulations.parameters]]
+N_BITS_IN = 8
+BIN_PT_IN = 4
+TYPE_IN = 1
+N_BITS_OUT = 9
+BIN_PT_OUT = 4
+TYPE_OUT = 1
+QUANTIZATION = 0
+OVERFLOW = 0
+LATENCY = 1
+# UFix_8_4 → Fix_9_4, unsigned input, 2-stage pipeline
+[[simulations.parameters]]
+N_BITS_IN = 8
+BIN_PT_IN = 4
+TYPE_IN = 0
+N_BITS_OUT = 9
+BIN_PT_OUT = 4
+TYPE_OUT = 1
+QUANTIZATION = 0
+OVERFLOW = 0
+LATENCY = 2
+# Fix_12_8 → Fix_8_4, round half away from zero + saturate
+[[simulations.parameters]]
+N_BITS_IN = 12
+BIN_PT_IN = 8
+TYPE_IN = 1
+N_BITS_OUT = 8
+BIN_PT_OUT = 4
+TYPE_OUT = 1
+QUANTIZATION = 1
+OVERFLOW = 1
+LATENCY = 1
+# Fix_12_8 → Fix_8_4, round half to even + wrap
+[[simulations.parameters]]
+N_BITS_IN = 12
+BIN_PT_IN = 8
+TYPE_IN = 1
+N_BITS_OUT = 8
+BIN_PT_OUT = 4
+TYPE_OUT = 1
+QUANTIZATION = 2
+OVERFLOW = 0
+LATENCY = 1
+
+# test scale
+[[simulations]]
+dir = "Bus"
+top = "scale"
+# Fix_16_8 ÷ 8, round half to even
+[[simulations.parameters]]
+N_BITS_IN = 16
+BIN_PT_IN = 8
+TYPE_IN = 1
+SCALE_FACTOR = -3
+N_BITS_OUT = 16
+BIN_PT_OUT = 8
+TYPE_OUT = 1
+QUANTIZATION = 2
+OVERFLOW = 0
+LATENCY = 1
+# Fix_8_4 × 4, saturate, combinational
+[[simulations.parameters]]
+N_BITS_IN = 8
+BIN_PT_IN = 4
+TYPE_IN = 1
+SCALE_FACTOR = 2
+N_BITS_OUT = 8
+BIN_PT_OUT = 4
+TYPE_OUT = 1
+QUANTIZATION = 0
+OVERFLOW = 1
+LATENCY = 0
+# Fix_8_4 × 4, wrap
+[[simulations.parameters]]
+N_BITS_IN = 8
+BIN_PT_IN = 4
+TYPE_IN = 1
+SCALE_FACTOR = 2
+N_BITS_OUT = 8
+BIN_PT_OUT = 4
+TYPE_OUT = 1
+QUANTIZATION = 0
+OVERFLOW = 0
+LATENCY = 1
+# UFix_8_8 ÷ 2, round half away from zero, 2-stage pipeline
+[[simulations.parameters]]
+N_BITS_IN = 8
+BIN_PT_IN = 8
+TYPE_IN = 0
+SCALE_FACTOR = -1
+N_BITS_OUT = 8
+BIN_PT_OUT = 8
+TYPE_OUT = 0
+QUANTIZATION = 1
+OVERFLOW = 0
+LATENCY = 2
+# Fix_8_2 × 32 → Fix_12_0 (intermediate binary point −3), exact
+[[simulations.parameters]]
+N_BITS_IN = 8
+BIN_PT_IN = 2
+TYPE_IN = 1
+SCALE_FACTOR = 5
+N_BITS_OUT = 12
+BIN_PT_OUT = 0
+TYPE_OUT = 1
+QUANTIZATION = 0
+OVERFLOW = 0
+LATENCY = 1
+# Fix_18_17 ÷ 2, round even + saturate (FFT stage shift)
+[[simulations.parameters]]
+N_BITS_IN = 18
+BIN_PT_IN = 17
+TYPE_IN = 1
+SCALE_FACTOR = -1
+N_BITS_OUT = 18
+BIN_PT_OUT = 17
+TYPE_OUT = 1
+QUANTIZATION = 2
+OVERFLOW = 1
+LATENCY = 1
+
+# ── Delays ───────────────────────────────────────────────────────────────────
+
+# test delay_bram
+[[simulations]]
+dir = "Delays"
+top = "delay_bram"
+# shortest RAM-based delay (1-word address range)
+[[simulations.parameters]]
+BITWIDTH = 8
+DELAY_LEN = 2
+# address range 4 (power of two)
+[[simulations.parameters]]
+BITWIDTH = 8
+DELAY_LEN = 5
+# address range 15 (not a power of two)
+[[simulations.parameters]]
+BITWIDTH = 8
+DELAY_LEN = 16
+# 100-cycle delay
+[[simulations.parameters]]
+BITWIDTH = 16
+DELAY_LEN = 100
+# 1000-cycle delay
+[[simulations.parameters]]
+BITWIDTH = 18
+DELAY_LEN = 1000
+# DELAY_LEN = 1: register fallback
+[[simulations.parameters]]
+BITWIDTH = 4
+DELAY_LEN = 1
+# DELAY_LEN = 0: combinational fallback
+[[simulations.parameters]]
+BITWIDTH = 4
+DELAY_LEN = 0
+
+# test delay_srl
+[[simulations]]
+dir = "Delays"
+top = "delay_srl"
+# enable + reset
+[[simulations.parameters]]
+BITWIDTH = 8
+DELAY_LEN = 4
+USE_ENABLE = 1
+USE_RST = 1
+# reset only (en ignored)
+[[simulations.parameters]]
+BITWIDTH = 8
+DELAY_LEN = 4
+USE_ENABLE = 0
+USE_RST = 1
+# enable only (rst ignored)
+[[simulations.parameters]]
+BITWIDTH = 8
+DELAY_LEN = 4
+USE_ENABLE = 1
+USE_RST = 0
+# plain 16-stage shift register
+[[simulations.parameters]]
+BITWIDTH = 16
+DELAY_LEN = 16
+USE_ENABLE = 0
+USE_RST = 0
+# 1-bit, single stage
+[[simulations.parameters]]
+BITWIDTH = 1
+DELAY_LEN = 1
+USE_ENABLE = 1
+USE_RST = 1
+# DELAY_LEN = 0: combinational pass-through
+[[simulations.parameters]]
+BITWIDTH = 8
+DELAY_LEN = 0
+USE_ENABLE = 1
+USE_RST = 1
+
+# test dual_port_ram
+[[simulations]]
+dir = "Delays"
+top = "dual_port_ram"
+# 16 × 8
+[[simulations.parameters]]
+DATA_WIDTH = 8
+ADDR_WIDTH = 4
+# 64 × 16
+[[simulations.parameters]]
+DATA_WIDTH = 16
+ADDR_WIDTH = 6
+# 32 × 32
+[[simulations.parameters]]
+DATA_WIDTH = 32
+ADDR_WIDTH = 5
+
+# test pipeline
+[[simulations]]
+dir = "Delays"
+top = "pipeline"
+# LATENCY = 0: combinational pass-through
+[[simulations.parameters]]
+BITWIDTH = 8
+LATENCY = 0
+# single register
+[[simulations.parameters]]
+BITWIDTH = 8
+LATENCY = 1
+# 3-stage pipeline
+[[simulations.parameters]]
+BITWIDTH = 8
+LATENCY = 3
+# 8-stage pipeline, 12-bit
+[[simulations.parameters]]
+BITWIDTH = 12
+LATENCY = 8
+# 1-bit, 5 stages
+[[simulations.parameters]]
+BITWIDTH = 1
+LATENCY = 5
+
+# test rom
+[[simulations]]
+dir = "Delays"
+top = "rom"
+# 16 × 8
+[[simulations.parameters]]
+DATA_WIDTH = 8
+ADDR_WIDTH = 4
+INIT_FILE = "../../../test_data/Delays/rom/simdata0/rom_init.mem"
+# 256 × 16
+[[simulations.parameters]]
+DATA_WIDTH = 16
+ADDR_WIDTH = 8
+INIT_FILE = "../../../test_data/Delays/rom/simdata1/rom_init.mem"
+# 32 × 18 (twiddle-coefficient width)
+[[simulations.parameters]]
+DATA_WIDTH = 18
+ADDR_WIDTH = 5
+INIT_FILE = "../../../test_data/Delays/rom/simdata2/rom_init.mem"
+# no INIT_FILE: all words 0
+[[simulations.parameters]]
+DATA_WIDTH = 8
+ADDR_WIDTH = 3
+
+# test single_port_ram
+[[simulations]]
+dir = "Delays"
+top = "single_port_ram"
+# 16 × 8
+[[simulations.parameters]]
+DATA_WIDTH = 8
+ADDR_WIDTH = 4
+# 64 × 16
+[[simulations.parameters]]
+DATA_WIDTH = 16
+ADDR_WIDTH = 6
+# 8 × 1
+[[simulations.parameters]]
+DATA_WIDTH = 1
+ADDR_WIDTH = 3
+# 256 × 32
+[[simulations.parameters]]
+DATA_WIDTH = 32
+ADDR_WIDTH = 8
+
 # ── FlowControl ──────────────────────────────────────────────────────────────
 
 # test bus_create
@@ -381,6 +946,125 @@ NBITS = 8
 # NBITS=16 — pack two 16-bit words into 32-bit complex
 [[simulations.parameters]]
 NBITS = 16
+
+# ── Multipliers ──────────────────────────────────────────────────────────────
+
+# test complex_multiplier
+[[simulations]]
+dir = "Multipliers"
+top = "complex_multiplier"
+# Fix_8_7 × Fix_8_7 → Fix_17_14, exact, 4-mult
+[[simulations.parameters]]
+N_BITS_A = 8
+BIN_PT_A = 7
+TYPE_A = 1
+N_BITS_B = 8
+BIN_PT_B = 7
+TYPE_B = 1
+N_BITS_OUT = 17
+BIN_PT_OUT = 14
+TYPE_OUT = 1
+QUANTIZATION = 0
+OVERFLOW = 0
+MULT_SPEC = 0
+MULT_LATENCY = 2
+ADD_LATENCY = 1
+# Fix_8_7 × Fix_8_7 → Fix_17_14, exact, 3-mult
+[[simulations.parameters]]
+N_BITS_A = 8
+BIN_PT_A = 7
+TYPE_A = 1
+N_BITS_B = 8
+BIN_PT_B = 7
+TYPE_B = 1
+N_BITS_OUT = 17
+BIN_PT_OUT = 14
+TYPE_OUT = 1
+QUANTIZATION = 0
+OVERFLOW = 0
+MULT_SPEC = 1
+MULT_LATENCY = 2
+ADD_LATENCY = 1
+# Fix_18_17 twiddle-style, round even + saturate, 4-mult
+[[simulations.parameters]]
+N_BITS_A = 18
+BIN_PT_A = 17
+TYPE_A = 1
+N_BITS_B = 18
+BIN_PT_B = 17
+TYPE_B = 1
+N_BITS_OUT = 18
+BIN_PT_OUT = 17
+TYPE_OUT = 1
+QUANTIZATION = 2
+OVERFLOW = 1
+MULT_SPEC = 0
+MULT_LATENCY = 3
+ADD_LATENCY = 2
+# Fix_18_17 twiddle-style, round even + saturate, 3-mult
+[[simulations.parameters]]
+N_BITS_A = 18
+BIN_PT_A = 17
+TYPE_A = 1
+N_BITS_B = 18
+BIN_PT_B = 17
+TYPE_B = 1
+N_BITS_OUT = 18
+BIN_PT_OUT = 17
+TYPE_OUT = 1
+QUANTIZATION = 2
+OVERFLOW = 1
+MULT_SPEC = 1
+MULT_LATENCY = 3
+ADD_LATENCY = 2
+# UFix_8_4 × Fix_8_6 → Fix_14_8, round + wrap, 4-mult
+[[simulations.parameters]]
+N_BITS_A = 8
+BIN_PT_A = 4
+TYPE_A = 0
+N_BITS_B = 8
+BIN_PT_B = 6
+TYPE_B = 1
+N_BITS_OUT = 14
+BIN_PT_OUT = 8
+TYPE_OUT = 1
+QUANTIZATION = 1
+OVERFLOW = 0
+MULT_SPEC = 0
+MULT_LATENCY = 1
+ADD_LATENCY = 1
+# UFix_8_4 × Fix_8_6 → Fix_14_8, round + wrap, 3-mult
+[[simulations.parameters]]
+N_BITS_A = 8
+BIN_PT_A = 4
+TYPE_A = 0
+N_BITS_B = 8
+BIN_PT_B = 6
+TYPE_B = 1
+N_BITS_OUT = 14
+BIN_PT_OUT = 8
+TYPE_OUT = 1
+QUANTIZATION = 1
+OVERFLOW = 0
+MULT_SPEC = 1
+MULT_LATENCY = 1
+ADD_LATENCY = 1
+# Fix_8_7 → Fix_10_7, round + saturate, 3-mult, fully combinational
+[[simulations.parameters]]
+N_BITS_A = 8
+BIN_PT_A = 7
+TYPE_A = 1
+N_BITS_B = 8
+BIN_PT_B = 7
+TYPE_B = 1
+N_BITS_OUT = 10
+BIN_PT_OUT = 7
+TYPE_OUT = 1
+QUANTIZATION = 1
+OVERFLOW = 1
+MULT_SPEC = 1
+MULT_LATENCY = 0
+ADD_LATENCY = 0
 
 # ── Templates ────────────────────────────────────────────────────────────────
 

@@ -82,19 +82,27 @@ def test_runner(cfg):
             top_result = result_path/f"{target_dir}/{top}/{top}_{i}.xml"
             top_result.parent.mkdir(parents=True, exist_ok=True)
             # 1. find the file
-            fn = find_file(f'{top}.', '../rtl')
+            # match the file name exactly: '<top>.' alone would also match
+            # e.g. 'complex_multiplier.sv' when top is 'multiplier'
+            fn = [p for p in find_file(f'{top}.', '../rtl')
+                  if p.name.startswith(f'{top}.')]
             logger.info(f'Found file names: {fn}')
             # 2. replace the vcd file name to the new one
             replace_vcd_filename(fn[0], f'{top}_{i}.vcd')
             # 3. build the verilog modules with the parameters
             platform = parameters[i].get("PLATFORM", "")
             extra = get_vendor_sources(platform, vendor_cfgs) if platform else []
+            # cocotb's Verilator runner passes parameters as -G<name>=<value>
+            # verbatim, so string parameters (e.g. INIT_FILE, PLATFORM) need
+            # explicit SystemVerilog quotes
+            hdl_params = {k: f'"{v}"' if isinstance(v, str) else v
+                          for k, v in parameters[i].items()}
             runner.build(
                 sources=sources + extra,
                 hdl_toplevel=top,
                 waves=True,
                 defines={'SIM': ''},
-                parameters=parameters[i],
+                parameters=hdl_params,
                 build_dir=f"sim_build/{target_dir}/{top}"
             )
             # run the tests
