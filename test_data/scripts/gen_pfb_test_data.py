@@ -13,6 +13,15 @@ y_c(f) = Σ_{j ≡ c mod 2^PFBSize} h[j]·x[(f-TotalTaps+1)·2^PFBSize + j],
 for several PFBSize / TotalTaps / n_inputs / n_pol_blocks; it also checks
 that any other per-hop delay than 2^(PFBSize-n_inputs)·n_pol_blocks fails.
 
+pfb_fir_real: the whole block as pfb_fir_real_init.m wires it, from the
+models above plus adder_tree (gen_adder_tree_test_data.py), Scale and
+Convert. End-to-end checks on every output frame (n_pol_blocks = 1, periodic
+sync): the output equals, bit for bit, the windowed presum computed exactly
+from its definition with the quantized coefficients, then scaled and
+converted (so the Wrap-mode bit growth never loses a bit), and it is within
+a few output LSBs of the same PFB computed in floating point with the
+unquantized window·sinc coefficients.
+
 pfb_coeff_gen: the expected outputs come from a reference model of
 pfb_coeff_gen_init.m (counter reset by sync, one ROM per tap behind a
 fan_latency delay, Register on the concatenated bus, din / sync delayed
@@ -38,7 +47,10 @@ from pathlib import Path
 
 from common import TEST_DATA_ROOT, run_cli                     # also puts rtl/.../scripts on sys.path
 from gen_butterfly_test_data import delay, write_csv, P, toml
-from gen_pfb_coeffs import all_coeffs, quantize_coeff, tap_table, write_tables
+from gen_pfb_coeffs import (all_coeffs, pfb_fir_real_params, quantize_coeff, tap_table,
+                            write_pfb_fir_real, write_tables)
+from gen_adder_tree_test_data import AT, m_adder_tree
+from gen_fixed_point_test_data import quantize, to_value
 from gen_fft_stage_test_data import m_sync_delay
 
 SCRIPT = Path(__file__).name
@@ -351,9 +363,222 @@ def gen_last_tap_real():
     return toml("PFBs", "last_tap_real", [(p, d) for p, d, _ in sets], SCRIPT)
 
 
+# ── pfb_fir_real ────────────────────────────────────────────────────────────
+
+FR = ["PFB_SIZE", "TOTAL_TAPS", "WINDOW_TYPE", "N_INPUTS", "N_POL_BLOCKS", "MAKE_BIPLEX",
+      "BIT_WIDTH_IN", "BIT_WIDTH_OUT", "COEFF_BIT_WIDTH", "ADD_LATENCY", "MULT_LATENCY",
+      "BRAM_LATENCY", "FAN_LATENCY", "CONV_LATENCY", "QUANTIZATION", "FWIDTH", "COEFFS_SHARE"]
+FR_TESTS = [
+    (P(FR, [5, 2, "hamming", 1, 1, 0, 8, 0, 18, 1, 2, 2, 1, 1, 1, 1.0, 0]), False,
+     "casper mask defaults (BitWidthOut 0: full adder width)"),
+    (P(FR, [4, 4, "hann", 1, 1, 1, 10, 12, 16, 1, 2, 2, 1, 1, 2, 1.0, 0]), False,
+     "2 pols (MakeBiplex), 4 taps, 12-bit output rounded to even"),
+    (P(FR, [4, 4, "hann", 1, 1, 1, 10, 12, 16, 1, 2, 2, 1, 1, 2, 1.0, 1]), False,
+     "as test 1 with coeffs_share: pol 2 uses pol 1's coefficients (same outputs)"),
+    (P(FR, [6, 8, "blackman", 2, 1, 0, 12, 0, 18, 2, 3, 2, 2, 2, 1, 0.8, 0]), False,
+     "64 channels, 8 taps, 4 inputs, fwidth 0.8"),
+    (P(FR, [3, 3, "rectwin", 0, 2, 1, 8, 19, 12, 0, 0, 1, 0, 0, 1, 2.0, 0]), True,
+     "2 serial pol blocks, odd taps, combinational adders / multipliers / convert, "
+     "BitWidthOut 19 > adder binary point 18: forced Truncate drops one bit (mask says "
+     "round), early re-sync"),
+]
+
+
+def fr_derived(p):
+    d = pfb_fir_real_params(p["PFB_SIZE"], p["TOTAL_TAPS"], p["WINDOW_TYPE"], p["FWIDTH"],
+                            p["BIT_WIDTH_IN"], p["COEFF_BIT_WIDTH"], p["BIT_WIDTH_OUT"])
+    d["OUT_QUANT"] = 0 if d["BIT_WIDTH_OUT"] > d["ADDER_BIN_PT_OUT"] else p["QUANTIZATION"]
+    return d
+
+
+def m_pfb_fir_real(p, st):
+    """st: din rows (POLS·2^N_INPUTS raw words, element (p-1)·2^n_inputs + n-1), sync."""
+    d = fr_derived(p)
+    t_, cbw, bw = p["TOTAL_TAPS"], p["COEFF_BIT_WIDTH"], p["BIT_WIDTH_IN"]
+    ni, pols = 1 << p["N_INPUTS"], 2 if p["MAKE_BIPLEX"] else 1
+    share = p["MAKE_BIPLEX"] and p["COEFFS_SHARE"]
+    cg_dly = p["BRAM_LATENCY"] + 1 + p["FAN_LATENCY"]
+    cycles = len(st["sync"])
+    hop = (1 << (p["PFB_SIZE"] - p["N_INPUTS"])) * p["N_POL_BLOCKS"]
+    pw = bw + cbw
+    cg, outs = {}, [[0] * (pols * ni) for _ in range(cycles)]
+    sync_out = None
+    for pl in range(pols):
+        for n in range(ni):
+            col = [row[pl * ni + n] for row in st["din"]]
+            if pl == 1 and share:
+                data, bus = delay(col, cg_dly, 0), cg[(0, n)]["bus"]
+            else:
+                cgp = {"PFB_SIZE": p["PFB_SIZE"], "N_INPUTS": p["N_INPUTS"], "BRAM_LATENCY": p["BRAM_LATENCY"],
+                       "FAN_LATENCY": p["FAN_LATENCY"]}
+                tabs = [tap_table(p["PFB_SIZE"], t_, p["WINDOW_TYPE"], p["N_INPUTS"], n, p["FWIDTH"], a, cbw)
+                        for a in range(1, t_ + 1)]
+                o = m_pfb_coeff_gen(cgp, {"din": col, "sync": st["sync"]}, tabs)
+                bus = [sum(c << ((t_ - 1 - a) * cbw) for a, c in enumerate(row)) for row in o["coeff"]]
+                data = o["dout"]
+                cg[(pl, n)] = {"bus": bus, "sync": o["sync_out"]}
+            # taps
+            first_sync = cg[(0, 0)]["sync"]
+            prods = []
+            tp = {"MULT_LATENCY": p["MULT_LATENCY"], "COEFF_WIDTH": cbw, "DELAY": hop,
+                  "DATA_WIDTH": bw, "N_COEFFS": t_}
+            cur = {"din": data, "sync": first_sync, "coeff": bus}
+            for t in range(t_ - 1):
+                o = m_tap_real(dict(tp, N_COEFFS=t_ - t), cur)
+                prods.append(o["taps_out"])
+                cur = {"din": o["dout"], "sync": o["sync_out"], "coeff": o["coeff_out"]}
+            o = m_last_tap_real({"BIT_WIDTH_IN": bw, "COEFF_BIT_WIDTH": cbw,
+                                 "MULT_LATENCY": p["MULT_LATENCY"]}, cur)
+            prods.append(o["tap_out"])
+            ap = P(AT, [t_, pw, pw - 2, 1, p["ADD_LATENCY"], 1, d["ADDER_N_BITS_OUT"],
+                        d["ADDER_BIN_PT_OUT"], 0, 0])
+            ao, aw = m_adder_tree(ap, {"din": [list(r) for r in zip(*prods)], "sync": o["sync_out"]})
+            bp_scaled = d["ADDER_BIN_PT_OUT"] - d["SCALE_FACTOR"]
+            nbo = d["BIT_WIDTH_OUT"]
+            conv = [quantize(to_value(v, aw, bp_scaled, 1), nbo, nbo - 1, 1, d["OUT_QUANT"], 0)
+                    for v in ao["dout"]]
+            conv = delay(conv, p["CONV_LATENCY"], 0)
+            for tt in range(cycles):
+                outs[tt][pl * ni + n] = conv[tt]
+            if pl == 0 and n == 0:
+                sync_out = delay(ao["sync_out"], p["CONV_LATENCY"], 0)
+    return {"dout": outs, "sync_out": sync_out}
+
+
+def fr_stimulus(rng, p, early_resync):
+    ni, pols = 1 << p["N_INPUTS"], 2 if p["MAKE_BIPLEX"] else 1
+    blk = 1 << (p["PFB_SIZE"] - p["N_INPUTS"])
+    period = blk * p["N_POL_BLOCKS"]
+    cycles = (p["TOTAL_TAPS"] + 6) * period + 64
+    bw = p["BIT_WIDTH_IN"]
+    din = [[0] * (pols * ni)] + [[rng.randrange(1 << bw) for _ in range(pols * ni)]
+                                 for _ in range(cycles - 1)]
+    sync = [1 if t >= 3 and (t - 3) % period == 0 else 0 for t in range(cycles)]
+    if early_resync:
+        sync[cycles // 2 + blk // 3] = 1
+    return {"din": din, "sync": sync}
+
+
+def check_pfb_fir_real(p, st, out):
+    """Exact and floating-point end-to-end checks (n_pol_blocks = 1, periodic sync)."""
+    d = fr_derived(p)
+    f_, t_, ni_b = p["PFB_SIZE"], p["TOTAL_TAPS"], p["N_INPUTS"]
+    ni, pols, n_ch, blk = 1 << ni_b, 2 if p["MAKE_BIPLEX"] else 1, 1 << f_, 1 << (f_ - ni_b)
+    bw, cbw, nbo = p["BIT_WIDTH_IN"], p["COEFF_BIT_WIDTH"], d["BIT_WIDTH_OUT"]
+    cycles = len(st["sync"])
+    hq = [quantize_coeff(v, cbw) for v in all_coeffs(f_, t_, p["WINDOW_TYPE"], p["FWIDTH"])]
+    hf = all_coeffs(f_, t_, p["WINDOW_TYPE"], p["FWIDTH"])
+    s0 = st["sync"].index(1) + 1                      # first input frame
+    n_in_frames = (cycles - s0) // blk
+    # global sample stream of each pol: frame g, channel c = k·2^n_inputs + n
+    x = [[signed(st["din"][s0 + g * blk + c // ni][pl * ni + c % ni], bw)
+          for g in range(n_in_frames) for c in range(n_ch)] for pl in range(pols)]
+    starts = [t + 1 for t, v in enumerate(out["sync_out"]) if v and t + 1 + blk <= cycles]
+    lag, frames, worst = None, 0, 0.0
+    bp_out = nbo - 1
+    for so in starts:
+        # which input frame does this output frame belong to? (latency is fixed)
+        cand = None
+        for f in range(t_ - 1, n_in_frames):
+            ok = True
+            for pl in range(pols):
+                for c in range(n_ch):
+                    acc = sum(hq[j] * x[pl][(f - t_ + 1) * n_ch + j] for j in range(c, t_ * n_ch, n_ch))
+                    val = acc / 2 ** (bw - 1 + cbw - 1) * 2 ** d["SCALE_FACTOR"]
+                    exp = quantize(val, nbo, bp_out, 1, d["OUT_QUANT"], 0)
+                    if out["dout"][so + c // ni][pl * ni + c % ni] != exp:
+                        ok = False
+                        break
+                if not ok:
+                    break
+            if ok:
+                cand = f
+                break
+        if cand is None:
+            continue                                  # pipeline still filling
+        assert lag in (None, so - (s0 + cand * blk)), "frame latency changes"
+        lag = so - (s0 + cand * blk)
+        frames += 1
+        for pl in range(pols):
+            for c in range(n_ch):
+                accf = sum(hf[j] * x[pl][(cand - t_ + 1) * n_ch + j] / 2 ** (bw - 1)
+                           for j in range(c, t_ * n_ch, n_ch)) * 2 ** d["SCALE_FACTOR"]
+                got = to_value(out["dout"][so + c // ni][pl * ni + c % ni], nbo, bp_out, 1)
+                worst = max(worst, abs(float(got) - accf))
+    assert frames >= 3, "too few output frames match the exact windowed presum"
+    # bound: coefficient rounding (T taps · ½ coefficient LSB · |x| ≤ 1), scaled,
+    # plus one output LSB of conversion
+    bound = t_ * 0.5 * 2.0 ** -(cbw - 1) * 2.0 ** d["SCALE_FACTOR"] + 2.0 ** -bp_out
+    assert worst <= bound, f"output differs from the floating-point PFB by {worst:.3g} > {bound:.3g}"
+    return frames, worst / bound
+
+
+def gen_pfb_fir_real():
+    name, sets = "pfb_fir_real", []
+    mdir = TEST_DATA_ROOT / "PFBs" / name
+    outs_by_set = {}
+    for n, (p, early, desc) in enumerate(FR_TESTS):
+        rng = random.Random(f"{name}-{n if n != 2 else 1}")     # test 2 = test 1's data
+        st = fr_stimulus(rng, p, early)
+        out = m_pfb_fir_real(p, st)
+        outs_by_set[n] = out
+        if p["N_POL_BLOCKS"] == 1 and not early:
+            frames, worst = check_pfb_fir_real(p, st, out)
+            check = f"{frames} frames exact; float error {worst:.0%} of bound"
+        else:
+            check = "n/a (bit-exact only)"
+        d = fr_derived(p)
+        dd = mdir / f"simdata{n}"
+        dd.mkdir(parents=True, exist_ok=True)
+        for old in dd.glob("*.mem"):
+            old.unlink()
+        write_pfb_fir_real(dd, p["PFB_SIZE"], p["TOTAL_TAPS"], p["WINDOW_TYPE"], p["N_INPUTS"],
+                           p["FWIDTH"], p["COEFF_BIT_WIDTH"])
+        full = dict(p, BIT_GROWTH=d["BIT_GROWTH"], ADDER_N_BITS_OUT=d["ADDER_N_BITS_OUT"],
+                    ADDER_BIN_PT_OUT=d["ADDER_BIN_PT_OUT"], SCALE_FACTOR=d["SCALE_FACTOR"],
+                    COEFF_DIR=f"../../../test_data/PFBs/{name}/simdata{n}/")
+        (dd / "params.json").write_text(json.dumps(full, indent=2) + "\n")
+        write_csv(dd / "sim_din.csv", st["din"])
+        write_csv(dd / "sim_sync.csv", st["sync"])
+        write_csv(dd / "sim_dout.csv", out["dout"])
+        write_csv(dd / "sim_sync_out.csv", out["sync_out"])
+        sets.append((full, desc, len(st["sync"]), check))
+    assert outs_by_set[1] == outs_by_set[2], "coeffs_share changes the outputs"
+    keys = FR + ["BIT_GROWTH", "ADDER_N_BITS_OUT", "SCALE_FACTOR"]
+    lines = [
+        "# pfb_fir_real test data", "",
+        "`pfb_fir_real` is the whole real-input PFB FIR: per polarisation and "
+        "input a pfb_coeff_gen, first_tap_real → tap_real × (TotalTaps−2) → "
+        "last_tap_real, an adder_tree, Scale and Convert. The inputs are random "
+        "full-scale words; `sync` pulses every 2^(PFB_SIZE−N_INPUTS)·N_POL_BLOCKS "
+        "cycles (test 4 adds an early re-sync). BIT_GROWTH, ADDER_N_BITS_OUT and "
+        "SCALE_FACTOR come from `rtl/PFBs/scripts/gen_pfb_coeffs.py` (as "
+        "pfb_fir_real_init.m); the ROM files from the same script; `COEFF_DIR` "
+        "is relative to `tests/sim_build/PFBs/pfb_fir_real/`.", "",
+        "Generated by `test_data/scripts/gen_pfb_test_data.py` (reference "
+        "model, not exported from MATLAB). *End-to-end check*: every output "
+        "frame equals, bit for bit, the windowed presum computed from its "
+        "definition with the quantized coefficients (then scaled and converted), "
+        "and its difference from the floating-point PFB with the unquantized "
+        "coefficients stays within the coefficient-rounding bound (TotalTaps · "
+        "½ coefficient LSB, scaled, plus one output LSB; the column gives the "
+        "worst error as a fraction of it). Test 2 (coeffs_share) uses test 1's inputs "
+        "and the script checks that its outputs are identical. CSV rows are "
+        "cycles; element (p−1)·2^N_INPUTS + n−1 is pol<p>_in<n> / pol<p>_out<n>.", "",
+        "| Test # | Directory | " + " | ".join(keys) + " | End-to-end check | Cycles | Description |",
+        "|" + "---|" * (len(keys) + 5),
+    ]
+    for n, (full, desc, cycles, check) in enumerate(sets):
+        lines.append(f"| {n} | `simdata{n}` | " + " | ".join(str(full[k]) for k in keys)
+                     + f" | {check} | {cycles} | {desc} |")
+    (mdir / "test_data.md").write_text("\n".join(lines) + "\n")
+    return toml("PFBs", name, [(full, desc) for full, desc, *_ in sets], SCRIPT)
+
+
 def main():
     run_cli(__doc__, {"pfb_coeff_gen": gen_pfb_coeff_gen, "first_tap_real": gen_first_tap_real,
-                      "tap_real": gen_tap_real, "last_tap_real": gen_last_tap_real})
+                      "tap_real": gen_tap_real, "last_tap_real": gen_last_tap_real,
+                      "pfb_fir_real": gen_pfb_fir_real})
 
 
 if __name__ == "__main__":

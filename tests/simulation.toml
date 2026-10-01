@@ -2647,6 +2647,132 @@ FAN_LATENCY = 1
 DIN_WIDTH = 11
 COEFF_DIR = "../../../test_data/PFBs/pfb_coeff_gen/simdata5/"
 
+# test pfb_fir_real
+[[simulations]]
+dir = "PFBs"
+top = "pfb_fir_real"
+test_data_script = "gen_pfb_test_data.py"
+# casper mask defaults (BitWidthOut 0: full adder width)
+[[simulations.parameters]]
+PFB_SIZE = 5
+TOTAL_TAPS = 2
+WINDOW_TYPE = "hamming"
+N_INPUTS = 1
+N_POL_BLOCKS = 1
+MAKE_BIPLEX = 0
+BIT_WIDTH_IN = 8
+BIT_WIDTH_OUT = 0
+COEFF_BIT_WIDTH = 18
+ADD_LATENCY = 1
+MULT_LATENCY = 2
+BRAM_LATENCY = 2
+FAN_LATENCY = 1
+CONV_LATENCY = 1
+QUANTIZATION = 1
+FWIDTH = 1.0
+COEFFS_SHARE = 0
+BIT_GROWTH = 1
+ADDER_N_BITS_OUT = 26
+ADDER_BIN_PT_OUT = 24
+SCALE_FACTOR = -1
+COEFF_DIR = "../../../test_data/PFBs/pfb_fir_real/simdata0/"
+# 2 pols (MakeBiplex), 4 taps, 12-bit output rounded to even
+[[simulations.parameters]]
+PFB_SIZE = 4
+TOTAL_TAPS = 4
+WINDOW_TYPE = "hann"
+N_INPUTS = 1
+N_POL_BLOCKS = 1
+MAKE_BIPLEX = 1
+BIT_WIDTH_IN = 10
+BIT_WIDTH_OUT = 12
+COEFF_BIT_WIDTH = 16
+ADD_LATENCY = 1
+MULT_LATENCY = 2
+BRAM_LATENCY = 2
+FAN_LATENCY = 1
+CONV_LATENCY = 1
+QUANTIZATION = 2
+FWIDTH = 1.0
+COEFFS_SHARE = 0
+BIT_GROWTH = 1
+ADDER_N_BITS_OUT = 26
+ADDER_BIN_PT_OUT = 24
+SCALE_FACTOR = -1
+COEFF_DIR = "../../../test_data/PFBs/pfb_fir_real/simdata1/"
+# as test 1 with coeffs_share: pol 2 uses pol 1's coefficients (same outputs)
+[[simulations.parameters]]
+PFB_SIZE = 4
+TOTAL_TAPS = 4
+WINDOW_TYPE = "hann"
+N_INPUTS = 1
+N_POL_BLOCKS = 1
+MAKE_BIPLEX = 1
+BIT_WIDTH_IN = 10
+BIT_WIDTH_OUT = 12
+COEFF_BIT_WIDTH = 16
+ADD_LATENCY = 1
+MULT_LATENCY = 2
+BRAM_LATENCY = 2
+FAN_LATENCY = 1
+CONV_LATENCY = 1
+QUANTIZATION = 2
+FWIDTH = 1.0
+COEFFS_SHARE = 1
+BIT_GROWTH = 1
+ADDER_N_BITS_OUT = 26
+ADDER_BIN_PT_OUT = 24
+SCALE_FACTOR = -1
+COEFF_DIR = "../../../test_data/PFBs/pfb_fir_real/simdata2/"
+# 64 channels, 8 taps, 4 inputs, fwidth 0.8
+[[simulations.parameters]]
+PFB_SIZE = 6
+TOTAL_TAPS = 8
+WINDOW_TYPE = "blackman"
+N_INPUTS = 2
+N_POL_BLOCKS = 1
+MAKE_BIPLEX = 0
+BIT_WIDTH_IN = 12
+BIT_WIDTH_OUT = 0
+COEFF_BIT_WIDTH = 18
+ADD_LATENCY = 2
+MULT_LATENCY = 3
+BRAM_LATENCY = 2
+FAN_LATENCY = 2
+CONV_LATENCY = 2
+QUANTIZATION = 1
+FWIDTH = 0.8
+COEFFS_SHARE = 0
+BIT_GROWTH = 1
+ADDER_N_BITS_OUT = 30
+ADDER_BIN_PT_OUT = 28
+SCALE_FACTOR = -1
+COEFF_DIR = "../../../test_data/PFBs/pfb_fir_real/simdata3/"
+# 2 serial pol blocks, odd taps, combinational adders / multipliers / convert, BitWidthOut 19 > adder binary point 18: forced Truncate drops one bit (mask says round), early re-sync
+[[simulations.parameters]]
+PFB_SIZE = 3
+TOTAL_TAPS = 3
+WINDOW_TYPE = "rectwin"
+N_INPUTS = 0
+N_POL_BLOCKS = 2
+MAKE_BIPLEX = 1
+BIT_WIDTH_IN = 8
+BIT_WIDTH_OUT = 19
+COEFF_BIT_WIDTH = 12
+ADD_LATENCY = 0
+MULT_LATENCY = 0
+BRAM_LATENCY = 1
+FAN_LATENCY = 0
+CONV_LATENCY = 0
+QUANTIZATION = 1
+FWIDTH = 2.0
+COEFFS_SHARE = 0
+BIT_GROWTH = 1
+ADDER_N_BITS_OUT = 20
+ADDER_BIN_PT_OUT = 18
+SCALE_FACTOR = -1
+COEFF_DIR = "../../../test_data/PFBs/pfb_fir_real/simdata4/"
+
 # test tap_real
 [[simulations]]
 dir = "PFBs"

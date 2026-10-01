@@ -29,10 +29,18 @@ bit-exactly here) and userwindow (a user-supplied function, not a
 generated table). casper's mask spells the Bohman window "bohamwin"; both
 spellings are accepted.
 
+With --bit-width-in it also prints the parameters pfb_fir_real derives
+from the coefficients (pfb_fir_real_init.m): BIT_GROWTH = nextpow2(max
+sub-filter gain sum|h|, at least 1), ADDER_BIN_PT_OUT = BitWidthIn +
+CoeffBitWidth - 2, ADDER_N_BITS_OUT = BIT_GROWTH + 1 + ADDER_BIN_PT_OUT,
+SCALE_FACTOR = -BIT_GROWTH and BIT_WIDTH_OUT (BitWidthOut, 0 = ADDER_N_BITS_OUT).
+
 Usage:
   python3 rtl/PFBs/scripts/gen_pfb_coeffs.py --pfb-size 5 --total-taps 4 \\
           --window hamming --n-inputs 1 --nput 0 --fwidth 1 \\
           --coeff-bit-width 18 -o coeffs/
+  python3 rtl/PFBs/scripts/gen_pfb_coeffs.py --pfb-size 5 --total-taps 4 \\
+          --window hamming --n-inputs 1 --coeff-bit-width 18 --bit-width-in 8 -o coeffs/
 """
 
 import argparse
@@ -212,14 +220,53 @@ def write_tables(out_dir, pfb_size, total_taps, window_type, n_inputs, nput, fwi
     return names
 
 
+# ── pfb_fir_real derived parameters (pfb_fir_real_init.m) ───────────────────
+
+def nextpow2(x):
+    """MATLAB nextpow2 for x > 0: smallest p with 2^p >= x."""
+    m, e = math.frexp(x)                 # x = m·2^e, 0.5 <= m < 1
+    return e - 1 if m == 0.5 else e
+
+
+def pfb_fir_real_params(pfb_size, total_taps, window_type, fwidth, bit_width_in,
+                        coeff_bit_width, bit_width_out=0):
+    """BIT_GROWTH, ADDER_N_BITS_OUT, ADDER_BIN_PT_OUT, SCALE_FACTOR, BIT_WIDTH_OUT.
+
+    max_gain = max over the 2^PFBSize sub-filters of sum(abs(coefficients)),
+    from the unquantized coefficients, at least 1; bit_growth = nextpow2.
+    """
+    h = all_coeffs(pfb_size, total_taps, window_type, fwidth)
+    n = 2 ** pfb_size
+    max_gain = max(sum(abs(h[k + t * n]) for t in range(total_taps)) for k in range(n))
+    max_gain = max(max_gain, 1.0)
+    bit_growth = nextpow2(max_gain)
+    adder_bin_pt_out = bit_width_in + coeff_bit_width - 2
+    adder_n_bits_out = bit_growth + 1 + adder_bin_pt_out
+    return {"BIT_GROWTH": bit_growth, "ADDER_N_BITS_OUT": adder_n_bits_out,
+            "ADDER_BIN_PT_OUT": adder_bin_pt_out, "SCALE_FACTOR": -bit_growth,
+            "BIT_WIDTH_OUT": bit_width_out or adder_n_bits_out}
+
+
+def write_pfb_fir_real(out_dir, pfb_size, total_taps, window_type, n_inputs, fwidth, coeff_bit_width):
+    """All ROM tables of a pfb_fir_real (every input nput; both pols share them)."""
+    names = []
+    for nput in range(2 ** n_inputs):
+        names += write_tables(out_dir, pfb_size, total_taps, window_type, n_inputs, nput,
+                              fwidth, coeff_bit_width)
+    return names
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--pfb-size", type=int, required=True, help="PFBSize")
     ap.add_argument("--total-taps", type=int, required=True, help="TotalTaps")
     ap.add_argument("--window", required=True, help="WindowType: " + ", ".join(SUPPORTED))
     ap.add_argument("--n-inputs", type=int, required=True, help="n_inputs (log2 of the inputs)")
-    ap.add_argument("--nput", type=int, nargs="+", required=True,
-                    help="input number(s) 0 … 2^n_inputs-1 (one table set each)")
+    ap.add_argument("--nput", type=int, nargs="+",
+                    help="input number(s) 0 … 2^n_inputs-1 (one table set each); default: all")
+    ap.add_argument("--bit-width-in", type=int,
+                    help="BitWidthIn: also print pfb_fir_real's derived parameters")
+    ap.add_argument("--bit-width-out", type=int, default=0, help="BitWidthOut (0 = automatic)")
     ap.add_argument("--fwidth", type=float, default=1.0, help="fwidth (default 1)")
     ap.add_argument("--coeff-bit-width", type=int, required=True, help="CoeffBitWidth")
     ap.add_argument("-o", "--output-dir", required=True)
@@ -227,13 +274,18 @@ def main():
     if not 0 <= args.n_inputs < args.pfb_size:
         ap.error("need 0 <= n_inputs < pfb-size")
     names = []
+    nputs = args.nput if args.nput is not None else list(range(2 ** args.n_inputs))
     try:
-        for nput in args.nput:
+        for nput in nputs:
             names += write_tables(args.output_dir, args.pfb_size, args.total_taps, args.window,
                                   args.n_inputs, nput, args.fwidth, args.coeff_bit_width)
     except ValueError as e:
         ap.error(str(e))
     print(f"wrote {len(names)} files to {args.output_dir}: {' '.join(names)}")
+    if args.bit_width_in is not None:
+        d = pfb_fir_real_params(args.pfb_size, args.total_taps, args.window, args.fwidth,
+                                args.bit_width_in, args.coeff_bit_width, args.bit_width_out)
+        print("pfb_fir_real parameters: " + " ".join(f"{k}={v}" for k, v in d.items()))
 
 
 if __name__ == "__main__":
