@@ -1,0 +1,12 @@
+{
+  "N_INPUTS": 1,
+  "FFT_SIZE": 5,
+  "N_BITS": 16,
+  "BIN_PT": 15,
+  "ADD_LATENCY": 1,
+  "CONV_LATENCY": 2,
+  "BRAM_LATENCY": 2,
+  "BRAM_MAP": 0,
+  "BRAM_DELAYS": 1,
+  "MAP_DIR": "../../../../test_data/FFTs/Internal/bi_real_unscr_4x/simdata2/"
+}

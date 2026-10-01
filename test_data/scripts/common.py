@@ -26,10 +26,12 @@ SCRIPTS_DIR = Path(__file__).resolve().parent
 TEST_DATA_ROOT = SCRIPTS_DIR.parent
 # rtl/ root: the first ancestor directory that contains rtl/
 RTL_ROOT = next(p / "rtl" for p in SCRIPTS_DIR.parents if (p / "rtl").is_dir())
-# generators that belong to RTL modules (in the modules' own scripts/ directory)
+# generators that belong to RTL modules (in the modules' own scripts/
+# directories, e.g. rtl/FFTs/Twiddle/scripts/, rtl/Reorder/scripts/)
 TWIDDLE_SCRIPTS = RTL_ROOT / "FFTs" / "Twiddle" / "scripts"
+MODULE_SCRIPTS = sorted(d for d in RTL_ROOT.rglob("scripts") if d.is_dir())
 
-for _p in (SCRIPTS_DIR, TWIDDLE_SCRIPTS):
+for _p in [SCRIPTS_DIR, *MODULE_SCRIPTS]:
     if str(_p) not in sys.path:
         sys.path.insert(0, str(_p))
 

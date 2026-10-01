@@ -1,0 +1,7 @@
+{
+  "N_INPUTS": 1,
+  "N_BITS": 18,
+  "BIN_PT": 17,
+  "LATENCY": 1,
+  "OVERFLOW": 0
+}

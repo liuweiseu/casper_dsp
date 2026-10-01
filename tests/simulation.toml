@@ -1292,6 +1292,226 @@ DELAYS_BRAM = 1
 MAX_FANOUT = 1
 INIT_FILE = "../../../test_data/FFTs/fft_stage_n/simdata5/twiddle.mem"
 
+# test fft_unscrambler
+[[simulations]]
+dir = "FFTs"
+top = "fft_unscrambler"
+test_data_script = "gen_fft_unscrambler_test_data.py"
+# 2 groups, order 4, distributed map (map latency 1)
+[[simulations.parameters]]
+N_STREAMS = 1
+FFT_SIZE = 5
+LOG2_N_GROUPS = 1
+N_BITS_IN = 8
+BRAM_LATENCY = 2
+COEFFS_BIT_LIMIT = 8
+MAP_INIT_FILE = "../../../test_data/FFTs/fft_unscrambler/simdata0/map.mem"
+# 2 streams × 4 groups, order 2, BRAM map (map latency 2)
+[[simulations.parameters]]
+N_STREAMS = 2
+FFT_SIZE = 6
+LOG2_N_GROUPS = 2
+N_BITS_IN = 12
+BRAM_LATENCY = 2
+COEFFS_BIT_LIMIT = 4
+MAP_INIT_FILE = "../../../test_data/FFTs/fft_unscrambler/simdata1/map.mem"
+# 2 streams × 4 groups, order 3, BRAM map, fanout latency 1
+[[simulations.parameters]]
+N_STREAMS = 2
+FFT_SIZE = 8
+LOG2_N_GROUPS = 2
+N_BITS_IN = 36
+BRAM_LATENCY = 1
+COEFFS_BIT_LIMIT = 8
+MAP_INIT_FILE = "../../../test_data/FFTs/fft_unscrambler/simdata2/map.mem"
+# 64 groups, order 7, map latency 3, fanout latency 1
+[[simulations.parameters]]
+N_STREAMS = 1
+FFT_SIZE = 13
+LOG2_N_GROUPS = 6
+N_BITS_IN = 6
+BRAM_LATENCY = 2
+COEFFS_BIT_LIMIT = 8
+MAP_INIT_FILE = "../../../test_data/FFTs/fft_unscrambler/simdata3/map.mem"
+# BRAM-map threshold exactly met: 2^(FFT_SIZE-1)·(FFT_SIZE-1) = 2^COEFFS_BIT_LIMIT
+[[simulations.parameters]]
+N_STREAMS = 1
+FFT_SIZE = 5
+LOG2_N_GROUPS = 1
+N_BITS_IN = 8
+BRAM_LATENCY = 1
+COEFFS_BIT_LIMIT = 6
+MAP_INIT_FILE = "../../../test_data/FFTs/fft_unscrambler/simdata4/map.mem"
+
+# ── FFTs/Internal ────────────────────────────────────────────────────────────
+
+# test bi_real_unscr_4x
+[[simulations]]
+dir = "FFTs/Internal"
+top = "bi_real_unscr_4x"
+test_data_script = "gen_fft_internal_test_data.py"
+# casper defaults
+[[simulations.parameters]]
+N_INPUTS = 1
+FFT_SIZE = 3
+N_BITS = 18
+BIN_PT = 17
+ADD_LATENCY = 1
+CONV_LATENCY = 1
+BRAM_LATENCY = 2
+BRAM_MAP = 0
+BRAM_DELAYS = 0
+MAP_DIR = "../../../../test_data/FFTs/Internal/bi_real_unscr_4x/simdata0/"
+# 2 lanes, BRAM map (map latency 3)
+[[simulations.parameters]]
+N_INPUTS = 2
+FFT_SIZE = 4
+N_BITS = 12
+BIN_PT = 11
+ADD_LATENCY = 2
+CONV_LATENCY = 1
+BRAM_LATENCY = 1
+BRAM_MAP = 1
+BRAM_DELAYS = 0
+MAP_DIR = "../../../../test_data/FFTs/Internal/bi_real_unscr_4x/simdata1/"
+# BRAM half-frame delays
+[[simulations.parameters]]
+N_INPUTS = 1
+FFT_SIZE = 5
+N_BITS = 16
+BIN_PT = 15
+ADD_LATENCY = 1
+CONV_LATENCY = 2
+BRAM_LATENCY = 2
+BRAM_MAP = 0
+BRAM_DELAYS = 1
+MAP_DIR = "../../../../test_data/FFTs/Internal/bi_real_unscr_4x/simdata2/"
+# smallest FFT (even map is the identity), combinational hilbert
+[[simulations.parameters]]
+N_INPUTS = 1
+FFT_SIZE = 2
+N_BITS = 8
+BIN_PT = 7
+ADD_LATENCY = 0
+CONV_LATENCY = 0
+BRAM_LATENCY = 1
+BRAM_MAP = 0
+BRAM_DELAYS = 0
+MAP_DIR = "../../../../test_data/FFTs/Internal/bi_real_unscr_4x/simdata3/"
+# 4 lanes, 256-point: fanout latency 1, sync_delay and delay_bram (half frame > 52)
+[[simulations.parameters]]
+N_INPUTS = 4
+FFT_SIZE = 8
+N_BITS = 18
+BIN_PT = 17
+ADD_LATENCY = 1
+CONV_LATENCY = 1
+BRAM_LATENCY = 2
+BRAM_MAP = 0
+BRAM_DELAYS = 0
+MAP_DIR = "../../../../test_data/FFTs/Internal/bi_real_unscr_4x/simdata4/"
+
+# test complex_conj
+[[simulations]]
+dir = "FFTs/Internal"
+top = "complex_conj"
+test_data_script = "gen_fft_internal_test_data.py"
+# casper defaults (Wrap)
+[[simulations.parameters]]
+N_INPUTS = 1
+N_BITS = 18
+BIN_PT = 17
+LATENCY = 1
+OVERFLOW = 0
+# 2 lanes, combinational, Saturate
+[[simulations.parameters]]
+N_INPUTS = 2
+N_BITS = 8
+BIN_PT = 7
+LATENCY = 0
+OVERFLOW = 1
+# 4 lanes, latency 2, Wrap
+[[simulations.parameters]]
+N_INPUTS = 4
+N_BITS = 12
+BIN_PT = 4
+LATENCY = 2
+OVERFLOW = 0
+# 3 lanes, 6-bit, Saturate
+[[simulations.parameters]]
+N_INPUTS = 3
+N_BITS = 6
+BIN_PT = 5
+LATENCY = 1
+OVERFLOW = 1
+
+# test hilbert
+[[simulations]]
+dir = "FFTs/Internal"
+top = "hilbert"
+test_data_script = "gen_fft_internal_test_data.py"
+# casper defaults
+[[simulations.parameters]]
+N_INPUTS = 1
+BIT_WIDTH = 18
+BIN_PT_IN = 17
+ADD_LATENCY = 1
+CONV_LATENCY = 1
+# 2 lanes, combinational convert
+[[simulations.parameters]]
+N_INPUTS = 2
+BIT_WIDTH = 8
+BIN_PT_IN = 7
+ADD_LATENCY = 2
+CONV_LATENCY = 0
+# 3 lanes, combinational adders
+[[simulations.parameters]]
+N_INPUTS = 3
+BIT_WIDTH = 12
+BIN_PT_IN = 10
+ADD_LATENCY = 0
+CONV_LATENCY = 1
+# fully combinational, 6-bit
+[[simulations.parameters]]
+N_INPUTS = 1
+BIT_WIDTH = 6
+BIN_PT_IN = 5
+ADD_LATENCY = 0
+CONV_LATENCY = 0
+
+# test mirror_spectrum
+[[simulations]]
+dir = "FFTs/Internal"
+top = "mirror_spectrum"
+test_data_script = "gen_fft_internal_test_data.py"
+# casper defaults
+[[simulations.parameters]]
+N_INPUTS = 1
+FFT_SIZE = 3
+INPUT_BIT_WIDTH = 18
+BIN_PT_IN = 17
+BRAM_LATENCY = 2
+NEGATE_LATENCY = 1
+NEGATE_MODE = 0
+# 2 lanes, negate latency 0 (as in bi_real_unscr_4x)
+[[simulations.parameters]]
+N_INPUTS = 2
+FFT_SIZE = 4
+INPUT_BIT_WIDTH = 12
+BIN_PT_IN = 11
+BRAM_LATENCY = 5
+NEGATE_LATENCY = 0
+NEGATE_MODE = 0
+# 4 lanes (replicate latency 2), dsp48e negate (latency 3)
+[[simulations.parameters]]
+N_INPUTS = 4
+FFT_SIZE = 2
+INPUT_BIT_WIDTH = 8
+BIN_PT_IN = 7
+BRAM_LATENCY = 1
+NEGATE_LATENCY = 0
+NEGATE_MODE = 1
+
 # ── FFTs/Twiddle ─────────────────────────────────────────────────────────────
 
 # test twiddle_coeff_0
@@ -1793,6 +2013,130 @@ OVERFLOW = 1
 MULT_SPEC = 1
 MULT_LATENCY = 0
 ADD_LATENCY = 0
+
+# ── Reorder ──────────────────────────────────────────────────────────────────
+
+# test barrel_switcher
+[[simulations]]
+dir = "Reorder"
+top = "barrel_switcher"
+test_data_script = "gen_reorder_test_data.py"
+# 2 lanes
+[[simulations.parameters]]
+LOG2_N_LANES = 1
+DATA_WIDTH = 8
+# 4 lanes
+[[simulations.parameters]]
+LOG2_N_LANES = 2
+DATA_WIDTH = 16
+# 8 lanes
+[[simulations.parameters]]
+LOG2_N_LANES = 3
+DATA_WIDTH = 6
+
+# test reorder
+[[simulations]]
+dir = "Reorder"
+top = "reorder"
+test_data_script = "gen_reorder_test_data.py"
+# casper's default map (order 4)
+[[simulations.parameters]]
+N_STREAMS = 1
+DATA_WIDTH = 8
+MAP_LEN = 8
+ORDER = 4
+MAP_LATENCY = 2
+BRAM_LATENCY = 1
+FANOUT_LATENCY = 0
+MAP_INIT_FILE = "../../../test_data/Reorder/reorder/simdata0/map.mem"
+# bit-reversal map of bi_real_unscr_4x reorder_even (order 2)
+[[simulations.parameters]]
+N_STREAMS = 1
+DATA_WIDTH = 36
+MAP_LEN = 16
+ORDER = 2
+MAP_LATENCY = 1
+BRAM_LATENCY = 2
+FANOUT_LATENCY = 0
+MAP_INIT_FILE = "../../../test_data/Reorder/reorder/simdata1/map.mem"
+# index-reversal map of reorder_out, 4 streams (rep latency 2)
+[[simulations.parameters]]
+N_STREAMS = 4
+DATA_WIDTH = 18
+MAP_LEN = 8
+ORDER = 2
+MAP_LATENCY = 3
+BRAM_LATENCY = 2
+FANOUT_LATENCY = 1
+MAP_INIT_FILE = "../../../test_data/Reorder/reorder/simdata2/map.mem"
+# fft_unscrambler map FFTSize 5, 2 groups (order 4)
+[[simulations.parameters]]
+N_STREAMS = 2
+DATA_WIDTH = 16
+MAP_LEN = 16
+ORDER = 4
+MAP_LATENCY = 2
+BRAM_LATENCY = 2
+FANOUT_LATENCY = 2
+MAP_INIT_FILE = "../../../test_data/Reorder/reorder/simdata3/map.mem"
+# fft_unscrambler map FFTSize 8, 4 groups (order 3)
+[[simulations.parameters]]
+N_STREAMS = 4
+DATA_WIDTH = 12
+MAP_LEN = 64
+ORDER = 3
+MAP_LATENCY = 2
+BRAM_LATENCY = 1
+FANOUT_LATENCY = 0
+MAP_INIT_FILE = "../../../test_data/Reorder/reorder/simdata4/map.mem"
+# fft_unscrambler map FFTSize 7, 2 groups (order 6)
+[[simulations.parameters]]
+N_STREAMS = 2
+DATA_WIDTH = 10
+MAP_LEN = 64
+ORDER = 6
+MAP_LATENCY = 1
+BRAM_LATENCY = 1
+FANOUT_LATENCY = 0
+MAP_INIT_FILE = "../../../test_data/Reorder/reorder/simdata5/map.mem"
+# identity map: plain delay (order 1)
+[[simulations.parameters]]
+N_STREAMS = 1
+DATA_WIDTH = 8
+MAP_LEN = 8
+ORDER = 1
+MAP_LATENCY = 1
+BRAM_LATENCY = 2
+FANOUT_LATENCY = 1
+MAP_INIT_FILE = "../../../test_data/Reorder/reorder/simdata6/map.mem"
+# 2-point map (order 1)
+[[simulations.parameters]]
+N_STREAMS = 2
+DATA_WIDTH = 8
+MAP_LEN = 2
+ORDER = 1
+MAP_LATENCY = 2
+BRAM_LATENCY = 1
+FANOUT_LATENCY = 0
+MAP_INIT_FILE = "../../../test_data/Reorder/reorder/simdata7/map.mem"
+
+# test square_transposer
+[[simulations]]
+dir = "Reorder"
+top = "square_transposer"
+test_data_script = "gen_reorder_test_data.py"
+# 2 lanes
+[[simulations.parameters]]
+LOG2_N_LANES = 1
+DATA_WIDTH = 8
+# 4 lanes, 36-bit words
+[[simulations.parameters]]
+LOG2_N_LANES = 2
+DATA_WIDTH = 36
+# 8 lanes
+[[simulations.parameters]]
+LOG2_N_LANES = 3
+DATA_WIDTH = 12
 
 # ── Templates ────────────────────────────────────────────────────────────────
 
