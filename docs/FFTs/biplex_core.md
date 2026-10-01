@@ -51,10 +51,10 @@ unscramblers.
 | `COEFF_BIT_WIDTH`  | 18          | Twiddle coefficient width |
 | `ADD_LATENCY`, `MULT_LATENCY`, `BRAM_LATENCY`, `CONV_LATENCY` | 1, 2, 2, 1 | As casper |
 | `QUANTIZATION`     | 1           | `0`=truncate, `1`=round half away from zero, `2`=round half to even |
-| `OVERFLOW`         | 0           | `0`=wrap, `1`=saturate |
+| `OVERFLOW`         | 1           | `0`=wrap, `1`=saturate |
 | `DELAYS_BIT_LIMIT` | 8           | Stages with `FFT_SIZE − s` above this use RAM delays |
 | `MAX_FANOUT`       | 4           | Fan-out latency control (per stage) |
-| `BITGROWTH`        | 0           | Grow one bit per stage instead of shifting, up to `MAX_BITS` |
+| `BITGROWTH`        | 1           | Grow one bit per stage instead of shifting, up to `MAX_BITS` (casper mask default on; fft_wideband_real passes off) |
 | `MAX_BITS`         | 20          | Width limit for bit growth |
 | `HARDCODE_SHIFTS`  | 0           | Use `SHIFT_SCHEDULE` instead of the `shift` input |
 | `SHIFT_SCHEDULE`   | 3           | casper `shift_schedule` as a bit mask (bit `s−1` = stage `s`) |
