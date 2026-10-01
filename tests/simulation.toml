@@ -2506,6 +2506,63 @@ ADD_LATENCY = 0
 
 # ── PFBs ─────────────────────────────────────────────────────────────────────
 
+# test first_tap_real
+[[simulations]]
+dir = "PFBs"
+top = "first_tap_real"
+test_data_script = "gen_pfb_test_data.py"
+# casper mask defaults: delay 32, 4 taps
+[[simulations.parameters]]
+PFB_SIZE = 6
+N_INPUTS = 1
+N_POL_BLOCKS = 1
+COEFF_BIT_WIDTH = 8
+TOTAL_TAPS = 4
+BIT_WIDTH_IN = 8
+MULT_LATENCY = 2
+BRAM_LATENCY = 2
+# 1 input, 2 serial polarisations: delay 64
+[[simulations.parameters]]
+PFB_SIZE = 5
+N_INPUTS = 0
+N_POL_BLOCKS = 2
+COEFF_BIT_WIDTH = 18
+TOTAL_TAPS = 3
+BIT_WIDTH_IN = 18
+MULT_LATENCY = 3
+BRAM_LATENCY = 1
+# 2 taps (forwards one coefficient), delay 4
+[[simulations.parameters]]
+PFB_SIZE = 4
+N_INPUTS = 2
+N_POL_BLOCKS = 1
+COEFF_BIT_WIDTH = 12
+TOTAL_TAPS = 2
+BIT_WIDTH_IN = 10
+MULT_LATENCY = 1
+BRAM_LATENCY = 2
+
+# test last_tap_real
+[[simulations]]
+dir = "PFBs"
+top = "last_tap_real"
+test_data_script = "gen_pfb_test_data.py"
+# mask defaults
+[[simulations.parameters]]
+BIT_WIDTH_IN = 8
+COEFF_BIT_WIDTH = 8
+MULT_LATENCY = 2
+# 18-bit data and coefficients
+[[simulations.parameters]]
+BIT_WIDTH_IN = 18
+COEFF_BIT_WIDTH = 18
+MULT_LATENCY = 3
+# combinational multiplier
+[[simulations.parameters]]
+BIT_WIDTH_IN = 12
+COEFF_BIT_WIDTH = 10
+MULT_LATENCY = 0
+
 # test pfb_coeff_gen
 [[simulations]]
 dir = "PFBs"
@@ -2589,6 +2646,48 @@ FWIDTH = 1.0
 FAN_LATENCY = 1
 DIN_WIDTH = 11
 COEFF_DIR = "../../../test_data/PFBs/pfb_coeff_gen/simdata5/"
+
+# test tap_real
+[[simulations]]
+dir = "PFBs"
+top = "tap_real"
+test_data_script = "gen_pfb_test_data.py"
+# tap_real mask defaults (coeff_frac_width as pfb_fir_real sets it)
+[[simulations.parameters]]
+MULT_LATENCY = 2
+COEFF_WIDTH = 12
+COEFF_FRAC_WIDTH = 11
+DELAY = 4
+DATA_WIDTH = 8
+BRAM_LATENCY = 1
+N_COEFFS = 3
+# 18-bit data and coefficients, delay 16, one coefficient forwarded
+[[simulations.parameters]]
+MULT_LATENCY = 1
+COEFF_WIDTH = 18
+COEFF_FRAC_WIDTH = 17
+DELAY = 16
+DATA_WIDTH = 18
+BRAM_LATENCY = 2
+N_COEFFS = 2
+# 5 coefficients on the bus, delay 32
+[[simulations.parameters]]
+MULT_LATENCY = 3
+COEFF_WIDTH = 10
+COEFF_FRAC_WIDTH = 9
+DELAY = 32
+DATA_WIDTH = 12
+BRAM_LATENCY = 2
+N_COEFFS = 5
+# combinational multiplier, delay 2
+[[simulations.parameters]]
+MULT_LATENCY = 0
+COEFF_WIDTH = 8
+COEFF_FRAC_WIDTH = 7
+DELAY = 2
+DATA_WIDTH = 8
+BRAM_LATENCY = 1
+N_COEFFS = 2
 
 # ── Reorder ──────────────────────────────────────────────────────────────────
 
