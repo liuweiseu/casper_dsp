@@ -46,7 +46,7 @@ As a result, stage 1 uses `twiddle_pass_through`, stage 2 uses
 `twiddle_general`, `INIT_FILE` must hold the table:
 
 ```
-python3 scripts/gen_twiddle_coeffs.py --fft-size FFT_SIZE \
+python3 rtl/FFTs/Twiddle/scripts/gen_twiddle_coeffs.py --fft-size FFT_SIZE \
     --coeffs 0 1 … 2^(FFT_STAGE-1)-1 --coeff-bit-width COEFF_BIT_WIDTH -o table.mem
 ```
 

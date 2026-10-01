@@ -13,6 +13,26 @@ lib_path = "platform/xilinx/2021.1/unisims"
 [altera]
 lib_path = "platform/altera"
 
+# ── Test data ────────────────────────────────────────────────────────────────
+# Where each module's test data comes from.
+#
+# generate = false : run the tests on test_data/ as it is (committed,
+#                    imported or MATLAB-exported data).
+# generate = true  : before a module's tests run, regenerate that module's
+#                    data with test_data/scripts/<test_data_script> --module
+#                    <top>. Only entries with a test_data_script are
+#                    regenerated; generation writes into the test
+#                    container's copy of test_data/, so the repository's
+#                    test_data/ is never modified.
+#
+# Per module, a [[simulations]] entry may override the global switch with
+#   generate_test_data = true / false
+# e.g. keep generate = true but set generate_test_data = false on a module
+# whose test data you imported yourself.
+
+[test_data]
+generate = false
+
 # ── BasicModules ─────────────────────────────────────────────────────────────
 
 # test constant
@@ -284,6 +304,7 @@ WIDTH = 2
 [[simulations]]
 dir = "Bus"
 top = "adder_subtractor"
+test_data_script = "gen_fixed_point_test_data.py"
 # Fix_8_4 + Fix_8_4 → Fix_9_4, full precision, combinational
 [[simulations.parameters]]
 N_BITS_A = 8
@@ -379,6 +400,7 @@ LATENCY = 1
 [[simulations]]
 dir = "Bus"
 top = "convert"
+test_data_script = "gen_fixed_point_test_data.py"
 # Fix_16_8 → Fix_8_4, truncate + wrap, combinational
 [[simulations.parameters]]
 N_BITS_IN = 16
@@ -461,6 +483,7 @@ LATENCY = 0
 [[simulations]]
 dir = "Bus"
 top = "multiplier"
+test_data_script = "gen_fixed_point_test_data.py"
 # Fix_8_7 × Fix_8_7 → Fix_16_14, full precision, combinational
 [[simulations.parameters]]
 N_BITS_A = 8
@@ -536,6 +559,7 @@ LATENCY = 1
 [[simulations]]
 dir = "Bus"
 top = "negate"
+test_data_script = "gen_fixed_point_test_data.py"
 # Fix_8_4 → Fix_8_4, wrap (−(−8) wraps to −8), combinational
 [[simulations.parameters]]
 N_BITS_IN = 8
@@ -607,6 +631,7 @@ LATENCY = 1
 [[simulations]]
 dir = "Bus"
 top = "scale"
+test_data_script = "gen_fixed_point_test_data.py"
 # Fix_16_8 ÷ 8, round half to even
 [[simulations.parameters]]
 N_BITS_IN = 16
@@ -686,6 +711,7 @@ LATENCY = 1
 [[simulations]]
 dir = "Delays"
 top = "delay_bram"
+test_data_script = "gen_delays_test_data.py"
 # shortest RAM-based delay (1-word address range)
 [[simulations.parameters]]
 BITWIDTH = 8
@@ -719,6 +745,7 @@ DELAY_LEN = 0
 [[simulations]]
 dir = "Delays"
 top = "delay_srl"
+test_data_script = "gen_delays_test_data.py"
 # enable + reset
 [[simulations.parameters]]
 BITWIDTH = 8
@@ -760,6 +787,7 @@ USE_RST = 1
 [[simulations]]
 dir = "Delays"
 top = "dual_port_ram"
+test_data_script = "gen_delays_test_data.py"
 # 16 × 8
 [[simulations.parameters]]
 DATA_WIDTH = 8
@@ -777,6 +805,7 @@ ADDR_WIDTH = 5
 [[simulations]]
 dir = "Delays"
 top = "pipeline"
+test_data_script = "gen_delays_test_data.py"
 # LATENCY = 0: combinational pass-through
 [[simulations.parameters]]
 BITWIDTH = 8
@@ -802,6 +831,7 @@ LATENCY = 5
 [[simulations]]
 dir = "Delays"
 top = "rom"
+test_data_script = "gen_delays_test_data.py"
 # 16 × 8
 [[simulations.parameters]]
 DATA_WIDTH = 8
@@ -826,6 +856,7 @@ ADDR_WIDTH = 3
 [[simulations]]
 dir = "Delays"
 top = "single_port_ram"
+test_data_script = "gen_delays_test_data.py"
 # 16 × 8
 [[simulations.parameters]]
 DATA_WIDTH = 8
@@ -847,6 +878,7 @@ ADDR_WIDTH = 8
 [[simulations]]
 dir = "Delays"
 top = "sync_delay"
+test_data_script = "gen_fft_stage_test_data.py"
 # DELAY_LEN = 0: pass-through
 [[simulations.parameters]]
 DELAY_LEN = 0
@@ -869,6 +901,7 @@ DELAY_LEN = 100
 [[simulations]]
 dir = "FFTs"
 top = "biplex_core"
+test_data_script = "gen_biplex_test_data.py"
 # 8-point, casper defaults, dynamic shift
 [[simulations.parameters]]
 N_INPUTS = 1
@@ -954,6 +987,7 @@ COEFF_DIR = "../../../test_data/FFTs/biplex_core/simdata3/"
 [[simulations]]
 dir = "FFTs"
 top = "butterfly_direct"
+test_data_script = "gen_butterfly_test_data.py"
 # pass_through (biplex stage 1), dynamic shift, round + wrap
 [[simulations.parameters]]
 N_INPUTS = 1
@@ -1138,6 +1172,7 @@ MAX_FANOUT = 4
 [[simulations]]
 dir = "FFTs"
 top = "fft_stage_n"
+test_data_script = "gen_fft_stage_test_data.py"
 # 16-point stage 1 (pass_through), register delays, fan latency 1
 [[simulations.parameters]]
 N_INPUTS = 1
@@ -1263,6 +1298,7 @@ INIT_FILE = "../../../test_data/FFTs/fft_stage_n/simdata5/twiddle.mem"
 [[simulations]]
 dir = "FFTs/Twiddle"
 top = "twiddle_coeff_0"
+test_data_script = "gen_twiddle_test_data.py"
 # casper-style latencies (total 5)
 [[simulations.parameters]]
 N_INPUTS = 1
@@ -1292,6 +1328,7 @@ CONV_LATENCY = 0
 [[simulations]]
 dir = "FFTs/Twiddle"
 top = "twiddle_coeff_1"
+test_data_script = "gen_twiddle_test_data.py"
 # casper-style latencies (total 5)
 [[simulations.parameters]]
 N_INPUTS = 1
@@ -1324,6 +1361,7 @@ CONV_LATENCY = 0
 [[simulations]]
 dir = "FFTs/Twiddle"
 top = "twiddle_general"
+test_data_script = "gen_twiddle_test_data.py"
 # 16-point stage coefficients 0..3, casper defaults (round ±inf, wrap)
 [[simulations.parameters]]
 N_INPUTS = 1
@@ -1425,6 +1463,7 @@ INIT_FILE = "../../../../test_data/FFTs/Twiddle/twiddle_general/simdata5/twiddle
 [[simulations]]
 dir = "FFTs/Twiddle"
 top = "twiddle_pass_through"
+test_data_script = "gen_twiddle_test_data.py"
 # 1 lane, 18-bit
 [[simulations.parameters]]
 N_INPUTS = 1
@@ -1438,6 +1477,7 @@ INPUT_BIT_WIDTH = 8
 [[simulations]]
 dir = "FFTs/Twiddle"
 top = "twiddle_stage_2"
+test_data_script = "gen_twiddle_test_data.py"
 # casper defaults (FFTSize 5, total latency 7)
 [[simulations.parameters]]
 N_INPUTS = 1
@@ -1533,6 +1573,7 @@ BIN_PT = 15
 [[simulations]]
 dir = "Misc"
 top = "convert_of"
+test_data_script = "gen_butterfly_test_data.py"
 # Fix_16_8 → Fix_8_4, truncate + wrap, combinational
 [[simulations.parameters]]
 N_BITS_IN = 16
@@ -1639,6 +1680,7 @@ NBITS = 16
 [[simulations]]
 dir = "Multipliers"
 top = "complex_multiplier"
+test_data_script = "gen_fixed_point_test_data.py"
 # Fix_8_7 × Fix_8_7 → Fix_17_14, exact, 4-mult
 [[simulations.parameters]]
 N_BITS_A = 8

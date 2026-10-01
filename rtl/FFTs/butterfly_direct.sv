@@ -16,7 +16,7 @@
 //   N_COEFFS = 1, COEFF_0 = 1 : twiddle_coeff_1
 //   N_COEFFS = 2, COEFFS = [0 1], STEP_PERIOD = FFT_SIZE-2 : twiddle_stage_2
 //   anything else             : twiddle_general (table from INIT_FILE, made by
-//                               scripts/gen_twiddle_coeffs.py for Coeffs)
+//                               rtl/FFTs/Twiddle/scripts/gen_twiddle_coeffs.py for Coeffs)
 //
 // WIDTHS (butterfly_direct_init.m): the adders take a (INPUT_BIT_WIDTH,
 // BIN_PT_IN) and bwo, which is INPUT_BIT_WIDTH+1 bits for twiddle_general and

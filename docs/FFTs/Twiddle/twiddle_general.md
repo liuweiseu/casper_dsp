@@ -27,7 +27,7 @@ form) and [`convert`](../../Bus/convert.md).
 
 ## Coefficient Table and Schedule
 
-[`scripts/gen_twiddle_coeffs.py`](../../../scripts/gen_twiddle_coeffs.py)
+[`rtl/FFTs/Twiddle/scripts/gen_twiddle_coeffs.py`](../../../rtl/FFTs/Twiddle/scripts/gen_twiddle_coeffs.py)
 generates the table from casper_library's `Coeffs` and `FFTSize`, using the
 formula in `coeff_gen_init.m`:
 
@@ -44,7 +44,7 @@ w[k] = exp(-2πj · bit_rev(Coeffs[k], FFTSize-1) / 2^FFTSize)
 - **Packing**: each row is `{re, im}`, with the real part in the upper half.
 
 ```
-python3 scripts/gen_twiddle_coeffs.py --fft-size 5 --coeffs 0 1 2 3 \
+python3 rtl/FFTs/Twiddle/scripts/gen_twiddle_coeffs.py --fft-size 5 --coeffs 0 1 2 3 \
     --coeff-bit-width 18 -o twiddle.mem
 ```
 

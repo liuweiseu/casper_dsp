@@ -16,7 +16,7 @@
 //   BITGROWTH     = BITGROWTH && (input width + 1 <= MAX_BITS)
 //   INIT_FILE     = {COEFF_DIR, "twiddle_stage<s>.mem"} (stages >= 3 use
 //                   twiddle_general; generate the files with
-//                   scripts/gen_twiddle_coeffs.py --fft-size FFT_SIZE
+//                   rtl/FFTs/Twiddle/scripts/gen_twiddle_coeffs.py --fft-size FFT_SIZE
 //                   --coeffs 0 .. 2^(s-1)-1)
 // BIN_PT_IN is the same for every stage.
 //

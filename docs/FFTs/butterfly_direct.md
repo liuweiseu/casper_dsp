@@ -25,7 +25,7 @@ as `butterfly_direct_init.m`. casper's `Coeffs` list is passed as `N_COEFFS`,
 | `Coeffs = [0]`, `BIPLEX = 0` | [`twiddle_coeff_0`](Twiddle/twiddle_coeff_0.md) |
 | `Coeffs = [1]` | [`twiddle_coeff_1`](Twiddle/twiddle_coeff_1.md) |
 | `Coeffs = [0 1]` and `STEP_PERIOD = FFT_SIZE − 2` | [`twiddle_stage_2`](Twiddle/twiddle_stage_2.md) |
-| otherwise | [`twiddle_general`](Twiddle/twiddle_general.md), table from `INIT_FILE` (`scripts/gen_twiddle_coeffs.py` for `Coeffs`) |
+| otherwise | [`twiddle_general`](Twiddle/twiddle_general.md), table from `INIT_FILE` (`rtl/FFTs/Twiddle/scripts/gen_twiddle_coeffs.py` for `Coeffs`) |
 
 ### Widths
 

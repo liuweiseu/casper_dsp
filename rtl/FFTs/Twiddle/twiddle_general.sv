@@ -17,7 +17,7 @@
 // cycles, then the next row, wrapping after N_COEFFS rows (N_COEFFS need not
 // be a power of two). Without sync pulses the counter free-runs from 0.
 //
-// The table comes from scripts/gen_twiddle_coeffs.py: row k = w[k] =
+// The table comes from rtl/FFTs/Twiddle/scripts/gen_twiddle_coeffs.py: row k = w[k] =
 // exp(-2πj · bit_rev(Coeffs[k], FFT_SIZE-1) / 2^FFT_SIZE), each part a
 // COEFF_BIT_WIDTH-bit signed word with binary point COEFF_BIT_WIDTH-1,
 // packed {re, im} (re in the upper half).

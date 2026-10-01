@@ -56,12 +56,20 @@ The repository uses four parallel directory trees, all mirroring `rtl/` structur
 | `test_data/` | CSV simulation input/output data |
 | `docs/` | Per-module documentation |
 
+Two kinds of Python scripts live next to the files they belong to:
+
+| Location | Purpose |
+|----------|---------|
+| `rtl/<Category>/.../scripts/` | Generators a module **needs to be used**, e.g. [rtl/FFTs/Twiddle/scripts/gen_twiddle_coeffs.py](rtl/FFTs/Twiddle/scripts/gen_twiddle_coeffs.py) writes the coefficient table (`.mem`) that `twiddle_general` loads through `INIT_FILE` |
+| `test_data/scripts/` | Test data generators: reference models that write `test_data/<Category>/<module>/` (inputs, expected outputs, `params.json`, `test_data.md`). Each accepts `--module <name>` / `--list` and prints the module's `simulation.toml` entry |
+
 ### Steps
 
 1. **RTL** — add the Verilog/SystemVerilog file under `rtl/<Category>/`.  
    Example: [rtl/Templates/simple_adder.v](rtl/Templates/simple_adder.v)
 
 2. **Test data** — create `test_data/<Category>/<module>/` and place CSV files there (e.g. `sim_in.csv`, `sim_out.csv`). For multiple parameter sets use subdirectories `simdata0/`, `simdata1/`, …
+   The data can be imported (e.g. exported from MATLAB) or produced by a generator script in `test_data/scripts/` (see *Test data generation* below).
 
 3. **Testbench** — create `testbench/<Category>/<module>/test_<module>.py`.  
    Derive the data path dynamically from `__file__` so no path is hardcoded:
@@ -95,6 +103,24 @@ NINPUTS = 2
 NBITS = 10
 NINPUTS = 4
 ```
+
+### Test data generation
+The `[test_data]` table in `tests/simulation.toml` decides whether the tests run on `test_data/` as it is, or regenerate it first with the scripts in `test_data/scripts/`:
+```[toml]
+[test_data]
+generate = false        # true: regenerate before testing
+
+[[simulations]]
+dir = "Bus"
+top = "convert"
+test_data_script = "gen_fixed_point_test_data.py"   # generator of this module's data
+# generate_test_data = false                        # per-module override of [test_data] generate
+```
+- `generate = false` (default): every module uses its committed / imported test data.
+- `generate = true`: before a module's tests, `tests/test_runner.py` runs `test_data/scripts/<test_data_script> --module <top>`, so only that module's data is rewritten. Entries without `test_data_script` (e.g. MATLAB-exported data) are never regenerated.
+- `generate_test_data` on a `[[simulations]]` entry overrides the global switch for that module, e.g. to keep your own imported data while the rest is regenerated.
+- Generation writes into the test container's copy of `test_data/`; the repository's `test_data/` is not modified. To update the repository, run the script directly, e.g. `python3 test_data/scripts/gen_fixed_point_test_data.py --module convert`.
+
 ### Local simulation
 
 **Run all tests:**

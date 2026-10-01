@@ -22,7 +22,7 @@ Each .mem row is one hexadecimal word {re, im} (re in the upper
 COEFF_BIT_WIDTH bits), matching rom's DATA_WIDTH = 2*COEFF_BIT_WIDTH.
 
 Usage:
-  python3 scripts/gen_twiddle_coeffs.py --fft-size 5 --coeffs 0 1 2 3 \\
+  python3 rtl/FFTs/Twiddle/scripts/gen_twiddle_coeffs.py --fft-size 5 --coeffs 0 1 2 3 \\
       --coeff-bit-width 18 -o twiddle.mem
 """
 

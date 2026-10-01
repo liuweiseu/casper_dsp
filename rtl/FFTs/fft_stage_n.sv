@@ -24,7 +24,7 @@
 // 0 .. 2^(FFT_STAGE-1)-1 otherwise, StepPeriod = FFT_SIZE-FFT_STAGE, biplex
 // on, so stage 1 uses twiddle_pass_through, stage 2 twiddle_stage_2 and later
 // stages twiddle_general, whose table INIT_FILE must hold (generate with
-// scripts/gen_twiddle_coeffs.py --fft-size FFT_SIZE --coeffs 0 .. 2^(FFT_STAGE-1)-1).
+// rtl/FFTs/Twiddle/scripts/gen_twiddle_coeffs.py --fft-size FFT_SIZE --coeffs 0 .. 2^(FFT_STAGE-1)-1).
 // shift[FFT_STAGE-1] is this stage's dynamic downshift; of = butterfly of |
 // of_in, registered (1 cycle).
 //
