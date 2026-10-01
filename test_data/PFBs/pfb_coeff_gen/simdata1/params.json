@@ -1,0 +1,13 @@
+{
+  "PFB_SIZE": 5,
+  "COEFF_BIT_WIDTH": 18,
+  "TOTAL_TAPS": 4,
+  "WINDOW_TYPE": "hamming",
+  "BRAM_LATENCY": 2,
+  "N_INPUTS": 1,
+  "NPUT": 1,
+  "FWIDTH": 1.0,
+  "FAN_LATENCY": 2,
+  "DIN_WIDTH": 9,
+  "COEFF_DIR": "../../../test_data/PFBs/pfb_coeff_gen/simdata1/"
+}

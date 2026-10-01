@@ -1,0 +1,13 @@
+{
+  "N_INPUTS": 5,
+  "DATA_WIDTH": 10,
+  "BIN_PT": 2,
+  "TYPE": 0,
+  "LATENCY": 1,
+  "PRECISION": 0,
+  "N_BITS_OUT": 10,
+  "BIN_PT_OUT": 0,
+  "QUANTIZATION": 0,
+  "OVERFLOW": 0,
+  "N_BITS_OUT_EFF": 13
+}

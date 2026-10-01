@@ -2150,6 +2150,108 @@ WIDTH = 8
 
 # ── Misc ─────────────────────────────────────────────────────────────────────
 
+# test adder_tree
+[[simulations]]
+dir = "Misc"
+top = "adder_tree"
+test_data_script = "gen_adder_tree_test_data.py"
+# 1 input: no stage, dout = din
+[[simulations.parameters]]
+N_INPUTS = 1
+DATA_WIDTH = 8
+BIN_PT = 0
+TYPE = 1
+LATENCY = 1
+PRECISION = 0
+N_BITS_OUT = 8
+BIN_PT_OUT = 0
+QUANTIZATION = 0
+OVERFLOW = 0
+# 2 inputs, full precision
+[[simulations.parameters]]
+N_INPUTS = 2
+DATA_WIDTH = 12
+BIN_PT = 4
+TYPE = 1
+LATENCY = 1
+PRECISION = 0
+N_BITS_OUT = 12
+BIN_PT_OUT = 0
+QUANTIZATION = 0
+OVERFLOW = 0
+# 3 inputs: one value carried through stage 1, latency 2
+[[simulations.parameters]]
+N_INPUTS = 3
+DATA_WIDTH = 8
+BIN_PT = 0
+TYPE = 1
+LATENCY = 2
+PRECISION = 0
+N_BITS_OUT = 8
+BIN_PT_OUT = 0
+QUANTIZATION = 0
+OVERFLOW = 0
+# 5 inputs, unsigned, carried values in stages 1 and 2
+[[simulations.parameters]]
+N_INPUTS = 5
+DATA_WIDTH = 10
+BIN_PT = 2
+TYPE = 0
+LATENCY = 1
+PRECISION = 0
+N_BITS_OUT = 10
+BIN_PT_OUT = 0
+QUANTIZATION = 0
+OVERFLOW = 0
+# 7 inputs, combinational (latency 0)
+[[simulations.parameters]]
+N_INPUTS = 7
+DATA_WIDTH = 18
+BIN_PT = 17
+TYPE = 1
+LATENCY = 0
+PRECISION = 0
+N_BITS_OUT = 18
+BIN_PT_OUT = 0
+QUANTIZATION = 0
+OVERFLOW = 0
+# 8 inputs: balanced tree
+[[simulations.parameters]]
+N_INPUTS = 8
+DATA_WIDTH = 16
+BIN_PT = 8
+TYPE = 1
+LATENCY = 1
+PRECISION = 0
+N_BITS_OUT = 16
+BIN_PT_OUT = 0
+QUANTIZATION = 0
+OVERFLOW = 0
+# 6 inputs, every adder Fix_18_17 (output width = input width), truncate, wrap
+[[simulations.parameters]]
+N_INPUTS = 6
+DATA_WIDTH = 18
+BIN_PT = 17
+TYPE = 1
+LATENCY = 1
+PRECISION = 1
+N_BITS_OUT = 18
+BIN_PT_OUT = 17
+QUANTIZATION = 0
+OVERFLOW = 0
+# 9 inputs (pfb-like), adders Fix_22_17, round even, saturate; carried input keeps Fix_24_20
+[[simulations.parameters]]
+N_INPUTS = 9
+DATA_WIDTH = 24
+BIN_PT = 20
+TYPE = 1
+LATENCY = 2
+PRECISION = 1
+N_BITS_OUT = 22
+BIN_PT_OUT = 17
+QUANTIZATION = 2
+OVERFLOW = 1
+
 # test armed_trigger
 [[simulations]]
 dir = "Misc"
@@ -2401,6 +2503,92 @@ OVERFLOW = 1
 MULT_SPEC = 1
 MULT_LATENCY = 0
 ADD_LATENCY = 0
+
+# ── PFBs ─────────────────────────────────────────────────────────────────────
+
+# test pfb_coeff_gen
+[[simulations]]
+dir = "PFBs"
+top = "pfb_coeff_gen"
+test_data_script = "gen_pfb_test_data.py"
+# casper-style: 32 channels, 4 taps, 2 inputs, input 0
+[[simulations.parameters]]
+PFB_SIZE = 5
+COEFF_BIT_WIDTH = 18
+TOTAL_TAPS = 4
+WINDOW_TYPE = "hamming"
+BRAM_LATENCY = 2
+N_INPUTS = 1
+NPUT = 0
+FWIDTH = 1.0
+FAN_LATENCY = 1
+DIN_WIDTH = 8
+COEFF_DIR = "../../../test_data/PFBs/pfb_coeff_gen/simdata0/"
+# same filter, input 1, fan latency 2
+[[simulations.parameters]]
+PFB_SIZE = 5
+COEFF_BIT_WIDTH = 18
+TOTAL_TAPS = 4
+WINDOW_TYPE = "hamming"
+BRAM_LATENCY = 2
+N_INPUTS = 1
+NPUT = 1
+FWIDTH = 1.0
+FAN_LATENCY = 2
+DIN_WIDTH = 9
+COEFF_DIR = "../../../test_data/PFBs/pfb_coeff_gen/simdata1/"
+# 1 input, 2 taps, hann, minimum latencies
+[[simulations.parameters]]
+PFB_SIZE = 4
+COEFF_BIT_WIDTH = 12
+TOTAL_TAPS = 2
+WINDOW_TYPE = "hann"
+BRAM_LATENCY = 1
+N_INPUTS = 0
+NPUT = 0
+FWIDTH = 1.0
+FAN_LATENCY = 0
+DIN_WIDTH = 6
+COEFF_DIR = "../../../test_data/PFBs/pfb_coeff_gen/simdata2/"
+# 8 taps, 4 inputs (input 3), blackman, fwidth 0.8
+[[simulations.parameters]]
+PFB_SIZE = 6
+COEFF_BIT_WIDTH = 16
+TOTAL_TAPS = 8
+WINDOW_TYPE = "blackman"
+BRAM_LATENCY = 3
+N_INPUTS = 2
+NPUT = 3
+FWIDTH = 0.8
+FAN_LATENCY = 2
+DIN_WIDTH = 10
+COEFF_DIR = "../../../test_data/PFBs/pfb_coeff_gen/simdata3/"
+# odd tap count, rectangular window, fwidth 2
+[[simulations.parameters]]
+PFB_SIZE = 3
+COEFF_BIT_WIDTH = 10
+TOTAL_TAPS = 3
+WINDOW_TYPE = "rectwin"
+BRAM_LATENCY = 1
+N_INPUTS = 1
+NPUT = 1
+FWIDTH = 2.0
+FAN_LATENCY = 1
+DIN_WIDTH = 7
+COEFF_DIR = "../../../test_data/PFBs/pfb_coeff_gen/simdata4/"
+# kaiser (beta 0.5), 4 inputs (input 2)
+[[simulations.parameters]]
+PFB_SIZE = 6
+COEFF_BIT_WIDTH = 18
+TOTAL_TAPS = 4
+WINDOW_TYPE = "kaiser"
+BRAM_LATENCY = 2
+N_INPUTS = 2
+NPUT = 2
+FWIDTH = 1.0
+FAN_LATENCY = 1
+DIN_WIDTH = 11
+COEFF_DIR = "../../../test_data/PFBs/pfb_coeff_gen/simdata5/"
 
 # ── Reorder ──────────────────────────────────────────────────────────────────
 
