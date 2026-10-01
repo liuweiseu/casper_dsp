@@ -187,6 +187,9 @@ def run_twiddle(p, coeffs, st):
         out = tw.m_twiddle_stage_2(dict(common, FFT_SIZE=p["FFT_SIZE"]), tst)
         bw_width = p["INPUT_BIT_WIDTH"]
     else:
+        # single coefficient: casper's constant coeff_gen, read latency 1
+        if p["N_COEFFS"] == 1:
+            common = dict(common, BRAM_LATENCY=1)
         gp = dict(common, N_COEFFS=p["N_COEFFS"], STEP_PERIOD=p["STEP_PERIOD"],
                   COEFF_BIT_WIDTH=p["COEFF_BIT_WIDTH"], QUANTIZATION=p["QUANTIZATION"],
                   OVERFLOW=p["OVERFLOW"])
@@ -246,7 +249,8 @@ def m_butterfly(p, coeffs, st):
               "coeff_0": 1 + p["MULT_LATENCY"] + p["ADD_LATENCY"] + p["CONV_LATENCY"],
               "coeff_1": 1 + p["MULT_LATENCY"] + p["ADD_LATENCY"] + p["CONV_LATENCY"]}.get(
         twiddle_type(p),
-        p["BRAM_LATENCY"] + p["MULT_LATENCY"] + p["ADD_LATENCY"] + p["CONV_LATENCY"])
+        (1 if p["N_COEFFS"] == 1 else p["BRAM_LATENCY"]) + p["MULT_LATENCY"] + p["ADD_LATENCY"]
+        + p["CONV_LATENCY"])
     if tw_lat + p["ADD_LATENCY"] + mux_lat + p["CONV_LATENCY"] == 0:
         # fully combinational: the first clock edge (t = 0) is before the
         # first input value arrives, so cycle 0 shows the all-zero result

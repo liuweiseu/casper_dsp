@@ -1,0 +1,22 @@
+{
+  "N_STREAMS": 2,
+  "FFT_SIZE": 3,
+  "INPUT_BIT_WIDTH": 16,
+  "BIN_PT_IN": 15,
+  "COEFF_BIT_WIDTH": 18,
+  "MAP_TAIL": 0,
+  "LARGER_FFT_SIZE": 0,
+  "START_STAGE": 0,
+  "ADD_LATENCY": 1,
+  "MULT_LATENCY": 2,
+  "BRAM_LATENCY": 2,
+  "CONV_LATENCY": 1,
+  "QUANTIZATION": 2,
+  "OVERFLOW": 1,
+  "MAX_FANOUT": 4,
+  "BITGROWTH": 1,
+  "MAX_BITS": 21,
+  "HARDCODE_SHIFTS": 0,
+  "SHIFT_SCHEDULE": 0,
+  "COEFF_DIR": "../../../test_data/FFTs/fft_direct/simdata1/"
+}

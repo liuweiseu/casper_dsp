@@ -1168,6 +1168,238 @@ QUANTIZATION = 0
 OVERFLOW = 0
 MAX_FANOUT = 4
 
+# test fft_biplex_real_4x
+[[simulations]]
+dir = "FFTs"
+top = "fft_biplex_real_4x"
+test_data_script = "gen_fft_wideband_test_data.py"
+# casper defaults, 8-point
+[[simulations.parameters]]
+N_BIPLEX_INPUTS = 1
+FFT_SIZE = 3
+INPUT_BIT_WIDTH = 18
+BIN_PT_IN = 17
+COEFF_BIT_WIDTH = 18
+ADD_LATENCY = 1
+MULT_LATENCY = 2
+BRAM_LATENCY = 2
+CONV_LATENCY = 1
+QUANTIZATION = 1
+OVERFLOW = 1
+DELAYS_BIT_LIMIT = 8
+COEFFS_BIT_LIMIT = 8
+MAX_FANOUT = 4
+BITGROWTH = 0
+MAX_BITS = 19
+HARDCODE_SHIFTS = 0
+SHIFT_SCHEDULE = 0
+COEFF_DIR = "../../../test_data/FFTs/fft_biplex_real_4x/simdata0/"
+MAP_DIR = "../../../test_data/FFTs/fft_biplex_real_4x/simdata0/"
+# 2 biplex inputs (8 real signals), bit growth capped at MAX_BITS 15
+[[simulations.parameters]]
+N_BIPLEX_INPUTS = 2
+FFT_SIZE = 4
+INPUT_BIT_WIDTH = 12
+BIN_PT_IN = 11
+COEFF_BIT_WIDTH = 18
+ADD_LATENCY = 1
+MULT_LATENCY = 2
+BRAM_LATENCY = 1
+CONV_LATENCY = 0
+QUANTIZATION = 2
+OVERFLOW = 1
+DELAYS_BIT_LIMIT = 8
+COEFFS_BIT_LIMIT = 8
+MAX_FANOUT = 4
+BITGROWTH = 1
+MAX_BITS = 15
+HARDCODE_SHIFTS = 0
+SHIFT_SCHEDULE = 0
+COEFF_DIR = "../../../test_data/FFTs/fft_biplex_real_4x/simdata1/"
+MAP_DIR = "../../../test_data/FFTs/fft_biplex_real_4x/simdata1/"
+# 32-point, low bit limits: BRAM delays and BRAM map
+[[simulations.parameters]]
+N_BIPLEX_INPUTS = 1
+FFT_SIZE = 5
+INPUT_BIT_WIDTH = 16
+BIN_PT_IN = 15
+COEFF_BIT_WIDTH = 18
+ADD_LATENCY = 2
+MULT_LATENCY = 3
+BRAM_LATENCY = 2
+CONV_LATENCY = 1
+QUANTIZATION = 1
+OVERFLOW = 1
+DELAYS_BIT_LIMIT = 4
+COEFFS_BIT_LIMIT = 4
+MAX_FANOUT = 2
+BITGROWTH = 0
+MAX_BITS = 19
+HARDCODE_SHIFTS = 0
+SHIFT_SCHEDULE = 0
+COEFF_DIR = "../../../test_data/FFTs/fft_biplex_real_4x/simdata2/"
+MAP_DIR = "../../../test_data/FFTs/fft_biplex_real_4x/simdata2/"
+# full-scale data, random shift, wrap: overflow flags per lane (no FFT check)
+[[simulations.parameters]]
+N_BIPLEX_INPUTS = 2
+FFT_SIZE = 3
+INPUT_BIT_WIDTH = 12
+BIN_PT_IN = 11
+COEFF_BIT_WIDTH = 18
+ADD_LATENCY = 1
+MULT_LATENCY = 2
+BRAM_LATENCY = 2
+CONV_LATENCY = 1
+QUANTIZATION = 1
+OVERFLOW = 0
+DELAYS_BIT_LIMIT = 8
+COEFFS_BIT_LIMIT = 8
+MAX_FANOUT = 4
+BITGROWTH = 0
+MAX_BITS = 19
+HARDCODE_SHIFTS = 0
+SHIFT_SCHEDULE = 0
+COEFF_DIR = "../../../test_data/FFTs/fft_biplex_real_4x/simdata3/"
+MAP_DIR = "../../../test_data/FFTs/fft_biplex_real_4x/simdata3/"
+
+# test fft_direct
+[[simulations]]
+dir = "FFTs"
+top = "fft_direct"
+test_data_script = "gen_fft_wideband_test_data.py"
+# 4-point, 1 stream, coeff_0 / coeff_1 twiddles only
+[[simulations.parameters]]
+N_STREAMS = 1
+FFT_SIZE = 2
+INPUT_BIT_WIDTH = 18
+BIN_PT_IN = 17
+COEFF_BIT_WIDTH = 18
+MAP_TAIL = 0
+LARGER_FFT_SIZE = 0
+START_STAGE = 0
+ADD_LATENCY = 1
+MULT_LATENCY = 2
+BRAM_LATENCY = 2
+CONV_LATENCY = 1
+QUANTIZATION = 1
+OVERFLOW = 1
+MAX_FANOUT = 4
+BITGROWTH = 0
+MAX_BITS = 19
+HARDCODE_SHIFTS = 0
+SHIFT_SCHEDULE = 0
+COEFF_DIR = "../../../test_data/FFTs/fft_direct/simdata0/"
+# 8-point, 2 streams, general twiddles, bit growth (output width min(MAX_BITS, IW+F))
+[[simulations.parameters]]
+N_STREAMS = 2
+FFT_SIZE = 3
+INPUT_BIT_WIDTH = 16
+BIN_PT_IN = 15
+COEFF_BIT_WIDTH = 18
+MAP_TAIL = 0
+LARGER_FFT_SIZE = 0
+START_STAGE = 0
+ADD_LATENCY = 1
+MULT_LATENCY = 2
+BRAM_LATENCY = 2
+CONV_LATENCY = 1
+QUANTIZATION = 2
+OVERFLOW = 1
+MAX_FANOUT = 4
+BITGROWTH = 1
+MAX_BITS = 21
+HARDCODE_SHIFTS = 0
+SHIFT_SCHEDULE = 0
+COEFF_DIR = "../../../test_data/FFTs/fft_direct/simdata1/"
+# 16-point, combinational convert, MAX_FANOUT 2
+[[simulations.parameters]]
+N_STREAMS = 1
+FFT_SIZE = 4
+INPUT_BIT_WIDTH = 18
+BIN_PT_IN = 17
+COEFF_BIT_WIDTH = 18
+MAP_TAIL = 0
+LARGER_FFT_SIZE = 0
+START_STAGE = 0
+ADD_LATENCY = 2
+MULT_LATENCY = 3
+BRAM_LATENCY = 1
+CONV_LATENCY = 0
+QUANTIZATION = 1
+OVERFLOW = 1
+MAX_FANOUT = 2
+BITGROWTH = 0
+MAX_BITS = 19
+HARDCODE_SHIFTS = 0
+SHIFT_SCHEDULE = 0
+COEFF_DIR = "../../../test_data/FFTs/fft_direct/simdata2/"
+# FFT_SIZE 1 (one butterfly), 3 streams, full-scale data, random shift, wrap
+[[simulations.parameters]]
+N_STREAMS = 3
+FFT_SIZE = 1
+INPUT_BIT_WIDTH = 12
+BIN_PT_IN = 11
+COEFF_BIT_WIDTH = 18
+MAP_TAIL = 0
+LARGER_FFT_SIZE = 0
+START_STAGE = 0
+ADD_LATENCY = 1
+MULT_LATENCY = 2
+BRAM_LATENCY = 2
+CONV_LATENCY = 1
+QUANTIZATION = 1
+OVERFLOW = 0
+MAX_FANOUT = 4
+BITGROWTH = 0
+MAX_BITS = 19
+HARDCODE_SHIFTS = 0
+SHIFT_SCHEDULE = 0
+COEFF_DIR = "../../../test_data/FFTs/fft_direct/simdata3/"
+# 8-point, full-scale data, hardcoded shifts 110 (stages 1, 2), saturate: overflow flags
+[[simulations.parameters]]
+N_STREAMS = 2
+FFT_SIZE = 3
+INPUT_BIT_WIDTH = 12
+BIN_PT_IN = 11
+COEFF_BIT_WIDTH = 12
+MAP_TAIL = 0
+LARGER_FFT_SIZE = 0
+START_STAGE = 0
+ADD_LATENCY = 1
+MULT_LATENCY = 2
+BRAM_LATENCY = 2
+CONV_LATENCY = 1
+QUANTIZATION = 1
+OVERFLOW = 1
+MAX_FANOUT = 4
+BITGROWTH = 0
+MAX_BITS = 19
+HARDCODE_SHIFTS = 1
+SHIFT_SCHEDULE = 6
+COEFF_DIR = "../../../test_data/FFTs/fft_direct/simdata4/"
+# MAP_TAIL: last 2 stages of a 64-point FFT (as in fft_wideband_real), 16 coefficients
+[[simulations.parameters]]
+N_STREAMS = 1
+FFT_SIZE = 2
+INPUT_BIT_WIDTH = 18
+BIN_PT_IN = 17
+COEFF_BIT_WIDTH = 18
+MAP_TAIL = 1
+LARGER_FFT_SIZE = 6
+START_STAGE = 5
+ADD_LATENCY = 1
+MULT_LATENCY = 2
+BRAM_LATENCY = 2
+CONV_LATENCY = 1
+QUANTIZATION = 1
+OVERFLOW = 1
+MAX_FANOUT = 4
+BITGROWTH = 0
+MAX_BITS = 19
+HARDCODE_SHIFTS = 0
+SHIFT_SCHEDULE = 0
+COEFF_DIR = "../../../test_data/FFTs/fft_direct/simdata5/"
+
 # test fft_stage_n
 [[simulations]]
 dir = "FFTs"
@@ -1342,6 +1574,162 @@ N_BITS_IN = 8
 BRAM_LATENCY = 1
 COEFFS_BIT_LIMIT = 6
 MAP_INIT_FILE = "../../../test_data/FFTs/fft_unscrambler/simdata4/map.mem"
+
+# test fft_wideband_real
+[[simulations]]
+dir = "FFTs"
+top = "fft_wideband_real"
+test_data_script = "gen_fft_wideband_test_data.py"
+# casper defaults, 32-point, 4 samples / cycle, unscrambled
+[[simulations.parameters]]
+N_STREAMS = 1
+FFT_SIZE = 5
+N_INPUTS = 2
+INPUT_BIT_WIDTH = 18
+BIN_PT_IN = 17
+COEFF_BIT_WIDTH = 18
+UNSCRAMBLE = 1
+ADD_LATENCY = 1
+MULT_LATENCY = 2
+BRAM_LATENCY = 2
+CONV_LATENCY = 0
+INPUT_LATENCY = 0
+BIPLEX_DIRECT_LATENCY = 0
+QUANTIZATION = 1
+OVERFLOW = 1
+DELAYS_BIT_LIMIT = 8
+COEFFS_BIT_LIMIT = 8
+MAX_FANOUT = 4
+BITGROWTH = 0
+MAX_BITS = 19
+HARDCODE_SHIFTS = 0
+SHIFT_SCHEDULE = 31
+MEM_DIR = "../../../test_data/FFTs/fft_wideband_real/simdata0/"
+# 64-point, 8 samples / cycle (2 biplex inputs), unscrambled
+[[simulations.parameters]]
+N_STREAMS = 1
+FFT_SIZE = 6
+N_INPUTS = 3
+INPUT_BIT_WIDTH = 16
+BIN_PT_IN = 15
+COEFF_BIT_WIDTH = 18
+UNSCRAMBLE = 1
+ADD_LATENCY = 1
+MULT_LATENCY = 2
+BRAM_LATENCY = 2
+CONV_LATENCY = 1
+INPUT_LATENCY = 0
+BIPLEX_DIRECT_LATENCY = 0
+QUANTIZATION = 1
+OVERFLOW = 1
+DELAYS_BIT_LIMIT = 8
+COEFFS_BIT_LIMIT = 8
+MAX_FANOUT = 4
+BITGROWTH = 0
+MAX_BITS = 19
+HARDCODE_SHIFTS = 0
+SHIFT_SCHEDULE = 63
+MEM_DIR = "../../../test_data/FFTs/fft_wideband_real/simdata1/"
+# 2 streams, 2 samples / cycle: N_INPUTS 1 forces UNSCRAMBLE off
+[[simulations.parameters]]
+N_STREAMS = 2
+FFT_SIZE = 5
+N_INPUTS = 1
+INPUT_BIT_WIDTH = 18
+BIN_PT_IN = 17
+COEFF_BIT_WIDTH = 18
+UNSCRAMBLE = 1
+ADD_LATENCY = 1
+MULT_LATENCY = 2
+BRAM_LATENCY = 2
+CONV_LATENCY = 0
+INPUT_LATENCY = 0
+BIPLEX_DIRECT_LATENCY = 0
+QUANTIZATION = 1
+OVERFLOW = 1
+DELAYS_BIT_LIMIT = 8
+COEFFS_BIT_LIMIT = 8
+MAX_FANOUT = 4
+BITGROWTH = 0
+MAX_BITS = 19
+HARDCODE_SHIFTS = 0
+SHIFT_SCHEDULE = 31
+MEM_DIR = "../../../test_data/FFTs/fft_wideband_real/simdata2/"
+# no unscrambler, bit growth, input and biplex-direct pipelines
+[[simulations.parameters]]
+N_STREAMS = 1
+FFT_SIZE = 6
+N_INPUTS = 2
+INPUT_BIT_WIDTH = 12
+BIN_PT_IN = 11
+COEFF_BIT_WIDTH = 18
+UNSCRAMBLE = 0
+ADD_LATENCY = 1
+MULT_LATENCY = 2
+BRAM_LATENCY = 2
+CONV_LATENCY = 1
+INPUT_LATENCY = 1
+BIPLEX_DIRECT_LATENCY = 2
+QUANTIZATION = 2
+OVERFLOW = 1
+DELAYS_BIT_LIMIT = 8
+COEFFS_BIT_LIMIT = 8
+MAX_FANOUT = 4
+BITGROWTH = 1
+MAX_BITS = 22
+HARDCODE_SHIFTS = 0
+SHIFT_SCHEDULE = 63
+MEM_DIR = "../../../test_data/FFTs/fft_wideband_real/simdata3/"
+# 2 streams, hardcoded shifts, BRAM delays / maps, unscrambled
+[[simulations.parameters]]
+N_STREAMS = 2
+FFT_SIZE = 6
+N_INPUTS = 2
+INPUT_BIT_WIDTH = 16
+BIN_PT_IN = 15
+COEFF_BIT_WIDTH = 16
+UNSCRAMBLE = 1
+ADD_LATENCY = 2
+MULT_LATENCY = 3
+BRAM_LATENCY = 1
+CONV_LATENCY = 1
+INPUT_LATENCY = 0
+BIPLEX_DIRECT_LATENCY = 1
+QUANTIZATION = 2
+OVERFLOW = 1
+DELAYS_BIT_LIMIT = 4
+COEFFS_BIT_LIMIT = 4
+MAX_FANOUT = 2
+BITGROWTH = 0
+MAX_BITS = 19
+HARDCODE_SHIFTS = 1
+SHIFT_SCHEDULE = 63
+MEM_DIR = "../../../test_data/FFTs/fft_wideband_real/simdata4/"
+# full-scale data, random shift, wrap: overflow from both blocks (no FFT check)
+[[simulations.parameters]]
+N_STREAMS = 2
+FFT_SIZE = 5
+N_INPUTS = 2
+INPUT_BIT_WIDTH = 10
+BIN_PT_IN = 9
+COEFF_BIT_WIDTH = 18
+UNSCRAMBLE = 1
+ADD_LATENCY = 1
+MULT_LATENCY = 2
+BRAM_LATENCY = 2
+CONV_LATENCY = 1
+INPUT_LATENCY = 0
+BIPLEX_DIRECT_LATENCY = 0
+QUANTIZATION = 1
+OVERFLOW = 0
+DELAYS_BIT_LIMIT = 8
+COEFFS_BIT_LIMIT = 8
+MAX_FANOUT = 4
+BITGROWTH = 0
+MAX_BITS = 19
+HARDCODE_SHIFTS = 0
+SHIFT_SCHEDULE = 31
+MEM_DIR = "../../../test_data/FFTs/fft_wideband_real/simdata5/"
 
 # ── FFTs/Internal ────────────────────────────────────────────────────────────
 

@@ -122,11 +122,18 @@ module butterfly_direct #(
         (N_COEFFS == 2 && COEFF_0 == 0 && COEFF_1 == 1 && STEP_PERIOD == FFT_SIZE - 2) ? TW_STAGE_2 :
                                           TW_GENERAL;
 
+    // A single-coefficient twiddle_general is a constant in casper (coeff_gen
+    // without a table), with the 1+mult+add+conv latency of twiddle_coeff_0
+    // ("must match twiddle_general with single coefficient so that latencies
+    // match when used in fft_direct", twiddle_coeff_0_init.m): its coefficient
+    // read latency is 1 here, whatever BRAM_LATENCY is.
+    localparam int TW_BRAM_LATENCY = (N_COEFFS == 1) ? 1 : BRAM_LATENCY;
+
     localparam int TWIDDLE_LATENCY =
         (TWIDDLE_TYPE == TW_PASS_THROUGH) ? 0 :
         (TWIDDLE_TYPE == TW_COEFF_0 || TWIDDLE_TYPE == TW_COEFF_1)
             ? 1 + MULT_LATENCY + ADD_LATENCY + CONV_LATENCY
-            : BRAM_LATENCY + MULT_LATENCY + ADD_LATENCY + CONV_LATENCY;
+            : TW_BRAM_LATENCY + MULT_LATENCY + ADD_LATENCY + CONV_LATENCY;
 
     localparam int DYNAMIC     = (BITGROWTH == 0 && HARDCODE_SHIFTS == 0) ? 1 : 0;
     localparam int MUX_LATENCY = DYNAMIC;
@@ -195,7 +202,7 @@ module butterfly_direct #(
                 .STEP_PERIOD(STEP_PERIOD), .INPUT_BIT_WIDTH(IW), .BIN_PT_IN(BP),
                 .COEFF_BIT_WIDTH(COEFF_BIT_WIDTH), .MULT_LATENCY(MULT_LATENCY),
                 .ADD_LATENCY(ADD_LATENCY), .CONV_LATENCY(CONV_LATENCY),
-                .BRAM_LATENCY(BRAM_LATENCY), .QUANTIZATION(QUANTIZATION),
+                .BRAM_LATENCY(TW_BRAM_LATENCY), .QUANTIZATION(QUANTIZATION),
                 .OVERFLOW(OVERFLOW), .INIT_FILE(INIT_FILE), .PLATFORM(PLATFORM)
             ) u_twiddle (
                 .clk(clk), .ai_re(a_re), .ai_im(a_im), .bi_re(b_re), .bi_im(b_im),
@@ -215,8 +222,6 @@ module butterfly_direct #(
         // component c: 0 = (a+bw).re, 1 = (a+bw).im, 2 = (a−bw).re, 3 = (a−bw).im
         logic [IW-1:0]         a_c   [4];
         logic [BW_W-1:0]       b_c   [4];
-        logic [SUM_W-1:0]      sum_c [4];
-        logic [CONV_IN_W-1:0]  cin_c [4];
         logic [N_BITS_OUT-1:0] out_c [4];
         logic [3:0]            of_c;
 
@@ -224,12 +229,17 @@ module butterfly_direct #(
         assign b_c = '{bwo_re[n], bwo_im[n], bwo_re[n], bwo_im[n]};
 
         for (genvar c = 0; c < 4; c++) begin : GEN_COMP
+            // per-component signals (whole arrays here would make Verilator
+            // see a false combinational loop when the shift stage is a wire)
+            logic [SUM_W-1:0]     sum_c;
+            logic [CONV_IN_W-1:0] cin_c;
+
             adder_subtractor #(
                 .N_BITS_A(IW),    .BIN_PT_A(BP), .TYPE_A(1),
                 .N_BITS_B(BW_W),  .BIN_PT_B(BP), .TYPE_B(1),
                 .N_BITS_OUT(SUM_W), .BIN_PT_OUT(BP), .TYPE_OUT(1),
                 .OPMODE(c / 2), .QUANTIZATION(0), .OVERFLOW(0), .LATENCY(ADD_LATENCY)
-            ) u_addsub (.clk(clk), .a(a_c[c]), .b(b_c[c]), .dout(sum_c[c]));
+            ) u_addsub (.clk(clk), .a(a_c[c]), .b(b_c[c]), .dout(sum_c));
 
             if (DYNAMIC != 0) begin : GEN_DYNAMIC
                 // unscaled (bus_norm0) and halved (bus_scale + bus_norm1), both
@@ -239,25 +249,25 @@ module butterfly_direct #(
                     .N_BITS_IN(SUM_W), .BIN_PT_IN(BP), .TYPE_IN(1),
                     .N_BITS_OUT(CONV_IN_W), .BIN_PT_OUT(BP + 1), .TYPE_OUT(1),
                     .QUANTIZATION(0), .OVERFLOW(0), .LATENCY(0)
-                ) u_norm0 (.clk(clk), .din(sum_c[c]), .dout(norm0));
+                ) u_norm0 (.clk(clk), .din(sum_c), .dout(norm0));
                 scale #(
                     .N_BITS_IN(SUM_W), .BIN_PT_IN(BP), .TYPE_IN(1), .SCALE_FACTOR(-1),
                     .N_BITS_OUT(CONV_IN_W), .BIN_PT_OUT(BP + 1), .TYPE_OUT(1),
                     .QUANTIZATION(0), .OVERFLOW(0), .LATENCY(0)
-                ) u_norm1 (.clk(clk), .din(sum_c[c]), .dout(norm1));
+                ) u_norm1 (.clk(clk), .din(sum_c), .dout(norm1));
                 multiplexer #(.NBITS(CONV_IN_W), .NINPUTS(2), .LATENCY(MUX_LATENCY)) u_mux (
-                    .clk(clk), .din('{norm0, norm1}), .sel(shift_d), .dout(cin_c[c]));
+                    .clk(clk), .din('{norm0, norm1}), .sel(shift_d), .dout(cin_c));
             end else begin : GEN_STATIC
                 // bitgrowth, or hardcoded shift: DOWNSHIFT only moves the
                 // binary point (CONV_IN_BP), the bits are unchanged
-                assign cin_c[c] = sum_c[c];
+                assign cin_c = sum_c;
             end
 
             convert_of #(
                 .N_BITS_IN (CONV_IN_W),  .BIN_PT_IN (CONV_IN_BP),
                 .N_BITS_OUT(N_BITS_OUT), .BIN_PT_OUT(BP),
                 .QUANTIZATION(QUANTIZATION), .OVERFLOW(OVERFLOW), .LATENCY(CONV_LATENCY)
-            ) u_convert (.clk(clk), .din(cin_c[c]), .dout(out_c[c]), .of(of_c[c]));
+            ) u_convert (.clk(clk), .din(cin_c), .dout(out_c[c]), .of(of_c[c]));
         end
 
         assign apbw_re[n] = out_c[0];

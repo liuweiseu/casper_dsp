@@ -73,6 +73,13 @@ otherwise. `TWIDDLE_LATENCY` depends on the variant:
 | `twiddle_pass_through` | 0 |
 | `twiddle_coeff_0`, `twiddle_coeff_1` | `1 + MULT_LATENCY + ADD_LATENCY + CONV_LATENCY` |
 | `twiddle_stage_2`, `twiddle_general` | `BRAM_LATENCY + MULT_LATENCY + ADD_LATENCY + CONV_LATENCY` |
+| `twiddle_general` with one coefficient | `1 + MULT_LATENCY + ADD_LATENCY + CONV_LATENCY` |
+
+A single-coefficient `twiddle_general` is a constant in casper (`coeff_gen`
+without a table). `twiddle_coeff_0_init.m` requires its latency to match
+twiddle_coeff_0's, so that the butterflies of one [`fft_direct`](fft_direct.md)
+stage stay aligned. The coefficient read latency passed to `twiddle_general`
+is therefore 1 for `N_COEFFS = 1`, whatever `BRAM_LATENCY` is.
 
 `of` has one more cycle of latency than the data.
 
