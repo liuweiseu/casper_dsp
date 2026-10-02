@@ -1,0 +1,25 @@
+{
+  "N_INPUTS": 1,
+  "BIPLEX": 0,
+  "FFT_SIZE": 5,
+  "N_COEFFS": 1,
+  "COEFF_0": 1,
+  "COEFF_1": 0,
+  "STEP_PERIOD": 4,
+  "COEFF_BIT_WIDTH": 18,
+  "INPUT_BIT_WIDTH": 16,
+  "BIN_PT_IN": 15,
+  "BITGROWTH": 0,
+  "DOWNSHIFT": 0,
+  "HARDCODE_SHIFTS": 0,
+  "ADD_LATENCY": 2,
+  "MULT_LATENCY": 1,
+  "BRAM_LATENCY": 1,
+  "CONV_LATENCY": 2,
+  "QUANTIZATION": 2,
+  "OVERFLOW": 1,
+  "MAX_FANOUT": 1,
+  "COEFFS": [
+    1
+  ]
+}

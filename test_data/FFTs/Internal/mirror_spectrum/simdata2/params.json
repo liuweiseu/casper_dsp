@@ -1,0 +1,9 @@
+{
+  "N_INPUTS": 4,
+  "FFT_SIZE": 2,
+  "INPUT_BIT_WIDTH": 8,
+  "BIN_PT_IN": 7,
+  "BRAM_LATENCY": 1,
+  "NEGATE_LATENCY": 0,
+  "NEGATE_MODE": 1
+}

@@ -1,0 +1,9 @@
+{
+  "N_INPUTS": 3,
+  "INPUT_BIT_WIDTH": 8,
+  "BIN_PT_IN": 7,
+  "MULT_LATENCY": 1,
+  "ADD_LATENCY": 1,
+  "BRAM_LATENCY": 2,
+  "CONV_LATENCY": 0
+}

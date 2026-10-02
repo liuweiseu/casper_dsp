@@ -1,0 +1,14 @@
+{
+  "N_STREAMS": 2,
+  "DATA_WIDTH": 8,
+  "MAP_LEN": 2,
+  "ORDER": 1,
+  "MAP_LATENCY": 2,
+  "BRAM_LATENCY": 1,
+  "FANOUT_LATENCY": 0,
+  "MAP_INIT_FILE": "../../../test_data/Reorder/reorder/simdata7/map.mem",
+  "MAP": [
+    0,
+    1
+  ]
+}

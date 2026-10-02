@@ -1,0 +1,14 @@
+{
+  "N_BITS_A": 12,
+  "BIN_PT_A": 11,
+  "TYPE_A": 1,
+  "N_BITS_B": 6,
+  "BIN_PT_B": 6,
+  "TYPE_B": 0,
+  "N_BITS_OUT": 8,
+  "BIN_PT_OUT": 7,
+  "TYPE_OUT": 1,
+  "QUANTIZATION": 1,
+  "OVERFLOW": 0,
+  "LATENCY": 2
+}

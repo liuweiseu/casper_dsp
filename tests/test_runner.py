@@ -2,6 +2,8 @@ import tomllib
 import pytest
 from pathlib import Path
 import os
+import subprocess
+import sys
 import logging
 from cocotb_tools.runner import get_runner
 from prepare_dump import replace_vcd_filename, find_file
@@ -9,6 +11,11 @@ from prepare_dump import replace_vcd_filename, find_file
 logger = logging.getLogger(__name__)
 
 _PROJECT_ROOT = Path(__file__).parent.parent
+# test data generators (test_data/scripts/); in the test container test_data/
+# is copied next to this file, in a checkout it is one level up
+_TEST_DATA_SCRIPTS = next((p / "test_data" / "scripts"
+                           for p in (Path(__file__).parent, _PROJECT_ROOT)
+                           if (p / "test_data" / "scripts").is_dir()), None)
 
 PLATFORM_TO_VENDOR = {
     "XILINX": "xilinx",
@@ -34,7 +41,34 @@ with open("simulation.toml", "rb") as f:
     full_config = tomllib.load(f)
     config      = full_config["simulations"]
     vendor_cfgs = {k: v for k, v in full_config.items()
-                   if isinstance(v, dict) and k != "simulations"}
+                   if isinstance(v, dict) and k not in ("simulations", "test_data")}
+    # [test_data] generate: regenerate test data with the generator scripts
+    # before the tests (see the comments in simulation.toml)
+    generate_default = bool(full_config.get("test_data", {}).get("generate", False))
+
+
+def generate_test_data(cfg):
+    """Regenerate this module's test data if simulation.toml asks for it.
+
+    Uses the entry's test_data_script with --module <top>, so only this
+    module's data is rewritten. Entries without a script keep their data.
+    """
+    top = cfg["top"]
+    if not cfg.get("generate_test_data", generate_default):
+        return
+    script = cfg.get("test_data_script")
+    if not script:
+        logger.info(f"{cfg['dir']}/{top}: no test_data_script, using existing test data")
+        return
+    if _TEST_DATA_SCRIPTS is None:
+        raise FileNotFoundError("test_data/scripts/ not found, cannot generate test data")
+    path = _TEST_DATA_SCRIPTS / script
+    logger.warning(f"{cfg['dir']}/{top}: generating test data with {script}")
+    proc = subprocess.run([sys.executable, str(path), "--module", top],
+                          capture_output=True, text=True)
+    if proc.returncode != 0:
+        raise RuntimeError(f"test data generation failed ({script} --module {top}):\n"
+                           f"{proc.stdout}\n{proc.stderr}")
 
 # generate id list
 ids = [f"{c['dir']}/{c['top']}" for c in config]
@@ -44,6 +78,9 @@ def test_runner(cfg):
     target_dir = cfg.get('dir')
     top = cfg.get('top')
     parameters = cfg.get('parameters', [])
+    # nested categories (dir = "FFTs/Twiddle") map to nested Python packages
+    tb_package = "testbench." + target_dir.replace("/", ".")
+    generate_test_data(cfg)
     
     sim = os.getenv("SIM", "verilator")
     result_path = Path("results")
@@ -71,7 +108,7 @@ def test_runner(cfg):
 
         # run the tests
         runner.test(hdl_toplevel=top,
-                    test_module=f"testbench.{target_dir}.{top}.test_{top},",
+                    test_module=f"{tb_package}.{top}.test_{top},",
                     results_xml=top_result,
                     waves=True,
                     plusargs=['--trace --trace-structs']
@@ -82,24 +119,32 @@ def test_runner(cfg):
             top_result = result_path/f"{target_dir}/{top}/{top}_{i}.xml"
             top_result.parent.mkdir(parents=True, exist_ok=True)
             # 1. find the file
-            fn = find_file(f'{top}.', '../rtl')
+            # match the file name exactly: '<top>.' alone would also match
+            # e.g. 'complex_multiplier.sv' when top is 'multiplier'
+            fn = [p for p in find_file(f'{top}.', '../rtl')
+                  if p.name.startswith(f'{top}.')]
             logger.info(f'Found file names: {fn}')
             # 2. replace the vcd file name to the new one
             replace_vcd_filename(fn[0], f'{top}_{i}.vcd')
             # 3. build the verilog modules with the parameters
             platform = parameters[i].get("PLATFORM", "")
             extra = get_vendor_sources(platform, vendor_cfgs) if platform else []
+            # cocotb's Verilator runner passes parameters as -G<name>=<value>
+            # verbatim, so string parameters (e.g. INIT_FILE, PLATFORM) need
+            # explicit SystemVerilog quotes
+            hdl_params = {k: f'"{v}"' if isinstance(v, str) else v
+                          for k, v in parameters[i].items()}
             runner.build(
                 sources=sources + extra,
                 hdl_toplevel=top,
                 waves=True,
                 defines={'SIM': ''},
-                parameters=parameters[i],
+                parameters=hdl_params,
                 build_dir=f"sim_build/{target_dir}/{top}"
             )
             # run the tests
             runner.test(hdl_toplevel=top,
-                        test_module=f"testbench.{target_dir}.{top}.test_{top},",
+                        test_module=f"{tb_package}.{top}.test_{top},",
                         results_xml=top_result,
                         waves=True,
                         plusargs=['--trace --trace-structs']

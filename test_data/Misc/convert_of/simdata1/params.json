@@ -1,0 +1,9 @@
+{
+  "N_BITS_IN": 16,
+  "BIN_PT_IN": 12,
+  "N_BITS_OUT": 8,
+  "BIN_PT_OUT": 4,
+  "QUANTIZATION": 1,
+  "OVERFLOW": 1,
+  "LATENCY": 1
+}

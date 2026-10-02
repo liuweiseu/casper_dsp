@@ -1,0 +1,13 @@
+{
+  "N_INPUTS": 9,
+  "DATA_WIDTH": 24,
+  "BIN_PT": 20,
+  "TYPE": 1,
+  "LATENCY": 2,
+  "PRECISION": 1,
+  "N_BITS_OUT": 22,
+  "BIN_PT_OUT": 17,
+  "QUANTIZATION": 2,
+  "OVERFLOW": 1,
+  "N_BITS_OUT_EFF": 22
+}

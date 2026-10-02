@@ -1,0 +1,13 @@
+{
+  "N_STREAMS": 2,
+  "FFT_SIZE": 8,
+  "LOG2_N_GROUPS": 2,
+  "N_BITS_IN": 36,
+  "BRAM_LATENCY": 1,
+  "COEFFS_BIT_LIMIT": 8,
+  "MAP_INIT_FILE": "../../../test_data/FFTs/fft_unscrambler/simdata2/map.mem",
+  "ORDER": 3,
+  "BRAM_MAP": 1,
+  "MAP_LATENCY": 2,
+  "FANOUT_LATENCY": 1
+}

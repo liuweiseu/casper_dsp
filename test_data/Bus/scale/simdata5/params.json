@@ -1,0 +1,12 @@
+{
+  "N_BITS_IN": 18,
+  "BIN_PT_IN": 17,
+  "TYPE_IN": 1,
+  "SCALE_FACTOR": -1,
+  "N_BITS_OUT": 18,
+  "BIN_PT_OUT": 17,
+  "TYPE_OUT": 1,
+  "QUANTIZATION": 2,
+  "OVERFLOW": 1,
+  "LATENCY": 1
+}
