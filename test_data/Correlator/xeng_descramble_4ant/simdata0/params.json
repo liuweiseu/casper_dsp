@@ -1,0 +1,5 @@
+{
+  "N_BITS": 8,
+  "ACC_LEN": 256,
+  "DEMUX_FACTOR": 1
+}

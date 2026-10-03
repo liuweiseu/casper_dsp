@@ -1,0 +1,6 @@
+{
+  "N_BITS_IN": 15,
+  "N_BITS_OUT": 16,
+  "FIX_PNT_POS": 6,
+  "DEMUX_FACTOR": 4
+}

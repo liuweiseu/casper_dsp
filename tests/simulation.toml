@@ -1002,6 +1002,75 @@ MULT_LATENCY = 1
 ADD_LATENCY = 0
 MULTIPLIER_IMPLEMENTATION = 0
 
+# test xeng_descramble
+[[simulations]]
+dir = "Correlator"
+top = "xeng_descramble"
+test_data_script = "gen_correlator_test_data.py"
+# Mask defaults: N 8, demux 8 (W 16, DEL 2, CNT 288)
+[[simulations.parameters]]
+NUM_ANTS = 8
+N_BITS = 4
+ACC_LEN = 128
+DEMUX_FACTOR = 8
+RAM_LATENCY = 1
+# N 6, demux 2 (W 15 -> P 16, DEL 7)
+[[simulations.parameters]]
+NUM_ANTS = 6
+N_BITS = 4
+ACC_LEN = 64
+DEMUX_FACTOR = 2
+RAM_LATENCY = 1
+# N 4, demux 4 (W 22 -> P 32, DEL 1)
+[[simulations.parameters]]
+NUM_ANTS = 4
+N_BITS = 8
+ACC_LEN = 32
+DEMUX_FACTOR = 4
+RAM_LATENCY = 1
+# N 10, demux 1 (W 13, DEL 1), burst start jitter
+[[simulations.parameters]]
+NUM_ANTS = 10
+N_BITS = 4
+ACC_LEN = 16
+DEMUX_FACTOR = 1
+RAM_LATENCY = 1
+# A hole before the last word of some bursts: the tap counter wraps early (map shifts, as in the diagram)
+[[simulations.parameters]]
+NUM_ANTS = 8
+N_BITS = 4
+ACC_LEN = 128
+DEMUX_FACTOR = 4
+RAM_LATENCY = 1
+# ship_el_del < 0 (mask errordlg, uses 0): readout overruns the frame
+[[simulations.parameters]]
+NUM_ANTS = 8
+N_BITS = 4
+ACC_LEN = 8
+DEMUX_FACTOR = 8
+RAM_LATENCY = 1
+
+# test xeng_descramble_4ant
+[[simulations]]
+dir = "Correlator"
+top = "xeng_descramble_4ant"
+test_data_script = "gen_correlator_test_data.py"
+# Mask defaults: W 25 -> P 32, OW 256, DEL 84, CNT 10
+[[simulations.parameters]]
+N_BITS = 8
+ACC_LEN = 256
+DEMUX_FACTOR = 1
+# 4-bit, ACC_LEN 16, demux 2
+[[simulations.parameters]]
+N_BITS = 4
+ACC_LEN = 16
+DEMUX_FACTOR = 2
+# 8-bit, ACC_LEN 64, demux 4
+[[simulations.parameters]]
+N_BITS = 8
+ACC_LEN = 64
+DEMUX_FACTOR = 4
+
 # ── Correlator/Internal ──────────────────────────────────────────────────────
 
 # test cmac_acc
@@ -1018,6 +1087,92 @@ N_BITS = 6
 # 1-bit
 [[simulations.parameters]]
 N_BITS = 1
+
+# test read_ctrl
+[[simulations]]
+dir = "Correlator/Internal"
+top = "read_ctrl"
+test_data_script = "gen_correlator_test_data.py"
+# xeng_descramble defaults (N 8, demux 8): one word every 3 cycles
+[[simulations.parameters]]
+DEL = 2
+CNT = 288
+DEL_BITS = 2
+RD_BITS = 9
+# DEL 0: back-to-back words, CNT = D*E-1
+[[simulations.parameters]]
+DEL = 0
+CNT = 79
+DEL_BITS = 1
+RD_BITS = 7
+# xeng_descramble_4ant defaults: DEL 84, CNT 10
+[[simulations.parameters]]
+DEL = 84
+CNT = 10
+DEL_BITS = 7
+RD_BITS = 4
+# DEL 7, CNT 42
+[[simulations.parameters]]
+DEL = 7
+CNT = 42
+DEL_BITS = 3
+RD_BITS = 6
+
+# test write_ctrl
+[[simulations]]
+dir = "Correlator/Internal"
+top = "write_ctrl"
+test_data_script = "gen_correlator_test_data.py"
+# N 8, ACC_LEN 128 (W 16), probe words at the end of the negedge_delay extension
+[[simulations.parameters]]
+NUM_ANTS = 8
+ACC_LEN = 128
+W = 16
+# N 6, ACC_LEN 16 (W 13), burst start jitter
+[[simulations.parameters]]
+NUM_ANTS = 6
+ACC_LEN = 16
+W = 13
+# N 4, ACC_LEN 64 (W 23): the 4ant map, Counter2 constant 9
+[[simulations.parameters]]
+NUM_ANTS = 4
+ACC_LEN = 64
+W = 23
+# N 10, ACC_LEN 8 (W 12), a hole before the last word of some bursts
+[[simulations.parameters]]
+NUM_ANTS = 10
+ACC_LEN = 8
+W = 12
+
+# test x_cast
+[[simulations]]
+dir = "Correlator/Internal"
+top = "x_cast"
+test_data_script = "gen_correlator_test_data.py"
+# W 16 -> P 16, demux 8 (all fields reversed)
+[[simulations.parameters]]
+N_BITS_IN = 16
+N_BITS_OUT = 16
+FIX_PNT_POS = 6
+DEMUX_FACTOR = 8
+# W 15 -> P 16, demux 4 (pairs reversed)
+[[simulations.parameters]]
+N_BITS_IN = 15
+N_BITS_OUT = 16
+FIX_PNT_POS = 6
+DEMUX_FACTOR = 4
+# W 25 -> P 32, demux 2 (halves swapped)
+[[simulations.parameters]]
+N_BITS_IN = 25
+N_BITS_OUT = 32
+FIX_PNT_POS = 14
+DEMUX_FACTOR = 2
+# W 13 -> P 16, demux 1 (order kept)
+[[simulations.parameters]]
+N_BITS_IN = 13
+N_BITS_OUT = 16
+FIX_PNT_POS = 6
+DEMUX_FACTOR = 1
 
 # ── Delays ───────────────────────────────────────────────────────────────────
 
