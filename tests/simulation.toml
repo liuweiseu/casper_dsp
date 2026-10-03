@@ -972,6 +972,64 @@ MULT_LATENCY = 2
 ADD_LATENCY = 1
 MULTIPLIER_IMPLEMENTATION = 2
 
+# test cross_multiplier
+[[simulations]]
+dir = "Correlator"
+top = "cross_multiplier"
+test_data_script = "gen_correlator_test_data.py"
+# Stored mask values with STREAMS 2: Fix_4_3 -> Fix_9_6 is lossless
+[[simulations.parameters]]
+STREAMS = 2
+AGGREGATION = 2
+BIT_WIDTH_IN = 4
+BIN_PT_IN = 3
+BIT_WIDTH_OUT = 9
+BIN_PT_OUT = 6
+MULT_LATENCY = 2
+ADD_LATENCY = 1
+OVERFLOW = 0
+QUANTIZATION = 0
+CONV_LATENCY = 0
+# 4 streams, 8-bit, round half away from zero + saturate, convert latency 1
+[[simulations.parameters]]
+STREAMS = 4
+AGGREGATION = 1
+BIT_WIDTH_IN = 8
+BIN_PT_IN = 7
+BIT_WIDTH_OUT = 12
+BIN_PT_OUT = 9
+MULT_LATENCY = 1
+ADD_LATENCY = 1
+OVERFLOW = 1
+QUANTIZATION = 1
+CONV_LATENCY = 1
+# 3 streams x 4 sub-streams, round half to even, overflow Error (= wrap), add latency 0
+[[simulations.parameters]]
+STREAMS = 3
+AGGREGATION = 4
+BIT_WIDTH_IN = 4
+BIN_PT_IN = 3
+BIT_WIDTH_OUT = 6
+BIN_PT_OUT = 4
+MULT_LATENCY = 1
+ADD_LATENCY = 0
+OVERFLOW = 2
+QUANTIZATION = 2
+CONV_LATENCY = 2
+# 1 stream: autocorrelations only (imaginary parts 0)
+[[simulations.parameters]]
+STREAMS = 1
+AGGREGATION = 2
+BIT_WIDTH_IN = 6
+BIN_PT_IN = 5
+BIT_WIDTH_OUT = 13
+BIN_PT_OUT = 10
+MULT_LATENCY = 3
+ADD_LATENCY = 2
+OVERFLOW = 0
+QUANTIZATION = 0
+CONV_LATENCY = 0
+
 # test dual_pol_cmac
 [[simulations]]
 dir = "Correlator"

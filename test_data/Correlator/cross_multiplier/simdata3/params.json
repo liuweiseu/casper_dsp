@@ -1,0 +1,13 @@
+{
+  "STREAMS": 1,
+  "AGGREGATION": 2,
+  "BIT_WIDTH_IN": 6,
+  "BIN_PT_IN": 5,
+  "BIT_WIDTH_OUT": 13,
+  "BIN_PT_OUT": 10,
+  "MULT_LATENCY": 3,
+  "ADD_LATENCY": 2,
+  "OVERFLOW": 0,
+  "QUANTIZATION": 0,
+  "CONV_LATENCY": 0
+}
