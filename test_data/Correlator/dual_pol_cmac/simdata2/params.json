@@ -1,0 +1,8 @@
+{
+  "ACC_LEN": 6,
+  "N_BITS_IN": 8,
+  "BIN_PT_IN": 7,
+  "MULT_LATENCY": 1,
+  "ADD_LATENCY": 0,
+  "MULTIPLIER_IMPLEMENTATION": 0
+}

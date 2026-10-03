@@ -814,6 +814,111 @@ QUANTIZATION = 2
 OVERFLOW = 1
 LATENCY = 1
 
+# ── Correlator ───────────────────────────────────────────────────────────────
+
+# test cmac
+[[simulations]]
+dir = "Correlator"
+top = "cmac"
+test_data_script = "gen_correlator_test_data.py"
+# Mask defaults: acc_len 128, Fix_4_3, latency 1+1
+[[simulations.parameters]]
+ACC_LEN = 128
+N_BITS_A = 4
+BIN_PT_A = 3
+N_BITS_B = 4
+BIN_PT_B = 3
+MULT_LATENCY = 1
+ADD_LATENCY = 1
+MULTIPLIER_IMPLEMENTATION = 2
+# acc_len 4, add latency 0 (sync delay 0)
+[[simulations.parameters]]
+ACC_LEN = 4
+N_BITS_A = 4
+BIN_PT_A = 3
+N_BITS_B = 4
+BIN_PT_B = 3
+MULT_LATENCY = 1
+ADD_LATENCY = 0
+MULTIPLIER_IMPLEMENTATION = 2
+# acc_len 10 (not a power of 2), Fix_8_7, latency 3+2
+[[simulations.parameters]]
+ACC_LEN = 10
+N_BITS_A = 8
+BIN_PT_A = 7
+N_BITS_B = 8
+BIN_PT_B = 7
+MULT_LATENCY = 3
+ADD_LATENCY = 2
+MULTIPLIER_IMPLEMENTATION = 0
+# Unequal widths Fix_6_5 × Fix_8_7, mult latency 0
+[[simulations.parameters]]
+ACC_LEN = 16
+N_BITS_A = 6
+BIN_PT_A = 5
+N_BITS_B = 8
+BIN_PT_B = 7
+MULT_LATENCY = 0
+ADD_LATENCY = 1
+MULTIPLIER_IMPLEMENTATION = 1
+# Smallest acc_len 2
+[[simulations.parameters]]
+ACC_LEN = 2
+N_BITS_A = 4
+BIN_PT_A = 3
+N_BITS_B = 4
+BIN_PT_B = 3
+MULT_LATENCY = 2
+ADD_LATENCY = 1
+MULTIPLIER_IMPLEMENTATION = 2
+
+# test dual_pol_cmac
+[[simulations]]
+dir = "Correlator"
+top = "dual_pol_cmac"
+test_data_script = "gen_correlator_test_data.py"
+# Mask defaults: acc_len 128, 4-bit inputs
+[[simulations.parameters]]
+ACC_LEN = 128
+N_BITS_IN = 4
+BIN_PT_IN = 3
+MULT_LATENCY = 1
+ADD_LATENCY = 1
+MULTIPLIER_IMPLEMENTATION = 2
+# acc_len 8, latency 2+1
+[[simulations.parameters]]
+ACC_LEN = 8
+N_BITS_IN = 4
+BIN_PT_IN = 3
+MULT_LATENCY = 2
+ADD_LATENCY = 1
+MULTIPLIER_IMPLEMENTATION = 2
+# acc_len 6, 8-bit inputs, add latency 0
+[[simulations.parameters]]
+ACC_LEN = 6
+N_BITS_IN = 8
+BIN_PT_IN = 7
+MULT_LATENCY = 1
+ADD_LATENCY = 0
+MULTIPLIER_IMPLEMENTATION = 0
+
+# ── Correlator/Internal ──────────────────────────────────────────────────────
+
+# test cmac_acc
+[[simulations]]
+dir = "Correlator/Internal"
+top = "cmac_acc"
+test_data_script = "gen_correlator_test_data.py"
+# 16-bit, random rst (single, back-to-back, long gaps)
+[[simulations.parameters]]
+N_BITS = 16
+# 6-bit: the accumulator wraps
+[[simulations.parameters]]
+N_BITS = 6
+# 1-bit
+[[simulations.parameters]]
+N_BITS = 1
+
 # ── Delays ───────────────────────────────────────────────────────────────────
 
 # test delay_bram

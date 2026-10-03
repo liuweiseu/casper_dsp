@@ -1,0 +1,10 @@
+{
+  "ACC_LEN": 10,
+  "N_BITS_A": 8,
+  "BIN_PT_A": 7,
+  "N_BITS_B": 8,
+  "BIN_PT_B": 7,
+  "MULT_LATENCY": 3,
+  "ADD_LATENCY": 2,
+  "MULTIPLIER_IMPLEMENTATION": 0
+}
