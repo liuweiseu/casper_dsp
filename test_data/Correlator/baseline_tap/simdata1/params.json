@@ -1,0 +1,11 @@
+{
+  "N_ANTS": 4,
+  "ANT_SEP": 2,
+  "N_BITS": 4,
+  "ACC_LEN": 8,
+  "ADD_LATENCY": 1,
+  "MULT_LATENCY": 2,
+  "BRAM_LATENCY": 2,
+  "MULT_TYPE": 1,
+  "USE_BRAM_DELAY": 1
+}

@@ -816,6 +816,106 @@ LATENCY = 1
 
 # ── Correlator ───────────────────────────────────────────────────────────────
 
+# test auto_tap
+[[simulations]]
+dir = "Correlator"
+top = "auto_tap"
+test_data_script = "gen_correlator_test_data.py"
+# Mask defaults: D = 126, S = 71 (the stored DelayLen values)
+[[simulations.parameters]]
+N_ANTS = 4
+N_SIMULTAN = 2
+N_BITS = 4
+ACC_LEN = 64
+ADD_LATENCY = 1
+MULT_LATENCY = 2
+BRAM_LATENCY = 2
+MULT_TYPE = 0
+USE_BRAM_DELAY = 1
+# acc_len 8, delay_slr (D = 14, S = 15)
+[[simulations.parameters]]
+N_ANTS = 4
+N_SIMULTAN = 2
+N_BITS = 4
+ACC_LEN = 8
+ADD_LATENCY = 1
+MULT_LATENCY = 2
+BRAM_LATENCY = 2
+MULT_TYPE = 1
+USE_BRAM_DELAY = 0
+# Odd N_ANTS 5: D = 3*3 + 1 = 10, S = 9
+[[simulations.parameters]]
+N_ANTS = 5
+N_SIMULTAN = 2
+N_BITS = 4
+ACC_LEN = 4
+ADD_LATENCY = 0
+MULT_LATENCY = 1
+BRAM_LATENCY = 2
+MULT_TYPE = 2
+USE_BRAM_DELAY = 1
+# N_ANTS 2, 8-bit inputs: D = 3, S = 9
+[[simulations.parameters]]
+N_ANTS = 2
+N_SIMULTAN = 2
+N_BITS = 8
+ACC_LEN = 4
+ADD_LATENCY = 1
+MULT_LATENCY = 1
+BRAM_LATENCY = 1
+MULT_TYPE = 0
+USE_BRAM_DELAY = 1
+
+# test baseline_tap
+[[simulations]]
+dir = "Correlator"
+top = "baseline_tap"
+test_data_script = "gen_correlator_test_data.py"
+# Mask defaults
+[[simulations.parameters]]
+N_ANTS = 4
+ANT_SEP = 1
+N_BITS = 4
+ACC_LEN = 32
+ADD_LATENCY = 1
+MULT_LATENCY = 2
+BRAM_LATENCY = 2
+MULT_TYPE = 2
+USE_BRAM_DELAY = 1
+# ANT_SEP 2: a_end for the first half of each frame
+[[simulations.parameters]]
+N_ANTS = 4
+ANT_SEP = 2
+N_BITS = 4
+ACC_LEN = 8
+ADD_LATENCY = 1
+MULT_LATENCY = 2
+BRAM_LATENCY = 2
+MULT_TYPE = 1
+USE_BRAM_DELAY = 1
+# 6 antennas, ANT_SEP 3, delay_slr, acc_len 4
+[[simulations.parameters]]
+N_ANTS = 6
+ANT_SEP = 3
+N_BITS = 4
+ACC_LEN = 4
+ADD_LATENCY = 1
+MULT_LATENCY = 1
+BRAM_LATENCY = 2
+MULT_TYPE = 0
+USE_BRAM_DELAY = 0
+# 5 antennas, acc_len 6 (not a power of 2), 8-bit
+[[simulations.parameters]]
+N_ANTS = 5
+ANT_SEP = 2
+N_BITS = 8
+ACC_LEN = 6
+ADD_LATENCY = 0
+MULT_LATENCY = 1
+BRAM_LATENCY = 1
+MULT_TYPE = 0
+USE_BRAM_DELAY = 1
+
 # test cmac
 [[simulations]]
 dir = "Correlator"
