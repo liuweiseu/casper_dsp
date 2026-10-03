@@ -1004,6 +1004,27 @@ DELAY_LEN = 16
 [[simulations.parameters]]
 DELAY_LEN = 100
 
+# test window_delay
+[[simulations]]
+dir = "Delays"
+top = "window_delay"
+test_data_script = "gen_hold_window_test_data.py"
+# Mask default 10, windows longer than DELAY-1
+[[simulations.parameters]]
+DELAY = 10
+# DELAY 1 (sync_delay length 0): one-cycle delay
+[[simulations.parameters]]
+DELAY = 1
+# DELAY 2, din high from power-on (rising edge at cycle 0)
+[[simulations.parameters]]
+DELAY = 2
+# DELAY 16, din high from power-on
+[[simulations.parameters]]
+DELAY = 16
+# DELAY 12, windows shorter than DELAY-1: sync_delay restarts
+[[simulations.parameters]]
+DELAY = 12
+
 # ── FFTs ─────────────────────────────────────────────────────────────────────
 
 # test biplex_core
@@ -2468,6 +2489,24 @@ OUTPUT_POL = 0
 EDGE_TYPE = 2
 OUTPUT_POL = 1
 
+# test negedge_delay
+[[simulations]]
+dir = "Misc"
+top = "negedge_delay"
+test_data_script = "gen_hold_window_test_data.py"
+# Minimum pulse length 3
+[[simulations.parameters]]
+PULSE_LEN = 3
+# Mask default 5; din high from power-on
+[[simulations.parameters]]
+PULSE_LEN = 5
+# Pulse length 8 (4-bit counter)
+[[simulations.parameters]]
+PULSE_LEN = 8
+# Pulse length 16 (5-bit counter); din high from power-on
+[[simulations.parameters]]
+PULSE_LEN = 16
+
 # test pulse_ext
 [[simulations]]
 dir = "Misc"
@@ -2492,6 +2531,28 @@ NBITS = 8
 # NBITS=16 — pack two 16-bit words into 32-bit complex
 [[simulations.parameters]]
 NBITS = 16
+
+# test sample_and_hold
+[[simulations]]
+dir = "Misc"
+top = "sample_and_hold"
+test_data_script = "gen_hold_window_test_data.py"
+# Period 8: free-running resample, syncs restart the period
+[[simulations.parameters]]
+PERIOD = 8
+BITWIDTH = 8
+# Period 5 (not a power of 2, 3-bit counter)
+[[simulations.parameters]]
+PERIOD = 5
+BITWIDTH = 4
+# Period 2: smallest legal period
+[[simulations.parameters]]
+PERIOD = 2
+BITWIDTH = 16
+# Mask default period 1024, 32-bit data
+[[simulations.parameters]]
+PERIOD = 1024
+BITWIDTH = 32
 
 # ── Multipliers ──────────────────────────────────────────────────────────────
 
