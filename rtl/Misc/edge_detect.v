@@ -13,7 +13,8 @@ localparam RISING   = 0;
 localparam FALLING  = 1;
 localparam BOTH     = 2;
 
-reg din_prev;
+// Power-on 0, as in Simulink (no X on the first cycle in 4-state simulators)
+reg din_prev = 1'b0;
 
 always @(posedge clk) begin
     din_prev <= din;

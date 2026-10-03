@@ -1,6 +1,6 @@
 import cocotb
 from cocotb.clock import Clock
-from cocotb.triggers import RisingEdge
+from cocotb.triggers import RisingEdge, Timer
 
 from pathlib import Path
 import numpy as np
@@ -15,6 +15,31 @@ FALLING = 1
 BOTH    = 2
 ACTIVE_HIGH = 0
 ACTIVE_LOW  = 1
+
+
+@cocotb.test()
+async def power_on_test(dut):
+    """din_prev powers on at 0 (as in Simulink).
+
+    Runs first, before any clock edge: dout is combinational in din and
+    din_prev, so with din=1 it shows din_prev's initial value. din is set
+    back to 0 so module_test starts from the power-on state.
+    """
+    edge_type  = int(dut.EDGE_TYPE.value)
+    output_pol = int(dut.OUTPUT_POL.value)
+    # din=1, din_prev=0: a rising edge (and any edge), no falling edge
+    detect = 0 if edge_type == FALLING else 1
+    expected = detect ^ output_pol
+
+    dut.clk.value = 0
+    dut.din.value = 1
+    await Timer(1, units="ns")
+    actual = dut.dout.value
+    assert actual.is_resolvable and int(actual) == expected, (
+        f"Power-on: din=1, expected dout={expected}, got {actual}"
+    )
+    dut.din.value = 0
+    await Timer(1, units="ns")
 
 
 @cocotb.test()

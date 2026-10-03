@@ -15,10 +15,18 @@ module counter #(
     parameter BIN_P = 0,
     /* ENABLE_LOAD: provide load port, 0 or 1 */
     parameter ENABLE_LOAD = 0,
-    /* ENABLE_SYNC_RST: synchronous clear to zero when rst=1 (1=enabled) */
+    /* ENABLE_SYNC_RST: synchronous reset to RST_VAL when rst=1 (1=enabled) */
     parameter ENABLE_SYNC_RST = 0,
     /* ENABLE_ENABLE: gate counting on enable signal (1=enabled) */
-    parameter ENABLE_ENABLE = 0
+    parameter ENABLE_ENABLE = 0,
+    /* RST_VAL: value loaded by the synchronous reset. The Xilinx Counter
+       loads start_count on reset, on power-on and when a count-limited
+       counter wraps, so a Sysgen Counter with start_count S maps to
+       INIT_VAL = RST_VAL = S. The default 0 keeps the original clear-to-zero
+       reset. Wrap-to-start_count is confirmed by the Simulink-exported
+       test data; reset-to-start_count is assumed from the Sysgen Counter
+       semantics (no stored Simulink data drives rst). */
+    parameter int RST_VAL = 0
 )(
     input clk,
     input rst,
@@ -47,6 +55,7 @@ end
 
 localparam [NBITS-1:0] STEP_VAL  = NBITS'(STEP);
 localparam [NBITS-1:0] INIT_VAL_ = NBITS'(INIT_VAL);
+localparam [NBITS-1:0] RST_VAL_  = NBITS'(RST_VAL);
 // Power-on value is given as a declaration initializer rather than an
 // 'initial' block: newer Verilator rejects a variable written by both an
 // 'initial' process and an always_ff (MULTIDRIVEN).
@@ -60,7 +69,7 @@ generate
         begin: UP
             always_ff @(posedge clk)
                 if (ENABLE_SYNC_RST && rst)
-                    cnt <= {NBITS{1'b0}};
+                    cnt <= RST_VAL_;
                 else if (!ENABLE_ENABLE || enable)
                     cnt <= cnt + STEP_VAL;
         end
@@ -68,7 +77,7 @@ generate
         begin: DOWN
             always_ff @(posedge clk)
                 if (ENABLE_SYNC_RST && rst)
-                    cnt <= {NBITS{1'b0}};
+                    cnt <= RST_VAL_;
                 else if (!ENABLE_ENABLE || enable)
                     cnt <= cnt - STEP_VAL;
         end
@@ -83,7 +92,7 @@ generate
         begin: UP
             always_ff @(posedge clk)
                 if (ENABLE_SYNC_RST && rst)
-                    cnt <= {NBITS{1'b0}};
+                    cnt <= RST_VAL_;
                 else if (!ENABLE_ENABLE || enable)
                     begin
                         if (cnt == NBITS'(COUNT_TO_VAL))
@@ -96,7 +105,7 @@ generate
         begin: DOWN
             always_ff @(posedge clk)
                 if (ENABLE_SYNC_RST && rst)
-                    cnt <= {NBITS{1'b0}};
+                    cnt <= RST_VAL_;
                 else if (!ENABLE_ENABLE || enable)
                     begin
                         if (cnt == NBITS'(COUNT_TO_VAL))

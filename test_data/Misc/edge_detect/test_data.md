@@ -12,3 +12,5 @@ Each subdirectory corresponds to one parameter set. `EDGE_TYPE`: 0 = rising edge
 | 3 | `simdata3` | 1 (falling) | 1 (active low)  | 100 | Detect falling edge, output pulse active low |
 | 4 | `simdata4` | 2 (both)    | 0 (active high) | 100 | Detect any edge, output pulse active high |
 | 5 | `simdata5` | 2 (both)    | 1 (active low)  | 100 | Detect any edge, output pulse active low |
+
+The testbench also runs `power_on_test` before `module_test`, with no CSV data. Before the first clock edge it drives `din = 1` and checks the combinational `dout` against `din_prev = 0` (the Simulink initial value) for each parameter set.

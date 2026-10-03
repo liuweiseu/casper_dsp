@@ -2,7 +2,7 @@
 
 ## Description
 
-Compares two unsigned input buses `a` and `b` and outputs a single-bit result
+Compares two input buses `a` and `b` (unsigned, or two's complement with `SIGNED = 1`) and outputs a single-bit result
 according to the selected comparison operator. An optional pipeline register can
 be inserted via the `LATENCY` parameter.
 
@@ -13,6 +13,7 @@ be inserted via the `LATENCY` parameter.
 | `NBITS`   | 8       | Bit width of inputs `a` and `b` |
 | `COMP`    | 0       | Comparison operator (see table below) |
 | `LATENCY` | 1       | `0` = combinational output; `>=1` = number of pipeline register stages |
+| `SIGNED`  | 0       | `0` = unsigned comparison; `1` = `a` and `b` are two's complement |
 
 ### `COMP` values
 
@@ -25,7 +26,7 @@ be inserted via the `LATENCY` parameter.
 | 4     | Less or equal   | `a <= b`    |
 | 5     | Greater or equal| `a >= b`    |
 
-All comparisons are **unsigned**.
+Comparisons are unsigned by default and signed when `SIGNED = 1`.
 
 ## Ports
 
