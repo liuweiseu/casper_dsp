@@ -1219,6 +1219,36 @@ N_BITS = 8
 ACC_LEN = 64
 DEMUX_FACTOR = 4
 
+# test xeng_tvg
+[[simulations]]
+dir = "Correlator"
+top = "xeng_tvg"
+test_data_script = "gen_correlator_test_data.py"
+# Mask defaults (internal sync period 2^15: one pulse at t = 2)
+[[simulations.parameters]]
+ANT_BITS = 2
+X_INT_BITS = 5
+SYNC_PERIOD = 15
+DATA_WIDTH = 16
+# X_INT_BITS 2, SYNC_PERIOD 6: several internal syncs per mode
+[[simulations.parameters]]
+ANT_BITS = 2
+X_INT_BITS = 2
+SYNC_PERIOD = 6
+DATA_WIDTH = 16
+# 24-bit data_in (data_out 24 bits)
+[[simulations.parameters]]
+ANT_BITS = 4
+X_INT_BITS = 3
+SYNC_PERIOD = 8
+DATA_WIDTH = 24
+# Smallest periods, 8-bit data_in (data_out 16 bits)
+[[simulations.parameters]]
+ANT_BITS = 2
+X_INT_BITS = 1
+SYNC_PERIOD = 1
+DATA_WIDTH = 8
+
 # ── Correlator/Internal ──────────────────────────────────────────────────────
 
 # test cmac_acc

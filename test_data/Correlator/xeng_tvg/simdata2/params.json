@@ -1,0 +1,6 @@
+{
+  "ANT_BITS": 4,
+  "X_INT_BITS": 3,
+  "SYNC_PERIOD": 8,
+  "DATA_WIDTH": 24
+}
