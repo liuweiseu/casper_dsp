@@ -1,0 +1,12 @@
+{
+  "N_ANTS": 10,
+  "N_BITS": 3,
+  "ACC_LEN": 16,
+  "DEMUX_FACTOR": 1,
+  "ADD_LATENCY": 1,
+  "MULT_LATENCY": 1,
+  "BRAM_LATENCY": 1,
+  "USE_DED_MULT": 1,
+  "USE_BRAM_DELAY": 1,
+  "MCNT_BITS": 8
+}

@@ -1002,6 +1002,96 @@ MULT_LATENCY = 1
 ADD_LATENCY = 0
 MULTIPLIER_IMPLEMENTATION = 0
 
+# test xeng
+[[simulations]]
+dir = "Correlator"
+top = "xeng"
+test_data_script = "gen_correlator_test_data.py"
+# Mask defaults (N_ANTS 8 from xeng_init.m), periodic sync
+[[simulations.parameters]]
+N_ANTS = 8
+N_BITS = 4
+ACC_LEN = 128
+DEMUX_FACTOR = 4
+ADD_LATENCY = 1
+MULT_LATENCY = 1
+BRAM_LATENCY = 2
+USE_DED_MULT = 1
+USE_BRAM_DELAY = 1
+MCNT_BITS = 16
+# 4 antennas: xeng_descramble_4ant, delay_slr
+[[simulations.parameters]]
+N_ANTS = 4
+N_BITS = 4
+ACC_LEN = 16
+DEMUX_FACTOR = 2
+ADD_LATENCY = 1
+MULT_LATENCY = 1
+BRAM_LATENCY = 2
+USE_DED_MULT = 1
+USE_BRAM_DELAY = 0
+MCNT_BITS = 8
+# 6 antennas, ACC_LEN 8, add latency 0
+[[simulations.parameters]]
+N_ANTS = 6
+N_BITS = 4
+ACC_LEN = 8
+DEMUX_FACTOR = 1
+ADD_LATENCY = 0
+MULT_LATENCY = 2
+BRAM_LATENCY = 2
+USE_DED_MULT = 1
+USE_BRAM_DELAY = 1
+MCNT_BITS = 8
+# 10 antennas, 3-bit samples
+[[simulations.parameters]]
+N_ANTS = 10
+N_BITS = 3
+ACC_LEN = 16
+DEMUX_FACTOR = 1
+ADD_LATENCY = 1
+MULT_LATENCY = 1
+BRAM_LATENCY = 1
+USE_DED_MULT = 1
+USE_BRAM_DELAY = 1
+MCNT_BITS = 8
+# ACC_LEN 12 (not a power of 2): W = N_BITS_OUT-1, descramble fields misaligned ($warning)
+[[simulations.parameters]]
+N_ANTS = 8
+N_BITS = 4
+ACC_LEN = 12
+DEMUX_FACTOR = 1
+ADD_LATENCY = 1
+MULT_LATENCY = 1
+BRAM_LATENCY = 2
+USE_DED_MULT = 1
+USE_BRAM_DELAY = 1
+MCNT_BITS = 8
+# Read pace 1.6 rounded to DEL 0: the last conjugated element is read before the next window rewrites it
+[[simulations.parameters]]
+N_ANTS = 8
+N_BITS = 4
+ACC_LEN = 32
+DEMUX_FACTOR = 4
+ADD_LATENCY = 1
+MULT_LATENCY = 1
+BRAM_LATENCY = 2
+USE_DED_MULT = 1
+USE_BRAM_DELAY = 1
+MCNT_BITS = 8
+# window_valid high from power-on (window_delay rises at XENG_DELAY), sync later
+[[simulations.parameters]]
+N_ANTS = 4
+N_BITS = 4
+ACC_LEN = 8
+DEMUX_FACTOR = 1
+ADD_LATENCY = 1
+MULT_LATENCY = 1
+BRAM_LATENCY = 2
+USE_DED_MULT = 1
+USE_BRAM_DELAY = 1
+MCNT_BITS = 8
+
 # test xeng_descramble
 [[simulations]]
 dir = "Correlator"
