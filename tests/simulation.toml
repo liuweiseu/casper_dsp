@@ -2495,6 +2495,192 @@ NBITS = 16
 
 # ── Multipliers ──────────────────────────────────────────────────────────────
 
+# test cmult
+[[simulations]]
+dir = "Multipliers"
+top = "cmult"
+test_data_script = "gen_fixed_point_test_data.py"
+# cmult_init.m defaults: Fix_18_17 → Fix_37_14, truncate + wrap
+[[simulations.parameters]]
+N_BITS_A = 18
+BIN_PT_A = 17
+N_BITS_B = 18
+BIN_PT_B = 17
+N_BITS_AB = 37
+BIN_PT_AB = 14
+QUANTIZATION = 0
+OVERFLOW = 0
+MULT_LATENCY = 3
+ADD_LATENCY = 1
+CONV_LATENCY = 1
+IN_LATENCY = 0
+CONJUGATED = 0
+MULTIPLIER_IMPLEMENTATION = 0
+PIPELINE_CMULT_EN = 0
+PIPELINE_LATENCY = 2
+# Defaults, conjugated (a·conj(b))
+[[simulations.parameters]]
+N_BITS_A = 18
+BIN_PT_A = 17
+N_BITS_B = 18
+BIN_PT_B = 17
+N_BITS_AB = 37
+BIN_PT_AB = 14
+QUANTIZATION = 0
+OVERFLOW = 0
+MULT_LATENCY = 3
+ADD_LATENCY = 1
+CONV_LATENCY = 1
+IN_LATENCY = 0
+CONJUGATED = 1
+MULTIPLIER_IMPLEMENTATION = 0
+PIPELINE_CMULT_EN = 0
+PIPELINE_LATENCY = 2
+# cmult_4bit_hdl* equivalent: Fix_4_3, full precision Fix_9_6, conjugated, latency 1
+[[simulations.parameters]]
+N_BITS_A = 4
+BIN_PT_A = 3
+N_BITS_B = 4
+BIN_PT_B = 3
+N_BITS_AB = 9
+BIN_PT_AB = 6
+QUANTIZATION = 0
+OVERFLOW = 0
+MULT_LATENCY = 1
+ADD_LATENCY = 0
+CONV_LATENCY = 0
+IN_LATENCY = 0
+CONJUGATED = 1
+MULTIPLIER_IMPLEMENTATION = 0
+PIPELINE_CMULT_EN = 0
+PIPELINE_LATENCY = 2
+# cmult_4bit_hdl equivalent: not conjugated, latency 1
+[[simulations.parameters]]
+N_BITS_A = 4
+BIN_PT_A = 3
+N_BITS_B = 4
+BIN_PT_B = 3
+N_BITS_AB = 9
+BIN_PT_AB = 6
+QUANTIZATION = 0
+OVERFLOW = 0
+MULT_LATENCY = 1
+ADD_LATENCY = 0
+CONV_LATENCY = 0
+IN_LATENCY = 0
+CONJUGATED = 0
+MULTIPLIER_IMPLEMENTATION = 0
+PIPELINE_CMULT_EN = 0
+PIPELINE_LATENCY = 2
+# Fix_8_7 full precision, conjugated, fully combinational
+[[simulations.parameters]]
+N_BITS_A = 8
+BIN_PT_A = 7
+N_BITS_B = 8
+BIN_PT_B = 7
+N_BITS_AB = 17
+BIN_PT_AB = 14
+QUANTIZATION = 0
+OVERFLOW = 0
+MULT_LATENCY = 0
+ADD_LATENCY = 0
+CONV_LATENCY = 0
+IN_LATENCY = 0
+CONJUGATED = 1
+MULTIPLIER_IMPLEMENTATION = 0
+PIPELINE_CMULT_EN = 0
+PIPELINE_LATENCY = 2
+# Fix_8_7 × Fix_12_11 → Fix_10_7, round ±inf + saturate, conjugated, IN_LATENCY 1
+[[simulations.parameters]]
+N_BITS_A = 8
+BIN_PT_A = 7
+N_BITS_B = 12
+BIN_PT_B = 11
+N_BITS_AB = 10
+BIN_PT_AB = 7
+QUANTIZATION = 1
+OVERFLOW = 1
+MULT_LATENCY = 2
+ADD_LATENCY = 1
+CONV_LATENCY = 2
+IN_LATENCY = 1
+CONJUGATED = 1
+MULTIPLIER_IMPLEMENTATION = 0
+PIPELINE_CMULT_EN = 0
+PIPELINE_LATENCY = 2
+# Fix_8_7 → Fix_9_6, round even + wrap, IN_LATENCY 2
+[[simulations.parameters]]
+N_BITS_A = 8
+BIN_PT_A = 7
+N_BITS_B = 8
+BIN_PT_B = 7
+N_BITS_AB = 9
+BIN_PT_AB = 6
+QUANTIZATION = 2
+OVERFLOW = 0
+MULT_LATENCY = 3
+ADD_LATENCY = 1
+CONV_LATENCY = 1
+IN_LATENCY = 2
+CONJUGATED = 0
+MULTIPLIER_IMPLEMENTATION = 0
+PIPELINE_CMULT_EN = 0
+PIPELINE_LATENCY = 2
+# Embedded multipliers + PIPELINE_CMULT_EN: 2 extra cycles
+[[simulations.parameters]]
+N_BITS_A = 6
+BIN_PT_A = 5
+N_BITS_B = 6
+BIN_PT_B = 5
+N_BITS_AB = 13
+BIN_PT_AB = 10
+QUANTIZATION = 0
+OVERFLOW = 0
+MULT_LATENCY = 2
+ADD_LATENCY = 1
+CONV_LATENCY = 1
+IN_LATENCY = 0
+CONJUGATED = 1
+MULTIPLIER_IMPLEMENTATION = 2
+PIPELINE_CMULT_EN = 1
+PIPELINE_LATENCY = 2
+# PIPELINE_CMULT_EN with behavioral HDL: no extra latency
+[[simulations.parameters]]
+N_BITS_A = 6
+BIN_PT_A = 5
+N_BITS_B = 6
+BIN_PT_B = 5
+N_BITS_AB = 13
+BIN_PT_AB = 10
+QUANTIZATION = 0
+OVERFLOW = 0
+MULT_LATENCY = 2
+ADD_LATENCY = 1
+CONV_LATENCY = 1
+IN_LATENCY = 0
+CONJUGATED = 1
+MULTIPLIER_IMPLEMENTATION = 0
+PIPELINE_CMULT_EN = 1
+PIPELINE_LATENCY = 3
+# Fix_18_17 → Fix_18_17, round even + saturate, conjugated
+[[simulations.parameters]]
+N_BITS_A = 18
+BIN_PT_A = 17
+N_BITS_B = 18
+BIN_PT_B = 17
+N_BITS_AB = 18
+BIN_PT_AB = 17
+QUANTIZATION = 2
+OVERFLOW = 1
+MULT_LATENCY = 3
+ADD_LATENCY = 1
+CONV_LATENCY = 1
+IN_LATENCY = 0
+CONJUGATED = 1
+MULTIPLIER_IMPLEMENTATION = 0
+PIPELINE_CMULT_EN = 0
+PIPELINE_LATENCY = 2
+
 # test complex_multiplier
 [[simulations]]
 dir = "Multipliers"

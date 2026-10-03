@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Generate test data for the fixed-point modules in rtl/Bus/ and rtl/Multipliers/.
 
+Complex words of cmult are packed {re, im} (real part in the MSBs).
+
 The expected outputs come from an exact golden model (Python Fraction
 arithmetic followed by explicit quantization / overflow rules), independent
 of the bit-level tricks used in the RTL.
@@ -140,6 +142,48 @@ def m_complex_multiplier(p, v):
     return [quantize(ar * br - ai * bi, *q), quantize(ar * bi + ai * br, *q)]
 
 
+def unpack(word, n_bits):
+    """Packed {re, im} word -> (re, im) raw words."""
+    return word >> n_bits, word & ((1 << n_bits) - 1)
+
+
+def m_cmult(p, v):
+    na, nb, nab = p["N_BITS_A"], p["N_BITS_B"], p["N_BITS_AB"]
+    ar, ai = (to_value(x, na, p["BIN_PT_A"], 1) for x in unpack(v[0], na))
+    br, bi = (to_value(x, nb, p["BIN_PT_B"], 1) for x in unpack(v[1], nb))
+    if p["CONJUGATED"]:
+        re, im = ar * br + ai * bi, ai * br - ar * bi
+    else:
+        re, im = ar * br - ai * bi, ai * br + ar * bi
+    q = (nab, p["BIN_PT_AB"], 1, p["QUANTIZATION"], p["OVERFLOW"])
+    return [(quantize(re, *q) << nab) | quantize(im, *q)]
+
+
+def cmult_vectors(rng, p):
+    """Packed (a, b) words: component corner cases, then random words.
+
+    Every pair of component corners appears as (a_re, a_im), with b both
+    swapped and equal, so -2^(n-1) meets -2^(n-1) in every product.
+    """
+    na, nb = p["N_BITS_A"], p["N_BITS_B"]
+    ca, cb = corners(na), corners(nb)
+    vecs = []
+    for i in range(len(ca)):
+        for j in range(len(ca)):
+            a = (ca[i] << na) | ca[j]
+            vecs.append((a, (cb[j % len(cb)] << nb) | cb[i % len(cb)]))
+            vecs.append((a, (cb[i % len(cb)] << nb) | cb[j % len(cb)]))
+    while len(vecs) < CYCLES:
+        vecs.append((rng.randrange(1 << 2 * na), rng.randrange(1 << 2 * nb)))
+    return vecs[:CYCLES]
+
+
+def cmult_total_latency(p):
+    pipe = p["PIPELINE_LATENCY"] if (p["MULTIPLIER_IMPLEMENTATION"] == 2
+                                     and p["PIPELINE_CMULT_EN"]) else 0
+    return p["IN_LATENCY"] + p["MULT_LATENCY"] + pipe + p["ADD_LATENCY"] + p["CONV_LATENCY"]
+
+
 def m_scale(p, v):
     x = to_value(v[0], p["N_BITS_IN"], p["BIN_PT_IN"], p["TYPE_IN"])
     x *= Fraction(2) ** p["SCALE_FACTOR"]
@@ -176,6 +220,10 @@ MULT = ["N_BITS_A", "BIN_PT_A", "TYPE_A", "N_BITS_B", "BIN_PT_B", "TYPE_B",
 CMULT = ["N_BITS_A", "BIN_PT_A", "TYPE_A", "N_BITS_B", "BIN_PT_B", "TYPE_B",
          "N_BITS_OUT", "BIN_PT_OUT", "TYPE_OUT", "QUANTIZATION", "OVERFLOW",
          "MULT_SPEC", "MULT_LATENCY", "ADD_LATENCY"]
+CM = ["N_BITS_A", "BIN_PT_A", "N_BITS_B", "BIN_PT_B", "N_BITS_AB", "BIN_PT_AB",
+      "QUANTIZATION", "OVERFLOW", "MULT_LATENCY", "ADD_LATENCY", "CONV_LATENCY",
+      "IN_LATENCY", "CONJUGATED", "MULTIPLIER_IMPLEMENTATION", "PIPELINE_CMULT_EN",
+      "PIPELINE_LATENCY"]
 SCALE = ["N_BITS_IN", "BIN_PT_IN", "TYPE_IN", "SCALE_FACTOR", "N_BITS_OUT",
          "BIN_PT_OUT", "TYPE_OUT", "QUANTIZATION", "OVERFLOW", "LATENCY"]
 
@@ -271,6 +319,46 @@ MODULES = {
             (P(CMULT, [8, 7, 1, 8, 7, 1, 10, 7, 1, 1, 1, 1, 0, 0]),
              "Fix_8_7 → Fix_10_7, round + saturate, 3-mult, fully combinational"),
         ]),
+    "cmult": dict(
+        category="Multipliers",
+        model=m_cmult, inputs=["a", "b"], outputs=["ab"],
+        widths=lambda p: [2 * p["N_BITS_A"], 2 * p["N_BITS_B"]],
+        vectors=cmult_vectors,
+        stimulus_note="The first 72 cycles walk every pair of per-part corner cases "
+                      "(0, 1, all-ones, MSB only, MSB−1, MSB+1) as (a_re, a_im), with "
+                      "b set to the swapped and the same pair, so −2^(n−1) meets "
+                      "−2^(n−1) in every product. The rest are seeded uniform-random "
+                      "words.",
+        latency=cmult_total_latency,
+        prose="`cmult` (casper_library cmult) computes `a·b` (`CONJUGATED`=0) or "
+              "`a·conj(b)` (`CONJUGATED`=1) on packed `{re, im}` words (real part "
+              "in the MSBs) and converts both parts to `N_BITS_AB`/`BIN_PT_AB`. "
+              "Latency = `IN_LATENCY + MULT_LATENCY + ADD_LATENCY + CONV_LATENCY` "
+              "(+ `PIPELINE_LATENCY` with embedded multipliers and "
+              "`PIPELINE_CMULT_EN`). Sets 2 and 3 are the full-precision "
+              "`cmult_4bit_hdl*` / `cmult_4bit_hdl` equivalents.",
+        tests=[
+            (P(CM, [18, 17, 18, 17, 37, 14, 0, 0, 3, 1, 1, 0, 0, 0, 0, 2]),
+             "cmult_init.m defaults: Fix_18_17 → Fix_37_14, truncate + wrap"),
+            (P(CM, [18, 17, 18, 17, 37, 14, 0, 0, 3, 1, 1, 0, 1, 0, 0, 2]),
+             "Defaults, conjugated (a·conj(b))"),
+            (P(CM, [4, 3, 4, 3, 9, 6, 0, 0, 1, 0, 0, 0, 1, 0, 0, 2]),
+             "cmult_4bit_hdl* equivalent: Fix_4_3, full precision Fix_9_6, conjugated, latency 1"),
+            (P(CM, [4, 3, 4, 3, 9, 6, 0, 0, 1, 0, 0, 0, 0, 0, 0, 2]),
+             "cmult_4bit_hdl equivalent: not conjugated, latency 1"),
+            (P(CM, [8, 7, 8, 7, 17, 14, 0, 0, 0, 0, 0, 0, 1, 0, 0, 2]),
+             "Fix_8_7 full precision, conjugated, fully combinational"),
+            (P(CM, [8, 7, 12, 11, 10, 7, 1, 1, 2, 1, 2, 1, 1, 0, 0, 2]),
+             "Fix_8_7 × Fix_12_11 → Fix_10_7, round ±inf + saturate, conjugated, IN_LATENCY 1"),
+            (P(CM, [8, 7, 8, 7, 9, 6, 2, 0, 3, 1, 1, 2, 0, 0, 0, 2]),
+             "Fix_8_7 → Fix_9_6, round even + wrap, IN_LATENCY 2"),
+            (P(CM, [6, 5, 6, 5, 13, 10, 0, 0, 2, 1, 1, 0, 1, 2, 1, 2]),
+             "Embedded multipliers + PIPELINE_CMULT_EN: 2 extra cycles"),
+            (P(CM, [6, 5, 6, 5, 13, 10, 0, 0, 2, 1, 1, 0, 1, 0, 1, 3]),
+             "PIPELINE_CMULT_EN with behavioral HDL: no extra latency"),
+            (P(CM, [18, 17, 18, 17, 18, 17, 2, 1, 3, 1, 1, 0, 1, 0, 0, 2]),
+             "Fix_18_17 → Fix_18_17, round even + saturate, conjugated"),
+        ]),
     "scale": dict(
         category="Bus",
         model=m_scale, inputs=["din"], outputs=["out"],
@@ -321,7 +409,10 @@ def write_module(name, spec):
     mdir = TEST_DATA / spec["category"] / name
     for n, (params, _) in enumerate(spec["tests"]):
         rng = random.Random(f"{name}-{n}")
-        vecs = stimulus(rng, spec["widths"](params))
+        if "vectors" in spec:
+            vecs = spec["vectors"](rng, params)
+        else:
+            vecs = stimulus(rng, spec["widths"](params))
         results = [spec["model"](params, v) for v in vecs]
         lat = spec["latency"](params)
         d = mdir / f"simdata{n}"
@@ -354,9 +445,10 @@ def test_data_md(name, spec):
         "the pipeline latency (the first `LATENCY` values are the zero "
         "power-on state).",
         "",
-        "The first cycles walk corner-case words (0, 1, all-ones, MSB only, "
-        "MSB−1, MSB+1; all pairs for 2-input modules), and the rest are "
-        "seeded uniform-random words.",
+        spec.get("stimulus_note",
+                 "The first cycles walk corner-case words (0, 1, all-ones, MSB only, "
+                 "MSB−1, MSB+1; all pairs for 2-input modules), and the rest are "
+                 "seeded uniform-random words."),
         "",
         "Encodings: `TYPE` 0=unsigned, 1=signed; `QUANTIZATION` 0=truncate, "
         "1=round half away from zero, 2=round half to even; `OVERFLOW` "
