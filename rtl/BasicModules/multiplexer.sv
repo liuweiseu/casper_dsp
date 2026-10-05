@@ -2,9 +2,14 @@ module multiplexer #(
     parameter int NBITS   = 8,
     parameter int NINPUTS = 2,
     /* LATENCY: 0 = combinational output, >=1 = pipeline stages */
-    parameter int LATENCY = 1
+    parameter int LATENCY = 1,
+    /* USE_ENABLE: 1 = use the enable port en (Xilinx "Provide enable port"):
+       en = 0 holds the pipeline registers; no effect when LATENCY = 0.
+       en defaults to 1 and may be left unconnected when unused. */
+    parameter int USE_ENABLE = 0
 )(
     input  logic                             clk,
+    input  logic                             en = 1'b1,
     input  logic [NBITS-1:0]                 din [NINPUTS],
     input  logic [$clog2(NINPUTS)-1:0]       sel,
     output logic [NBITS-1:0]                 dout
@@ -25,7 +30,7 @@ module multiplexer #(
             // variable written by both an 'initial' process and an always_ff
             // (MULTIDRIVEN).
             logic [NBITS-1:0] shift_reg [0:LATENCY-1] = '{default: '0};
-            always_ff @(posedge clk) begin
+            always_ff @(posedge clk) if (USE_ENABLE == 0 || en) begin
                 shift_reg[0] <= result;
                 for (int k = 1; k < LATENCY; k = k + 1)
                     shift_reg[k] <= shift_reg[k-1];

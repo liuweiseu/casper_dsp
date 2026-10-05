@@ -1,10 +1,12 @@
 module register #(
     /* BITWIDTH: data bit width */
     parameter BITWIDTH   = 1,
-    /* USE_RST: 1 = use synchronous reset (rst pin active), 0 = no reset pin */
-    parameter USE_RST    = 1,
-    /* USE_ENABLE: 1 = use enable (en pin active), 0 = no enable pin */
-    parameter USE_ENABLE = 1,
+    /* USE_RST: 1 = use synchronous reset (rst pin active), 0 = no reset pin
+       (Xilinx Register default: off) */
+    parameter USE_RST    = 0,
+    /* USE_ENABLE: 1 = use enable (en pin active), 0 = no enable pin
+       (Xilinx Register default: off) */
+    parameter USE_ENABLE = 0,
     /* INIT_VAL: value loaded into q when rst is asserted */
     parameter INIT_VAL   = 0
 )(

@@ -13,12 +13,14 @@ register can be inserted via the `LATENCY` parameter.
 | `NBITS`    | 8       | Bit width of each input and the output |
 | `NINPUTS`  | 2       | Number of input buses to select from |
 | `LATENCY`  | 1       | `0` = combinational output; `>=1` = number of pipeline register stages |
+| `USE_ENABLE` | 0     | `1` = the pipeline registers update only when `en` is high (Xilinx "Provide enable port"); no effect when `LATENCY = 0` |
 
 ## Ports
 
 | Port   | Direction | Width                   | Description |
 |--------|-----------|-------------------------|-------------|
 | `clk`  | input     | 1                       | Clock signal (unused when `LATENCY=0`) |
+| `en`   | input     | 1                       | Pipeline enable (used when `USE_ENABLE = 1`; default 1, may be left unconnected) |
 | `din`  | input     | `NBITS` × `NINPUTS`     | Input buses (unpacked array: `din[0]` … `din[NINPUTS-1]`) |
 | `sel`  | input     | `⌈log₂(NINPUTS)⌉`       | Selects which input is forwarded to the output |
 | `dout` | output    | `NBITS`                 | Selected output |
@@ -27,4 +29,5 @@ register can be inserted via the `LATENCY` parameter.
 
 `dout` reflects `din[sel]`. With `LATENCY=0` the output is purely
 combinational; with `LATENCY=N` the result passes through `N` pipeline
-registers, introducing `N` clock cycles of latency.
+registers, introducing `N` clock cycles of latency. With `USE_ENABLE = 1`
+the pipeline registers hold while `en` is low.

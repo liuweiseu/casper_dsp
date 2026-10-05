@@ -3,9 +3,14 @@ module logical #(
     parameter int NINPUTS = 2,
     parameter int LATENCY = 1,
     /* FUNC: 0=AND, 1=NAND, 2=OR, 3=NOR, 4=XOR, 5=XNOR */
-    parameter int FUNC    = 0
+    parameter int FUNC    = 0,
+    /* USE_ENABLE: 1 = use the enable port en (Xilinx "Provide enable port"):
+       en = 0 holds the pipeline registers; no effect when LATENCY = 0.
+       en defaults to 1 and may be left unconnected when unused. */
+    parameter int USE_ENABLE = 0
 )(
     input  logic             clk,
+    input  logic             en = 1'b1,
     input  logic [NBITS-1:0] din [NINPUTS],
     output logic [NBITS-1:0] dout
 );
@@ -32,7 +37,7 @@ module logical #(
             // variable written by both an 'initial' process and an always_ff
             // (MULTIDRIVEN).
             logic [NBITS-1:0] shift_reg [0:LATENCY-1] = '{default: '0};
-            always_ff @(posedge clk) begin
+            always_ff @(posedge clk) if (USE_ENABLE == 0 || en) begin
                 shift_reg[0] <= result;
                 for (int k = 1; k < LATENCY; k = k + 1)
                     shift_reg[k] <= shift_reg[k-1];

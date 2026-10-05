@@ -1,0 +1,12 @@
+{
+  "COUNTER_TYPE": 1,
+  "NBITS": 5,
+  "COUNT_TO_VAL": 13,
+  "COUNT_DIR": 2,
+  "INIT_VAL": 3,
+  "STEP": 2,
+  "ENABLE_SYNC_RST": 1,
+  "ENABLE_ENABLE": 1,
+  "ENABLE_LOAD": 0,
+  "RST_VAL": 3
+}

@@ -3,10 +3,29 @@ from cocotb.clock import Clock
 from cocotb.triggers import RisingEdge, Timer
 
 from pathlib import Path
+import json
 import numpy as np
 
 _here = Path(__file__).parent
 testdatadir = (_here / "../../../test_data" / _here.parent.name / _here.name).resolve()
+
+
+# Parameters matched against simdataN/params.json (USE_ENABLE sets, generated
+# by test_data/scripts/gen_basic_test_data.py); the original sets have no
+# params.json and are selected by the parameter checks below.
+PARAMS = ['NBITS', 'NINPUTS', 'LATENCY', 'USE_ENABLE']
+
+
+def find_param_datadir(dut):
+    """Return the simdataN with a params.json matching the DUT, or None."""
+    dut_params = {name: int(getattr(dut, name).value) for name in PARAMS}
+    for d in sorted(testdatadir.glob("simdata*")):
+        pj = d / "params.json"
+        if pj.exists():
+            p = json.loads(pj.read_text())
+            if {k: p[k] for k in PARAMS} == dut_params:
+                return d
+    return None
 
 
 @cocotb.test()
@@ -25,6 +44,8 @@ async def module_test(dut):
         simdata1 : NBITS=8, NINPUTS=4, LATENCY=1
         simdata2 : NBITS=8, NINPUTS=2, LATENCY=0 (combinational)
         simdata3 : NBITS=8, NINPUTS=2, LATENCY=2
+        simdata4 : NBITS=8, NINPUTS=4, LATENCY=2, USE_ENABLE=1 (en driven
+                   from sim_en.csv)
     """
     nbits   = int(dut.NBITS.value)
     ninputs = int(dut.NINPUTS.value)
@@ -33,7 +54,12 @@ async def module_test(dut):
         f"Testing with NBITS={nbits}, NINPUTS={ninputs}, LATENCY={latency}"
     )
 
-    if   nbits == 8 and ninputs == 2 and latency == 1:
+    datadir = find_param_datadir(dut)
+    if datadir is not None:
+        pass
+    elif int(dut.USE_ENABLE.value):
+        assert False, "No params.json matches this USE_ENABLE configuration"
+    elif nbits == 8 and ninputs == 2 and latency == 1:
         datadir = testdatadir / "simdata0"
     elif nbits == 8 and ninputs == 4 and latency == 1:
         datadir = testdatadir / "simdata1"
@@ -52,6 +78,8 @@ async def module_test(dut):
     sim_din  = np.loadtxt(datadir / "sim_din.csv", dtype=int, ndmin=2).tolist()
     sim_sel  = np.loadtxt(datadir / "sim_sel.csv",  dtype=int).tolist()
     expected = np.loadtxt(datadir / "sim_dout.csv",  dtype=int).tolist()
+    en_file  = datadir / "sim_en.csv"
+    sim_en   = np.loadtxt(en_file, dtype=int).tolist() if en_file.exists() else None
 
     cocotb.log.info(f"Loaded {len(expected)} test vectors from {datadir.name}/")
 
@@ -74,6 +102,8 @@ async def module_test(dut):
             # cocotb/Verilator unpacked-array convention: list[k] → din[k] (direct mapping)
             dut.din.value = sim_din[i]
             dut.sel.value = sim_sel[i]
+            if sim_en is not None:
+                dut.en.value = sim_en[i]
             await RisingEdge(dut.clk)
             actual = int(dut.dout.value)
             assert actual == expected[i], (
