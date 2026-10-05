@@ -46,8 +46,8 @@ async def power_on_test(dut):
 async def module_test(dut):
     """Test edge_detect module.
 
-    For each value in sim_in.csv, drive din before the rising edge and
-    compare dout against the expected value in sim_out.csv after the edge.
+    For each value in sim_din.csv, drive din before the rising edge and
+    compare dout against the expected value in sim_dout.csv after the edge.
 
     Parameter sets:
         simdata0 : EDGE_TYPE=0(rising),  OUTPUT_POL=0(active_high)
@@ -82,8 +82,8 @@ async def module_test(dut):
         )
         return
 
-    sim_in           = np.loadtxt(datadir / "sim_in.csv",  dtype=int).tolist()
-    expected_results = np.loadtxt(datadir / "sim_out.csv", dtype=int).tolist()
+    sim_in           = np.loadtxt(datadir / "sim_din.csv",  dtype=int).tolist()
+    expected_results = np.loadtxt(datadir / "sim_dout.csv", dtype=int).tolist()
     cocotb.log.info(f"Loaded {len(sim_in)} values from {datadir.name}/")
 
     for i, (din_val, expected) in enumerate(zip(sim_in, expected_results)):

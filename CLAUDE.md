@@ -27,7 +27,9 @@ Test results (`.vcd`, `.xml`) land in `tests/results/`. VCD waveforms can be vie
 
 1. **RTL**: Place the Verilog/SystemVerilog file under `rtl/<Category>/`. See existing directories under `rtl/` for available categories.
 
-2. **Test data**: Create `test_data/<Category>/<module_name>/` and place CSV input/output files there (e.g., `sim_in.csv`, `sim_out.csv`). Multiple parameter sets use subdirectories (`simdata0/`, `simdata1/`, …).
+2. **Test data**: Create `test_data/<Category>/<module_name>/` and place CSV input/output files there. Multiple parameter sets use subdirectories (`simdata0/`, `simdata1/`, …).
+   - Every CSV is named `sim_<port>.csv`, where `<port>` is the exact name of the DUT port it drives or checks (e.g. `sim_din.csv`, `sim_dout.csv` for ports `din`/`dout`). Do not use generic names such as `sim_in.csv`/`sim_out.csv` unless the port really is called `in`/`out`.
+   - An array port (e.g. `din [N]`) gets one file, `sim_din.csv`, with one space-separated column per element: column j = `din[j]`.
 
    Also create a `test_data.md` in that directory documenting the test configurations:
    - Start with `# <module_name> test data` and a brief prose description.
@@ -50,10 +52,10 @@ Test results (`.vcd`, `.xml`) land in `tests/results/`. VCD waveforms can be vie
      ```
    - The standard loop pattern is `await RisingEdge` then read — never read an output before the first clock edge. `expected[0]` must correspond to the value read after the first rising edge (which, due to cocotb's pre-NB-read convention, reflects the module's initial state):
      ```python
-     for i in range(len(sim_out)):
+     for i in range(len(sim_dout)):
          await RisingEdge(dut.clk)
-         actual = int(dut.out.value)
-         assert actual == sim_out[i]
+         actual = int(dut.dout.value)
+         assert actual == sim_dout[i]
      ```
 
 4. **Register in `tests/simulation.toml`**: Add a `[[simulations]]` entry. If the module is parameterized, add one `[[simulations.parameters]]` block per parameter combination.

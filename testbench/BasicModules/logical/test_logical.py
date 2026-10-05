@@ -20,8 +20,8 @@ XNOR = 5
 async def module_test(dut):
     """Test logical module.
 
-    sim_out[i] = dout value before clock edge i (pre-edge read convention).
-    Initial shift_reg = 0, so sim_out[0..LATENCY-1] = 0.
+    sim_dout[i] = dout value before clock edge i (pre-edge read convention).
+    Initial shift_reg = 0, so sim_dout[0..LATENCY-1] = 0.
 
     Parameter sets:
         simdata0 : FUNC=0(AND),  NBITS=4, NINPUTS=2, LATENCY=1
@@ -69,22 +69,19 @@ async def module_test(dut):
         )
         return
 
-    sim_inputs = [
-        np.loadtxt(datadir / f"sim_in{k}.csv", dtype=int).tolist()
-        for k in range(1, ninputs + 1)
-    ]
-    expected = np.loadtxt(datadir / "sim_out.csv", dtype=int).tolist()
+    # sim_din.csv: row i = [din[0], ..., din[NINPUTS-1]]
+    sim_din  = np.loadtxt(datadir / "sim_din.csv", dtype=int, ndmin=2).tolist()
+    expected = np.loadtxt(datadir / "sim_dout.csv", dtype=int).tolist()
 
     cocotb.log.info(f"Loaded {len(expected)} expected values from {datadir.name}")
 
     for i in range(len(expected)):
-        # cocotb unpacked-array convention: [din[NINPUTS-1], ..., din[0]]
-        # sim_inputs[0] -> din[0] (sim_in1), sim_inputs[1] -> din[1] (sim_in2), ...
-        dut.din.value = [sim_inputs[k][i] for k in range(ninputs - 1, -1, -1)]
+        # cocotb/Verilator unpacked-array convention: list[k] -> din[k]
+        dut.din.value = sim_din[i]
         await RisingEdge(dut.clk)
         actual = int(dut.dout.value)
         assert actual == expected[i], (
-            f"Index {i}: inputs={[sim_inputs[k][i] for k in range(ninputs)]} "
+            f"Index {i}: din={sim_din[i]} "
             f"→ expected dout={expected[i]}, got {actual}"
         )
 

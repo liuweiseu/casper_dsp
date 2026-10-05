@@ -17,7 +17,7 @@ async def module_test(dut):
     For LATENCY>=1 (pipelined): drives inputs before each rising edge,
     reads dout after the edge (pre-edge read convention).
 
-    sim_out[i] = dout value before clock edge i (LATENCY>=1), or the
+    sim_dout[i] = dout value before clock edge i (LATENCY>=1), or the
     immediate combinational result (LATENCY=0).
 
     Parameter sets:
@@ -48,25 +48,23 @@ async def module_test(dut):
         )
         return
 
-    sim_inputs = [
-        np.loadtxt(datadir / f"sim_in{k}.csv", dtype=int).tolist()
-        for k in range(ninputs)
-    ]
+    # sim_din.csv: row i = [din[0], ..., din[NINPUTS-1]]
+    sim_din  = np.loadtxt(datadir / "sim_din.csv", dtype=int, ndmin=2).tolist()
     sim_sel  = np.loadtxt(datadir / "sim_sel.csv",  dtype=int).tolist()
-    expected = np.loadtxt(datadir / "sim_out.csv",  dtype=int).tolist()
+    expected = np.loadtxt(datadir / "sim_dout.csv",  dtype=int).tolist()
 
     cocotb.log.info(f"Loaded {len(expected)} test vectors from {datadir.name}/")
 
     if latency == 0:
         for i in range(len(expected)):
             # cocotb/Verilator unpacked-array convention: list[k] → din[k] (direct mapping)
-            dut.din.value = [sim_inputs[k][i] for k in range(ninputs)]
+            dut.din.value = sim_din[i]
             dut.sel.value = sim_sel[i]
             await Timer(1, units="ns")
             actual = int(dut.dout.value)
             assert actual == expected[i], (
                 f"Index {i}: sel={sim_sel[i]}, "
-                f"inputs={[sim_inputs[k][i] for k in range(ninputs)]} "
+                f"din={sim_din[i]} "
                 f"→ expected dout={expected[i]}, got {actual}"
             )
     else:
@@ -74,13 +72,13 @@ async def module_test(dut):
         cocotb.start_soon(clock.start())
         for i in range(len(expected)):
             # cocotb/Verilator unpacked-array convention: list[k] → din[k] (direct mapping)
-            dut.din.value = [sim_inputs[k][i] for k in range(ninputs)]
+            dut.din.value = sim_din[i]
             dut.sel.value = sim_sel[i]
             await RisingEdge(dut.clk)
             actual = int(dut.dout.value)
             assert actual == expected[i], (
                 f"Index {i}: sel={sim_sel[i]}, "
-                f"inputs={[sim_inputs[k][i] for k in range(ninputs)]} "
+                f"din={sim_din[i]} "
                 f"→ expected dout={expected[i]}, got {actual}"
             )
 

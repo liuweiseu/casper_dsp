@@ -1,7 +1,7 @@
 # multiplexer test data
 
-Each subdirectory corresponds to one parameter set. Input files are named
-`sim_in0.csv`, `sim_in1.csv`, … (one per input port, 0-indexed).
+Each subdirectory corresponds to one parameter set. The input file is
+`sim_din.csv`, one column per element of the `din` array port (column j = `din[j]`).
 `sim_sel.csv` contains the selection index per cycle.
 
 **CSV data exported from the corresponding MATLAB Simulink block.**

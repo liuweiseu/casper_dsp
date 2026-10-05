@@ -14,9 +14,9 @@ async def module_test(dut):
     """Test inverter module.
 
     For LATENCY=0 (combinational): drive din, wait 1 ns, read dout.
-      sim_out[i] = ~din[i] directly (no clock-edge offset).
+      sim_dout[i] = ~din[i] directly (no clock-edge offset).
     For LATENCY>=1 (pipelined): drive din, await RisingEdge, read dout.
-      sim_out[i] = pre-edge value = ~din[i-LATENCY], with leading zeros.
+      sim_dout[i] = pre-edge value = ~din[i-LATENCY], with leading zeros.
 
     Parameter sets:
         simdata0 : NBITS=4, LATENCY=0 — combinational pass-through
@@ -42,8 +42,8 @@ async def module_test(dut):
         )
         return
 
-    sim_d    = np.loadtxt(datadir / "sim_d.csv",   dtype=int).tolist()
-    expected = np.loadtxt(datadir / "sim_out.csv", dtype=int).tolist()
+    sim_d    = np.loadtxt(datadir / "sim_din.csv",   dtype=int).tolist()
+    expected = np.loadtxt(datadir / "sim_dout.csv", dtype=int).tolist()
     cocotb.log.info(f"Loaded {len(expected)} expected values from {datadir.name}")
 
     for i, (d_val, exp) in enumerate(zip(sim_d, expected)):

@@ -13,8 +13,8 @@ testdatadir = (_here / "../../../test_data" / _here.parent.name / _here.name).re
 async def module_test(dut):
     """Test bit_reverse module.
 
-    For each input value in sim_in.csv, drive din and compare dout against
-    the expected bit-reversed value in sim_out.csv.
+    For each input value in sim_din.csv, drive din and compare dout against
+    the expected bit-reversed value in sim_dout.csv.
 
     Parameter sets:
         simdata0 : NBITS=8,  all 256 input values (0 to 255)
@@ -31,8 +31,8 @@ async def module_test(dut):
         cocotb.log.warning(f"No test data for NBITS={nbits}. Skipping.")
         return
 
-    sim_in          = np.loadtxt(datadir / "sim_in.csv",  dtype=int).tolist()
-    expected_results = np.loadtxt(datadir / "sim_out.csv", dtype=int).tolist()
+    sim_in          = np.loadtxt(datadir / "sim_din.csv",  dtype=int).tolist()
+    expected_results = np.loadtxt(datadir / "sim_dout.csv", dtype=int).tolist()
     cocotb.log.info(f"Loaded {len(sim_in)} values from {datadir.name}/")
 
     for i, (din_val, expected) in enumerate(zip(sim_in, expected_results)):

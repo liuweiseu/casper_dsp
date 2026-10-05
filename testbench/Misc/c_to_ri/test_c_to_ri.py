@@ -12,8 +12,8 @@ testdatadir = (_here / "../../../test_data" / _here.parent.name / _here.name).re
 async def module_test(dut):
     """Test c_to_ri module.
 
-    Drive the packed complex input c with values from sim_in.csv and verify
-    that re and im outputs match sim_out_re.csv and sim_out_im.csv.
+    Drive the packed complex input c with values from sim_c.csv and verify
+    that re and im outputs match sim_re.csv and sim_im.csv.
 
     Parameter sets:
         simdata0 : NBITS=8,  BIN_PT=7  — unpack 16-bit complex into two 8-bit parts
@@ -31,9 +31,9 @@ async def module_test(dut):
         cocotb.log.warning(f"No test data for NBITS={nbits}. Skipping.")
         return
 
-    sim_in = np.loadtxt(datadir / "sim_in.csv",     dtype=int).tolist()
-    exp_re = np.loadtxt(datadir / "sim_out_re.csv", dtype=int).tolist()
-    exp_im = np.loadtxt(datadir / "sim_out_im.csv", dtype=int).tolist()
+    sim_in = np.loadtxt(datadir / "sim_c.csv",     dtype=int).tolist()
+    exp_re = np.loadtxt(datadir / "sim_re.csv", dtype=int).tolist()
+    exp_im = np.loadtxt(datadir / "sim_im.csv", dtype=int).tolist()
     cocotb.log.info(f"Loaded {len(sim_in)} samples from {datadir.name}/")
 
     for i, (c_val, e_re, e_im) in enumerate(zip(sim_in, exp_re, exp_im)):

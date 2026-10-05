@@ -1,6 +1,6 @@
 # bus_create test data
 
-Each subdirectory corresponds to one parameter set. Input files are named `sim_in1.csv`, `sim_in2.csv`, … (one per input port).
+Each subdirectory corresponds to one parameter set. The input file `sim_din.csv` has one column per element of the `din` array port (column j = `din[j]`); `sim_bus_out.csv` holds the expected output.
 
 **CSV data exported from the corresponding MATLAB Simulink block.**
 

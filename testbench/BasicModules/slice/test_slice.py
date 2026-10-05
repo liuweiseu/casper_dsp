@@ -18,8 +18,8 @@ async def module_test(dut):
     if start_bit == 0 and width == 2:
         # test START_BIT = 0 and width = 2
         # load the input and expected output data 
-        sim_in = np.loadtxt(testdatadir/'sim_in.csv', dtype=int).tolist()
-        expected_results = np.loadtxt(testdatadir/'sim_out.csv', dtype=int).tolist()
+        sim_in = np.loadtxt(testdatadir/'sim_din.csv', dtype=int).tolist()
+        expected_results = np.loadtxt(testdatadir/'sim_dout.csv', dtype=int).tolist()
         for i in range(len(sim_in)):
             dut.din.value = sim_in[i]
             # wait for the logic to be stable

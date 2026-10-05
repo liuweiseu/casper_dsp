@@ -15,7 +15,7 @@ async def module_test(dut):
     """Test register module.
 
     Drives d (and conditionally en/rst) before each rising edge and compares q
-    against the expected value in simdata<N>/sim_out.csv after the edge.
+    against the expected value in simdata<N>/sim_q.csv after the edge.
 
     Parameter sets:
         simdata0 : USE_RST=1, USE_ENABLE=1, INIT_VAL=0,  BITWIDTH=4 — reset + enable, reset to 0
@@ -57,7 +57,7 @@ async def module_test(dut):
         return
 
     sim_d    = np.loadtxt(datadir / "sim_d.csv",   dtype=int).tolist()
-    expected = np.loadtxt(datadir / "sim_out.csv", dtype=int).tolist()
+    expected = np.loadtxt(datadir / "sim_q.csv", dtype=int).tolist()
 
     sim_rst = np.loadtxt(datadir / "sim_rst.csv", dtype=int).tolist() if use_rst    else None
     sim_en  = np.loadtxt(datadir / "sim_en.csv",  dtype=int).tolist() if use_enable else None

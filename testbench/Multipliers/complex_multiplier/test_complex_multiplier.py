@@ -33,7 +33,7 @@ async def module_test(dut):
     """Test complex_multiplier module.
 
     Each simdataN/params.json holds one parameter set (see test_data.md).
-    sim_out_re/im.csv[i] = dout_re/im read after clock edge i (pre-edge read
+    sim_dout_re/im.csv[i] = dout_re/im read after clock edge i (pre-edge read
     convention); the first LATENCY values (MULT_LATENCY + ADD_LATENCY for
     MULT_SPEC=0, MULT_LATENCY + 2*ADD_LATENCY for MULT_SPEC=1) are the zero
     power-on state of the pipeline.
@@ -51,8 +51,8 @@ async def module_test(dut):
 
     ports = ["a_re", "a_im", "b_re", "b_im"]
     stim = {p: np.loadtxt(datadir / f"sim_{p}.csv", dtype=int).tolist() for p in ports}
-    exp_re = np.loadtxt(datadir / "sim_out_re.csv", dtype=int).tolist()
-    exp_im = np.loadtxt(datadir / "sim_out_im.csv", dtype=int).tolist()
+    exp_re = np.loadtxt(datadir / "sim_dout_re.csv", dtype=int).tolist()
+    exp_im = np.loadtxt(datadir / "sim_dout_im.csv", dtype=int).tolist()
     cocotb.log.info(f"Loaded {len(exp_re)} expected values from {datadir.name}")
 
     for i in range(len(exp_re)):

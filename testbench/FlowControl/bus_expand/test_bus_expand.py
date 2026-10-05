@@ -17,12 +17,10 @@ async def module_test(dut):
     cocotb.log.info(f"Testing with NOUT={nout}, WIDTH={width}")
     if nout == 4 and width == 8:
         # load the input and expected output data 
-        sim_in = np.loadtxt(testdatadir/'simdata0/sim_in.csv', dtype=int).tolist()
-        expected_results = np.zeros(nout, dtype=object)
-        expected_results[0] = np.loadtxt(testdatadir/'simdata0/sim_out1.csv', dtype=int).tolist()
-        expected_results[1] = np.loadtxt(testdatadir/'simdata0/sim_out2.csv', dtype=int).tolist()
-        expected_results[2] = np.loadtxt(testdatadir/'simdata0/sim_out3.csv', dtype=int).tolist()
-        expected_results[3] = np.loadtxt(testdatadir/'simdata0/sim_out4.csv', dtype=int).tolist()
+        sim_in = np.loadtxt(testdatadir/'simdata0/sim_bus_in.csv', dtype=int).tolist()
+        # sim_bus_out.csv: row i = [bus_out[0], ..., bus_out[NOUT-1]]
+        sim_bus_out = np.loadtxt(testdatadir/'simdata0/sim_bus_out.csv', dtype=int, ndmin=2)
+        expected_results = [sim_bus_out[:, j].tolist() for j in range(nout)]
         for i in range(len(sim_in)):
             dut.bus_in.value = sim_in[i]
             # wait for the logic to be stable

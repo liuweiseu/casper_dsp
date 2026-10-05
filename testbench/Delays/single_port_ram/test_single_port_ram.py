@@ -13,7 +13,7 @@ testdatadir = (_here / "../../../test_data" / _here.parent.name / _here.name).re
 PARAMS = ['DATA_WIDTH', 'ADDR_WIDTH']
 # CSV name (sim_<name>.csv) -> DUT port
 INPUTS = {'we': 'we', 'addr': 'addr', 'din': 'din'}
-OUTPUTS = {'out': 'dout'}
+OUTPUTS = {'dout': 'dout'}
 
 
 def find_datadir(dut):

@@ -232,7 +232,7 @@ SCALE = ["N_BITS_IN", "BIN_PT_IN", "TYPE_IN", "SCALE_FACTOR", "N_BITS_OUT",
 MODULES = {
     "convert": dict(
         category="Bus",
-        model=m_convert, inputs=["din"], outputs=["out"],
+        model=m_convert, inputs=["din"], outputs=["dout"],
         widths=lambda p: [p["N_BITS_IN"]],
         latency=lambda p: p["LATENCY"],
         prose="`convert` requantizes `din` from the input fixed-point format "
@@ -255,7 +255,7 @@ MODULES = {
         ]),
     "adder_subtractor": dict(
         category="Bus",
-        model=m_adder_subtractor, inputs=["a", "b"], outputs=["out"],
+        model=m_adder_subtractor, inputs=["a", "b"], outputs=["dout"],
         widths=lambda p: [p["N_BITS_A"], p["N_BITS_B"]],
         latency=lambda p: p["LATENCY"],
         prose="`adder_subtractor` computes `a + b` (`OPMODE`=0) or `a - b` "
@@ -276,7 +276,7 @@ MODULES = {
         ]),
     "multiplier": dict(
         category="Bus",
-        model=m_multiplier, inputs=["a", "b"], outputs=["out"],
+        model=m_multiplier, inputs=["a", "b"], outputs=["dout"],
         widths=lambda p: [p["N_BITS_A"], p["N_BITS_B"]],
         latency=lambda p: p["LATENCY"],
         prose="`multiplier` computes `a * b` and requantizes to the output format.",
@@ -295,7 +295,7 @@ MODULES = {
     "complex_multiplier": dict(
         category="Multipliers",
         model=m_complex_multiplier,
-        inputs=["a_re", "a_im", "b_re", "b_im"], outputs=["out_re", "out_im"],
+        inputs=["a_re", "a_im", "b_re", "b_im"], outputs=["dout_re", "dout_im"],
         widths=lambda p: [p["N_BITS_A"]] * 2 + [p["N_BITS_B"]] * 2,
         latency=cmult_latency,
         prose="`complex_multiplier` computes `(a_re + j·a_im)(b_re + j·b_im)` and "
@@ -361,7 +361,7 @@ MODULES = {
         ]),
     "scale": dict(
         category="Bus",
-        model=m_scale, inputs=["din"], outputs=["out"],
+        model=m_scale, inputs=["din"], outputs=["dout"],
         widths=lambda p: [p["N_BITS_IN"]],
         latency=lambda p: p["LATENCY"],
         prose="`scale` computes `din · 2^SCALE_FACTOR` and requantizes to the "
@@ -382,7 +382,7 @@ MODULES = {
         ]),
     "negate": dict(
         category="Bus",
-        model=m_negate, inputs=["din"], outputs=["out"],
+        model=m_negate, inputs=["din"], outputs=["dout"],
         widths=lambda p: [p["N_BITS_IN"]],
         latency=lambda p: p["LATENCY"],
         prose="`negate` computes `-din` and requantizes to the output format.",

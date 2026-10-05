@@ -1,6 +1,6 @@
 # logical test data
 
-Each subdirectory corresponds to one parameter set. `FUNC`: 0=AND, 1=NAND, 2=OR, 3=NOR, 4=XOR, 5=XNOR. Input files are named `sim_in1.csv`, `sim_in2.csv`, … (one per input port).
+Each subdirectory corresponds to one parameter set. `FUNC`: 0=AND, 1=NAND, 2=OR, 3=NOR, 4=XOR, 5=XNOR. The input file `sim_din.csv` has one column per element of the `din` array port (column j = `din[j]`); `sim_dout.csv` holds the expected output.
 
 **CSV data exported from the corresponding MATLAB Simulink block.**
 

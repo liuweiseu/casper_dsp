@@ -39,7 +39,7 @@ async def module_test(dut):
     """Test counter module.
 
     Each clock cycle the simulated dout is read and compared against the
-    expected value in simdata<N>/sim_out.csv.
+    expected value in simdata<N>/sim_dout.csv.
 
     Parameter sets:
         simdata0 : COUNTER_TYPE=0(free_running), COUNT_DIR=0(up),   NBITS=8, STEP=1, INIT_VAL=0,   COUNT_TO_VAL=0
@@ -90,8 +90,8 @@ async def module_test(dut):
         )
         return
 
-    expected_results = np.loadtxt(datadir / "sim_out.csv", dtype=int).tolist()
-    cocotb.log.info(f"Loaded {len(expected_results)} expected values from {datadir.name}/sim_out.csv")
+    expected_results = np.loadtxt(datadir / "sim_dout.csv", dtype=int).tolist()
+    cocotb.log.info(f"Loaded {len(expected_results)} expected values from {datadir.name}/sim_dout.csv")
 
     for i, expected in enumerate(expected_results):
         await RisingEdge(dut.clk)

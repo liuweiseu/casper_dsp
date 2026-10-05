@@ -1,6 +1,6 @@
 # c_to_ri test data
 
-Each subdirectory corresponds to one parameter set. The input file `sim_in.csv` holds the packed complex word; `sim_out_re.csv` and `sim_out_im.csv` hold the expected real and imaginary outputs. `BIN_PT` does not affect bit-level behaviour and is not varied across test sets.
+Each subdirectory corresponds to one parameter set. The input file `sim_c.csv` holds the packed complex word; `sim_re.csv` and `sim_im.csv` hold the expected real and imaginary outputs. `BIN_PT` does not affect bit-level behaviour and is not varied across test sets.
 
 | Test # | Directory | NBITS | BIN_PT | Cycles | Description |
 |--------|-----------|-------|--------|--------|-------------|

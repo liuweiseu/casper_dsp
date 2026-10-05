@@ -17,7 +17,7 @@ PARAMS = ['DELAY_LEN']
 LANE_IN = []
 SCALAR_IN = ['din']
 LANE_OUT = {}
-SCALAR_OUT = {'out': 'dout'}
+SCALAR_OUT = {'dout': 'dout'}
 
 
 def find_datadir(dut):

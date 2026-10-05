@@ -33,7 +33,7 @@ async def module_test(dut):
     """Test adder_subtractor module.
 
     Each simdataN/params.json holds one parameter set (see test_data.md).
-    sim_out.csv[i] = dout read after clock edge i (pre-edge read convention);
+    sim_dout.csv[i] = dout read after clock edge i (pre-edge read convention);
     the first LATENCY values are the zero power-on state of the pipeline.
     """
     clock = Clock(dut.clk, 10, unit="ns")
@@ -49,7 +49,7 @@ async def module_test(dut):
 
     a = np.loadtxt(datadir / "sim_a.csv", dtype=int).tolist()
     b = np.loadtxt(datadir / "sim_b.csv", dtype=int).tolist()
-    expected = np.loadtxt(datadir / "sim_out.csv", dtype=int).tolist()
+    expected = np.loadtxt(datadir / "sim_dout.csv", dtype=int).tolist()
     cocotb.log.info(f"Loaded {len(expected)} expected values from {datadir.name}")
 
     for i in range(len(expected)):

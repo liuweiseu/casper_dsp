@@ -176,7 +176,7 @@ BRAM = ["BITWIDTH", "DELAY_LEN"]
 
 MODULES = {
     "delay_srl": dict(
-        inputs=["din", "rst", "en"], outputs=["out"],
+        inputs=["din", "rst", "en"], outputs=["dout"],
         stim=s_delay_srl, model=m_delay_srl,
         prose="`delay_srl` delays `din` by `DELAY_LEN` (enabled) cycles, with "
               "an optional synchronous reset and clock enable. `rst` pulses "
@@ -191,7 +191,7 @@ MODULES = {
             (P(SRL, [8, 0, 1, 1]), 256, "DELAY_LEN = 0: combinational pass-through"),
         ]),
     "pipeline": dict(
-        inputs=["din"], outputs=["out"],
+        inputs=["din"], outputs=["dout"],
         stim=lambda rng, p, c: s_din(rng, p["BITWIDTH"], c), model=m_pipeline,
         prose="`pipeline` delays `din` by `LATENCY` cycles (no reset / enable).",
         tests=[
@@ -202,7 +202,7 @@ MODULES = {
             (P(PIPE, [1, 5]), 256, "1-bit, 5 stages"),
         ]),
     "single_port_ram": dict(
-        inputs=["we", "addr", "din"], outputs=["out"],
+        inputs=["we", "addr", "din"], outputs=["dout"],
         stim=s_single_port_ram, model=m_single_port_ram,
         prose="`single_port_ram` is a READ_FIRST single-port RAM with a "
               "1-cycle registered read. The first half of each run is "
@@ -217,7 +217,7 @@ MODULES = {
         ]),
     "dual_port_ram": dict(
         inputs=["we_a", "addr_a", "din_a", "we_b", "addr_b", "din_b"],
-        outputs=["out_a", "out_b"],
+        outputs=["dout_a", "dout_b"],
         stim=s_dual_port_ram, model=m_dual_port_ram,
         prose="`dual_port_ram` is a true dual-port, common-clock RAM (READ_FIRST "
               "on each port, 1-cycle registered reads). Both ports read and "
@@ -231,7 +231,7 @@ MODULES = {
             (P(RAM, [32, 5]), 512, "32 × 32"),
         ]),
     "rom": dict(
-        inputs=["addr"], outputs=["out"],
+        inputs=["addr"], outputs=["dout"],
         stim=s_rom, model=None,
         prose="`rom` reads a memory image loaded from `INIT_FILE` with a "
               "1-cycle registered read. Each run first sweeps every address in "
@@ -247,7 +247,7 @@ MODULES = {
             (P(RAM, [8, 3]), 64, "no INIT_FILE: all words 0"),
         ]),
     "delay_bram": dict(
-        inputs=["din"], outputs=["out"],
+        inputs=["din"], outputs=["dout"],
         stim=lambda rng, p, c: s_din(rng, p["BITWIDTH"], c), model=m_delay_bram,
         prose="`delay_bram` delays `din` by `DELAY_LEN` cycles using a RAM "
               "(read-first single-port RAM plus an address counter that wraps "

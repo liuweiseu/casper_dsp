@@ -20,8 +20,8 @@ async def module_test(dut):
     if latency == 1 and bitwidth == 3:
         # test LATENCY = 0 and BITWIDTH = 3
         # load the input and expected output data 
-        sim_in = np.loadtxt(testdatadir/'sim_in.csv', dtype=int).tolist()
-        expected_results = np.loadtxt(testdatadir/'sim_out.csv', dtype=int).tolist()
+        sim_in = np.loadtxt(testdatadir/'sim_din.csv', dtype=int).tolist()
+        expected_results = np.loadtxt(testdatadir/'sim_dout.csv', dtype=int).tolist()
         for i in range(len(sim_in)):
             dut.din.value = sim_in[i]
             # wait for the logic to be stable

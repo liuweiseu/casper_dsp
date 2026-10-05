@@ -17,7 +17,7 @@ PARAMS = ['N_BITS_IN', 'BIN_PT_IN', 'N_BITS_OUT', 'BIN_PT_OUT', 'QUANTIZATION', 
 LANE_IN = []
 SCALAR_IN = ['din']
 LANE_OUT = {}
-SCALAR_OUT = {'out': 'dout', 'of': 'of'}
+SCALAR_OUT = {'dout': 'dout', 'of': 'of'}
 
 
 def find_datadir(dut):

@@ -18,11 +18,11 @@ async def module_test(dut):
     if nbits == 8 and ninputs == 2:
         # test NBITS = 8 and NINPUTS = 2
         # load the input and expected output data 
-        sim_in1 = np.loadtxt(testdatadir/'simdata0/sim_in1.csv', dtype=int).tolist()
-        sim_in2 = np.loadtxt(testdatadir/'simdata0/sim_in2.csv', dtype=int).tolist()
-        expected_results = np.loadtxt(testdatadir/'simdata0/sim_out.csv', dtype=int).tolist()
-        for i in range(len(sim_in1)):
-            dut.din.value = [sim_in2[i], sim_in1[i]]
+        # sim_din.csv: row i = [din[0], din[1]]
+        sim_din = np.loadtxt(testdatadir/'simdata0/sim_din.csv', dtype=int, ndmin=2).tolist()
+        expected_results = np.loadtxt(testdatadir/'simdata0/sim_bus_out.csv', dtype=int).tolist()
+        for i in range(len(sim_din)):
+            dut.din.value = sim_din[i]
             # wait for the logic to be stable
             await Timer(1, units="ns")
             # get the output
@@ -31,13 +31,11 @@ async def module_test(dut):
     elif nbits == 10 and ninputs == 4:
         # test NBITS = 10 and NINPUTS = 4
         # load the input and expected output data 
-        sim_in1 = np.loadtxt(testdatadir/'simdata1/sim_in1.csv', dtype=int).tolist()
-        sim_in2 = np.loadtxt(testdatadir/'simdata1/sim_in2.csv', dtype=int).tolist()
-        sim_in3 = np.loadtxt(testdatadir/'simdata1/sim_in3.csv', dtype=int).tolist()
-        sim_in4 = np.loadtxt(testdatadir/'simdata1/sim_in4.csv', dtype=int).tolist()
-        expected_results = np.loadtxt(testdatadir/'simdata1/sim_out.csv', dtype=np.int64).tolist()
-        for i in range(len(sim_in1)):
-            dut.din.value = [sim_in4[i], sim_in3[i], sim_in2[i], sim_in1[i]]
+        # sim_din.csv: row i = [din[0], ..., din[3]]
+        sim_din = np.loadtxt(testdatadir/'simdata1/sim_din.csv', dtype=int, ndmin=2).tolist()
+        expected_results = np.loadtxt(testdatadir/'simdata1/sim_bus_out.csv', dtype=np.int64).tolist()
+        for i in range(len(sim_din)):
+            dut.din.value = sim_din[i]
             # wait for the logic to be stable
             await Timer(1, units="ns")
             # get the output
