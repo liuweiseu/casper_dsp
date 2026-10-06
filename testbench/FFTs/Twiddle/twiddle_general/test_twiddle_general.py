@@ -6,6 +6,8 @@ from pathlib import Path
 import json
 import numpy as np
 
+from testbench.csv_ports import load_rows
+
 # test_data mirrors testbench/ at any depth (this module is in a nested
 # category, testbench/FFTs/Twiddle/<module>/), so locate the testbench root
 # instead of assuming a single category level
@@ -30,8 +32,8 @@ def find_datadir(dut):
 
 
 def load(datadir, port):
-    """CSV -> list of rows; lane ports give one list of N_INPUTS values per row."""
-    return np.loadtxt(datadir / f"sim_{port}.csv", dtype=int, ndmin=2).tolist()
+    """sim_<port>.csv, or sim_<port><j>.csv per element of a lane port, -> list of rows; lane ports give one list of N_INPUTS values per row."""
+    return load_rows(datadir, port)
 
 
 @cocotb.test()

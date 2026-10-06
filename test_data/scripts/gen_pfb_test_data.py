@@ -147,7 +147,7 @@ def gen_pfb_coeff_gen():
         "the tables of all inputs and taps into the full filter and checks "
         "that it is symmetric (column *Filter length checked*), which holds "
         "only with casper's half-sample time axis. CSV rows are cycles; "
-        "`sim_coeff.csv` has one column per tap (tap 1 first).", "",
+        "`sim_coeff<j>.csv` holds tap j + 1 (`coeff[j]`).", "",
         "| Test # | Directory | " + " | ".join(CG) + " | Filter length checked | Cycles | Description |",
         "|" + "---|" * (len(CG) + 5),
     ]

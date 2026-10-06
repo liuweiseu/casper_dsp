@@ -5,6 +5,8 @@ from cocotb.triggers import RisingEdge
 from pathlib import Path
 import json
 
+from testbench.csv_ports import load_packed
+
 # test_data mirrors testbench/ at any depth: locate the testbench root
 _here = Path(__file__).resolve().parent
 _tb_root = next(p for p in _here.parents if p.name == "testbench")
@@ -12,9 +14,12 @@ testdatadir = _tb_root.parent / "test_data" / _here.relative_to(_tb_root)
 
 # Integer parameters matched against simdataN/params.json
 PARAMS = ['ANT_BITS', 'X_INT_BITS', 'SYNC_PERIOD', 'DATA_WIDTH']
-# sim_<name>.csv -> DUT port of the same name
+# sim_<name>.csv -> DUT port of the same name; a packed array port has one
+# file per element, sim_<name>0.csv, sim_<name>1.csv, ... (see PACKED)
 INPUTS = ['tvg_sel', 'sync', 'data_in', 'valid_in', 'tv']
 OUTPUTS = ['sync_out', 'data_out', 'valid_out']
+# packed array ports: element width (tv[k] = software register k)
+PACKED = lambda p: {'tv': 32}
 
 
 def find_datadir(dut):
@@ -48,8 +53,11 @@ async def module_test(dut):
         cocotb.log.warning(f"No test data for {dut_params}. Skipping.")
         return
 
-    stim = {k: load(datadir / f"sim_{k}.csv") for k in INPUTS}
-    expected = {k: load(datadir / f"sim_{k}.csv") for k in OUTPUTS}
+    packed = PACKED(dut_params)
+    data = {k: load_packed(datadir, k, packed[k]) if k in packed
+            else load(datadir / f"sim_{k}.csv") for k in INPUTS + OUTPUTS}
+    stim = {k: data[k] for k in INPUTS}
+    expected = {k: data[k] for k in OUTPUTS}
     cycles = len(next(iter(expected.values())))
     cocotb.log.info(f"Loaded {cycles} cycles from {datadir.name}")
 

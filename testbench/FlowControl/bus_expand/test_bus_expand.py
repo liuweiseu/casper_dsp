@@ -5,6 +5,8 @@ from cocotb.triggers import RisingEdge, Timer
 from pathlib import Path
 import numpy as np
 
+from testbench.csv_ports import load_rows
+
 # testdatadir points to the corresponding test_data subdirectory
 _here = Path(__file__).parent
 testdatadir = (_here / "../../../test_data" / _here.parent.name / _here.name).resolve()
@@ -18,8 +20,8 @@ async def module_test(dut):
     if nout == 4 and width == 8:
         # load the input and expected output data 
         sim_in = np.loadtxt(testdatadir/'simdata0/sim_bus_in.csv', dtype=int).tolist()
-        # sim_bus_out.csv: row i = [bus_out[0], ..., bus_out[NOUT-1]]
-        sim_bus_out = np.loadtxt(testdatadir/'simdata0/sim_bus_out.csv', dtype=int, ndmin=2)
+        # sim_bus_out<j>.csv = bus_out[j]; row i = [bus_out[0], ..., bus_out[NOUT-1]]
+        sim_bus_out = np.array(load_rows(testdatadir/'simdata0', 'bus_out'))
         expected_results = [sim_bus_out[:, j].tolist() for j in range(nout)]
         for i in range(len(sim_in)):
             dut.bus_in.value = sim_in[i]

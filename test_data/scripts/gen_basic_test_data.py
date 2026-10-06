@@ -45,7 +45,13 @@ def write_set(d, params, ports):
     d.mkdir(parents=True, exist_ok=True)
     (d / "params.json").write_text(json.dumps(params, indent=2) + "\n")
     for name, vals in ports.items():
-        np.savetxt(d / f"sim_{name}.csv", np.asarray(vals, dtype=np.int64), fmt="%d")
+        arr = np.asarray(vals, dtype=np.int64)
+        if arr.ndim == 2:
+            # array port: one file per element, sim_<name><j>.csv = element j
+            for j in range(arr.shape[1]):
+                np.savetxt(d / f"sim_{name}{j}.csv", arr[:, j], fmt="%d")
+        else:
+            np.savetxt(d / f"sim_{name}.csv", arr, fmt="%d")
 
 
 def pipe(vals, en, lat):

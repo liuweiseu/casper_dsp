@@ -61,7 +61,13 @@ def write_set(d, params, ports):
     d.mkdir(parents=True, exist_ok=True)
     (d / "params.json").write_text(json.dumps(params, indent=2) + "\n")
     for name, vals in ports.items():
-        (d / f"sim_{name}.csv").write_text("".join(f"{int(v)}\n" for v in vals))
+        vals = list(vals)
+        if vals and isinstance(vals[0], list):
+            # array port: one file per element, sim_<name><j>.csv = element j
+            for j in range(len(vals[0])):
+                (d / f"sim_{name}{j}.csv").write_text("".join(f"{int(v[j])}\n" for v in vals))
+        else:
+            (d / f"sim_{name}.csv").write_text("".join(f"{int(v)}\n" for v in vals))
 
 
 def toml_block(dir_, top, sets):
@@ -1270,20 +1276,16 @@ def gen_cross_multiplier():
             for t in range(cyc):
                 for sub in range(A):
                     assert unpack(dout[t][0] >> (2 * 13 * (A - 1 - sub)), 13, 2)[1] == 0
-        nout = S_ * (S_ + 1) // 2
-        din_flat = [sum(wd << (2 * A * w * x) for x, wd in enumerate(words)) for words in din]
-        wo = p["BIT_WIDTH_OUT"]
-        dout_flat = [sum(wd << (2 * A * wo * kk) for kk, wd in enumerate(o)) for o in dout]
-        write_set(mdir / f"simdata{k}", p, dict(sync_in=sync, din=din_flat, sync_out=sync_out,
-                                                dout=dout_flat))
+        write_set(mdir / f"simdata{k}", p, dict(sync_in=sync, din=din, sync_out=sync_out,
+                                                dout=[list(o) for o in dout]))
         sets.append((p, desc))
         cycles.append(cyc)
     write_md(mdir, "cross_multiplier",
              "`cross_multiplier` computes `din[x] · conj(din[y])` for every pair x ≤ y and "
              "every sub-stream (full precision, then convert_of to the output format), "
-             "latency `1 + MULT + ADD + CONV`. `din` / `dout` are packed arrays, written "
-             "flattened: stream x at bits `[x·2·AGG·W +: 2·AGG·W]`, output k (pairs in "
-             "x, y order) likewise; inside a word sub-stream 0 is in the MSBs and each "
+             "latency `1 + MULT + ADD + CONV`. `din` / `dout` are packed arrays with one "
+             "file per element: `sim_din<x>.csv` is stream x (`din[x]`), `sim_dout<k>.csv` "
+             "output k (pairs in x, y order); inside a word sub-stream 0 is in the MSBs and each "
              "complex value is {re, im}. The first cycles walk most-negative / "
              "most-positive parts, the rest is random. Set 0 is checked against numpy "
              "`x * conj(y)`, set 3 (autocorrelations) for zero imaginary parts.",
@@ -1368,9 +1370,8 @@ def gen_xeng_tvg():
             for a in range(9):
                 assert out["data_out"][t0 + 4 + a * (1 << X)] == 0x1111 * (a % 8)
         assert TVG_CONST in out["data_out"][610:740]
-        tv_flat = sum(v << (32 * j) for j, v in enumerate(tv))
         write_set(mdir / f"simdata{k}", p, dict(tvg_sel=tvg_sel, sync=sync, data_in=data_in,
-                                                valid_in=valid_in, tv=[tv_flat] * cyc, **out))
+                                                valid_in=valid_in, tv=[list(tv)] * cyc, **out))
         sets.append((p, desc))
         cycles.append(cyc)
     write_md(mdir, "xeng_tvg",
@@ -1378,8 +1379,7 @@ def gen_xeng_tvg():
              "pattern {c, ~c, c, ~c}, 2 the constant 0x1A4E, 3 tv[k][15:0] per antenna. "
              "Stimulus: the mode sequence 0, 1, 2, 3, 0, 3 with external sync pulses, "
              "random data / valid, tv[k] = (random << 16) | 0x1111*k (only the low 16 bits "
-             "may appear). `tv` is written as one 256-bit word (tv[k] at bits "
-             "[32k +: 32]). Set 1 checks the mode-1 and mode-3 antenna sequences after an "
+             "may appear). `tv` has one file per register: `sim_tv<k>.csv` is tv[k]. Set 1 checks the mode-1 and mode-3 antenna sequences after an "
              "internal sync (antenna 0 at sync_out + 1, then every 2^X_INT_BITS cycles).",
              sets, cycles)
     return toml_block(CATEGORY, "xeng_tvg", sets)

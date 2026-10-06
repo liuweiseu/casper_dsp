@@ -188,7 +188,8 @@ def gen_biplex():
         "rounding error. `twiddle_stage<s>.mem` (stages ≥ 3) come from "
         "`rtl/FFTs/Twiddle/scripts/gen_twiddle_coeffs.py`; `COEFF_DIR` is relative to the "
         "simulator's working directory `tests/sim_build/FFTs/biplex_core/`. "
-        "CSV rows are cycles, lane ports have `N_INPUTS` columns, bus ports "
+        "CSV rows are cycles, lane ports have one file per lane "
+        "(`sim_<port><j>.csv` = lane j), bus ports "
         "are integers; raw unsigned bit patterns with the pre-edge read "
         "convention.", "",
         "| Test # | Directory | " + " | ".join(BC) + " | Cycles | Description |",

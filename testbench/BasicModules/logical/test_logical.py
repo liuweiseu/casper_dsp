@@ -6,6 +6,8 @@ from pathlib import Path
 import json
 import numpy as np
 
+from testbench.csv_ports import load_rows
+
 _here = Path(__file__).parent
 testdatadir = (_here / "../../../test_data" / _here.parent.name / _here.name).resolve()
 
@@ -95,8 +97,8 @@ async def module_test(dut):
         )
         return
 
-    # sim_din.csv: row i = [din[0], ..., din[NINPUTS-1]]
-    sim_din  = np.loadtxt(datadir / "sim_din.csv", dtype=int, ndmin=2).tolist()
+    # sim_din<j>.csv = din[j]; row i = [din[0], ..., din[NINPUTS-1]]
+    sim_din  = load_rows(datadir, "din")
     expected = np.loadtxt(datadir / "sim_dout.csv", dtype=int).tolist()
     en_file  = datadir / "sim_en.csv"
     sim_en   = np.loadtxt(en_file, dtype=int).tolist() if en_file.exists() else None

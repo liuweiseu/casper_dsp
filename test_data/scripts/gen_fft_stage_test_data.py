@@ -10,8 +10,8 @@ its twiddle_general tables come from rtl/FFTs/Twiddle/scripts/gen_twiddle_coeffs
 Writes, per module, test_data/<Category>/<module>/simdataN/{params.json,
 sim_<port>.csv[, twiddle.mem]} and test_data.md, and prints the matching
 [[simulations]] blocks for tests/simulation.toml. CSV rows are clock cycles;
-lane ports have N_INPUTS space-separated columns; values are raw unsigned
-bit patterns (bus ports such as shift / of as integers).
+lane ports have one file per lane (sim_<port><j>.csv = lane j); values are
+raw unsigned bit patterns (bus ports such as shift / of as integers).
 
 Usage:
   python3 test_data/scripts/gen_fft_stage_test_data.py
@@ -251,8 +251,8 @@ def gen_fft_stage():
         "model of `fft_stage_n_init.m` on top of the butterfly reference model "
         "of `test_data/scripts/gen_butterfly_test_data.py` (not exported from MATLAB). "
         "`twiddle.mem` (stages ≥ 3) comes from `rtl/FFTs/Twiddle/scripts/gen_twiddle_coeffs.py`. "
-        "CSV rows are cycles, lane ports have `N_INPUTS` columns (lane 0 "
-        "first), bus ports are integers; raw unsigned bit patterns with the "
+        "CSV rows are cycles, lane ports have one file per lane "
+        "(`sim_<port><j>.csv` = lane j), bus ports are integers; raw unsigned bit patterns with the "
         "pre-edge read convention.", "",
         "| Test # | Directory | " + " | ".join(ST)
         + " | P | ND | MUX | RAM delays | Cycles | Description |",

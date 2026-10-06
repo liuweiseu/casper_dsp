@@ -10,8 +10,8 @@ rtl/FFTs/Twiddle/scripts/gen_twiddle_coeffs.py.
 Writes, per module, test_data/<Category>/<module>/simdataN/{params.json,
 sim_<port>.csv[, twiddle.mem]} and test_data.md, and prints the matching
 [[simulations]] blocks for tests/simulation.toml. CSV rows are clock cycles;
-lane ports have N_INPUTS space-separated columns; values are raw unsigned
-bit patterns.
+lane ports have one file per lane (sim_<port><j>.csv = lane j); values are
+raw unsigned bit patterns.
 
 Usage:
   python3 test_data/scripts/gen_butterfly_test_data.py            # both modules
@@ -57,8 +57,15 @@ def of_flag(value, n_in, bp_in, n_out, bp_out):
 
 
 def write_csv(path, rows):
-    path.write_text("".join(
-        (" ".join(str(v) for v in r) if isinstance(r, list) else str(r)) + "\n" for r in rows))
+    """Write sim_<port>.csv, one value per line. Rows that are lists (an array
+    port, one value per element) go to one file per element instead:
+    sim_<port>0.csv, sim_<port>1.csv, ... (file j = element j)."""
+    rows = list(rows)
+    if rows and isinstance(rows[0], list):
+        for j in range(len(rows[0])):
+            (path.parent / f"{path.stem}{j}.csv").write_text("".join(f"{r[j]}\n" for r in rows))
+    else:
+        path.write_text("".join(f"{r}\n" for r in rows))
 
 
 def P(names, values):
@@ -324,7 +331,7 @@ def gen_butterfly():
         "MATLAB). `params.json` also records casper's `COEFFS`; "
         "`twiddle.mem` (twiddle_general only) comes from "
         "`rtl/FFTs/Twiddle/scripts/gen_twiddle_coeffs.py`. CSV rows are cycles, lane ports have "
-        "`N_INPUTS` columns (lane 0 first), `sim_of.csv` holds the `of` bus as "
+        "one file per lane (`sim_<port><j>.csv` = lane j), `sim_of.csv` holds the `of` bus as "
         "an integer (bit n = lane n); all values are raw unsigned bit patterns "
         "with the pre-edge read convention.", "",
         "| Test # | Directory | " + " | ".join(keys)

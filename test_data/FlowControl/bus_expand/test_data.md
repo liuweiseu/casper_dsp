@@ -1,6 +1,6 @@
 # bus_expand test data
 
-Each subdirectory corresponds to one parameter set. The input file is `sim_bus_in.csv`; `sim_bus_out.csv` has one column per element of the `bus_out` array port (column j = `bus_out[j]`).
+Each subdirectory corresponds to one parameter set. The input file is `sim_bus_in.csv`; the `bus_out` array port has one expected-output file per element (`sim_bus_out<j>.csv` = `bus_out[j]`).
 
 **CSV data exported from the corresponding MATLAB Simulink block.**
 

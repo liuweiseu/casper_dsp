@@ -12,8 +12,9 @@ For every module this writes, under test_data/FFTs/Twiddle/<module>/:
   simdataN/params.json   DUT parameters (+ COEFFS metadata for
                          twiddle_general); the testbench matches the
                          integer parameters it lists
-  simdataN/sim_<port>.csv one row per clock cycle; lane ports have
-                         N_INPUTS columns (lane 0 first); raw unsigned words
+  simdataN/sim_<port>.csv one row per clock cycle; lane ports have one
+                         file per lane, sim_<port><j>.csv = lane j; raw
+                         unsigned words
   simdataN/twiddle.mem   (twiddle_general) coefficient table for INIT_FILE
   test_data.md           table of all test configurations
 
@@ -294,8 +295,15 @@ def full_params(name, n, params):
 
 
 def write_csv(path, rows):
-    path.write_text("".join(
-        (" ".join(str(v) for v in r) if isinstance(r, list) else str(r)) + "\n" for r in rows))
+    """Write sim_<port>.csv, one value per line. Rows that are lists (an array
+    port, one value per element) go to one file per element instead:
+    sim_<port>0.csv, sim_<port>1.csv, ... (file j = element j)."""
+    rows = list(rows)
+    if rows and isinstance(rows[0], list):
+        for j in range(len(rows[0])):
+            (path.parent / f"{path.stem}{j}.csv").write_text("".join(f"{r[j]}\n" for r in rows))
+    else:
+        path.write_text("".join(f"{r}\n" for r in rows))
 
 
 def write_module(name, spec):
@@ -343,9 +351,9 @@ def test_data_md(name, spec):
         "Python reference models of the casper_library behavior (not exported "
         "from MATLAB). Each `simdataN/` holds a `params.json` with the DUT "
         "parameters (the testbench matches the integer ones), and one "
-        "`sim_<port>.csv` per port: one row per clock cycle, with `N_INPUTS` "
-        "space-separated columns (lane 0 first) for the lane ports "
-        "(`ai_*`, `bi_*`, `ao_*`, `bwo_*`). All values are raw unsigned bit "
+        "`sim_<port>.csv` per port, one row per clock cycle; the lane ports "
+        "(`ai_*`, `bi_*`, `ao_*`, `bwo_*`) have one file per lane instead, "
+        "`sim_<port><j>.csv` = lane j. All values are raw unsigned bit "
         "patterns. Expected outputs follow the pre-edge read convention, so "
         "the first latency cycles show the zero power-on state. Cycles 1–4 "
         "drive the extreme words (most negative, most positive, −1, 0) on "

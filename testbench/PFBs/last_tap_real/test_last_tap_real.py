@@ -6,6 +6,8 @@ from pathlib import Path
 import json
 import numpy as np
 
+from testbench.csv_ports import load_rows
+
 # test_data mirrors testbench/ at any depth: locate the testbench root
 _here = Path(__file__).resolve().parent
 _tb_root = next(p for p in _here.parents if p.name == "testbench")
@@ -31,8 +33,8 @@ def find_datadir(dut):
 
 
 def load(datadir, name):
-    """CSV -> list of rows (each a list of one value)."""
-    return np.loadtxt(datadir / f"sim_{name}.csv", dtype=int, ndmin=2).tolist()
+    """sim_<port>.csv, or sim_<port><j>.csv per element of a lane port, -> list of rows (each a list of one value)."""
+    return load_rows(datadir, name)
 
 
 @cocotb.test()

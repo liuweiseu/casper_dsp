@@ -10,7 +10,7 @@ is the exact sum of the inputs, STAGES·LATENCY cycles later.
 
 Writes test_data/Misc/adder_tree/simdataN/{params.json, sim_<port>.csv} and
 test_data.md, and prints the [[simulations]] block for tests/simulation.toml.
-din has one column per input (din[0] first); values are raw words.
+din has one file per input, sim_din<j>.csv = din[j]; values are raw words.
 
 Usage:
   python3 test_data/scripts/gen_adder_tree_test_data.py
@@ -123,7 +123,7 @@ def gen():
         "(reference model, not exported from MATLAB). For full precision the "
         "script also checks that `dout` is the exact sum of the inputs "
         "STAGES·LATENCY cycles later (column *Exact-sum cycles checked*). CSV "
-        "rows are cycles; `sim_din.csv` has one column per input.", "",
+        "rows are cycles; `sim_din<j>.csv` holds input `din[j]`.", "",
         "| Test # | Directory | " + " | ".join(AT) + " | Stages | dout width | Exact-sum cycles checked | Cycles | Description |",
         "|" + "---|" * (len(AT) + 7),
     ]

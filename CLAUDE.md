@@ -29,7 +29,7 @@ Test results (`.vcd`, `.xml`) land in `tests/results/`. VCD waveforms can be vie
 
 2. **Test data**: Create `test_data/<Category>/<module_name>/` and place CSV input/output files there. Multiple parameter sets use subdirectories (`simdata0/`, `simdata1/`, …).
    - Every CSV is named `sim_<port>.csv`, where `<port>` is the exact name of the DUT port it drives or checks (e.g. `sim_din.csv`, `sim_dout.csv` for ports `din`/`dout`). Do not use generic names such as `sim_in.csv`/`sim_out.csv` unless the port really is called `in`/`out`.
-   - An array port (e.g. `din [N]`) gets one file, `sim_din.csv`, with one space-separated column per element: column j = `din[j]`.
+   - Every CSV holds exactly one signal, one value per line. An array port (e.g. `din [N]`, or a packed `[N-1:0][W-1:0]` array) gets one file per element: `sim_din0.csv`, `sim_din1.csv`, …, file j = `din[j]` (also when N = 1). Testbenches load them with `testbench/csv_ports.py` (`load_rows` stacks the element files into rows; `load_packed` packs them for a packed array port); generators write them by passing one list per row (e.g. `write_csv` in `test_data/scripts/gen_butterfly_test_data.py`).
 
    Also create a `test_data.md` in that directory documenting the test configurations:
    - Start with `# <module_name> test data` and a brief prose description.

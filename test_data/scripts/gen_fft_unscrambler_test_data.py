@@ -10,8 +10,9 @@ one aligned input frame, all lanes, permuted the same way each frame.
 
 Writes test_data/FFTs/fft_unscrambler/simdataN/{params.json, sim_<port>.csv,
 map.mem} and test_data.md, and prints the [[simulations]] block for
-tests/simulation.toml. din / dout have one column per element k = s·G + g
-(stream s, group g); values are raw two's-complement words.
+tests/simulation.toml. din / dout have one file per element k = s·G + g
+(stream s, group g), sim_din<k>.csv / sim_dout<k>.csv; values are raw
+two's-complement words.
 
 Usage:
   python3 test_data/scripts/gen_fft_unscrambler_test_data.py
@@ -159,8 +160,8 @@ def gen():
         "checked*). Not exported from MATLAB. `map.mem` comes from "
         "`rtl/Reorder/scripts/gen_reorder_map.py --unscrambler`; "
         "`MAP_INIT_FILE` is relative to `tests/sim_build/FFTs/fft_unscrambler/`. "
-        "CSV rows are cycles; din / dout have one column per element "
-        "`s·G + g`.", "",
+        "CSV rows are cycles; din / dout have one file per element "
+        "`k = s·G + g` (`sim_din<k>.csv`, `sim_dout<k>.csv`).", "",
         "| Test # | Directory | " + " | ".join(FU) + " | ORDER | BRAM map | Map latency | "
         "Fanout latency | Frames checked | Cycles | Description |",
         "|" + "---|" * (len(FU) + 9),

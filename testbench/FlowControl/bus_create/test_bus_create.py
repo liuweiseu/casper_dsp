@@ -5,6 +5,8 @@ from cocotb.triggers import RisingEdge, Timer
 from pathlib import Path
 import numpy as np
 
+from testbench.csv_ports import load_rows
+
 # testdatadir points to the corresponding test_data subdirectory
 _here = Path(__file__).parent
 testdatadir = (_here / "../../../test_data" / _here.parent.name / _here.name).resolve()
@@ -18,8 +20,8 @@ async def module_test(dut):
     if nbits == 8 and ninputs == 2:
         # test NBITS = 8 and NINPUTS = 2
         # load the input and expected output data 
-        # sim_din.csv: row i = [din[0], din[1]]
-        sim_din = np.loadtxt(testdatadir/'simdata0/sim_din.csv', dtype=int, ndmin=2).tolist()
+        # sim_din<j>.csv = din[j]; row i = [din[0], din[1]]
+        sim_din = load_rows(testdatadir/'simdata0', 'din')
         expected_results = np.loadtxt(testdatadir/'simdata0/sim_bus_out.csv', dtype=int).tolist()
         for i in range(len(sim_din)):
             dut.din.value = sim_din[i]
@@ -31,8 +33,8 @@ async def module_test(dut):
     elif nbits == 10 and ninputs == 4:
         # test NBITS = 10 and NINPUTS = 4
         # load the input and expected output data 
-        # sim_din.csv: row i = [din[0], ..., din[3]]
-        sim_din = np.loadtxt(testdatadir/'simdata1/sim_din.csv', dtype=int, ndmin=2).tolist()
+        # sim_din<j>.csv = din[j]; row i = [din[0], ..., din[3]]
+        sim_din = load_rows(testdatadir/'simdata1', 'din')
         expected_results = np.loadtxt(testdatadir/'simdata1/sim_bus_out.csv', dtype=np.int64).tolist()
         for i in range(len(sim_din)):
             dut.din.value = sim_din[i]
