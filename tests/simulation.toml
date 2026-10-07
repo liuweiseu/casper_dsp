@@ -33,12 +33,24 @@ lib_path = "platform/altera"
 [test_data]
 generate = false
 
+# ── Simulation length ────────────────────────────────────────────────────────
+# Every [[simulations]] entry has a simulation_cycles key: the number of clock
+# cycles each test runs, from the Cycles column of the module's
+# test_data/<dir>/<top>/test_data.md. It is a list with one value per
+# [[simulations.parameters]] block, in the same order, or a single integer
+# when the entry has no parameter blocks. constant has no clock: each of its
+# tests is one combinational check, counted as 1. The key is informational:
+# tests/test_runner.py does not read it, and it is kept out of
+# [[simulations.parameters]] because every key there is passed to the DUT as
+# an HDL parameter.
+
 # ── BasicModules ─────────────────────────────────────────────────────────────
 
 # test constant
 [[simulations]]
 dir = "BasicModules"
 top = "constant"
+simulation_cycles = [1, 1, 1, 1, 1]
 # zero output
 [[simulations.parameters]]
 NBITS = 8
@@ -64,6 +76,7 @@ VAL = 4095
 [[simulations]]
 dir = "BasicModules"
 top = "counter"
+simulation_cycles = [299, 299, 299, 299, 299, 300, 300, 300, 300, 300, 300, 300, 300, 300]
 # free_running(0), up(0), step=1 — basic increment with wrap-around
 [[simulations.parameters]]
 NBITS = 8
@@ -208,6 +221,7 @@ ENABLE_LOAD = 1
 [[simulations]]
 dir = "BasicModules"
 top = "delay"
+simulation_cycles = [8, 200, 200, 200, 200]
 # LATENCY=1, BITWIDTH=3 — original set
 [[simulations.parameters]]
 LATENCY = 1
@@ -241,6 +255,7 @@ USE_ENABLE = 0
 [[simulations]]
 dir = "BasicModules"
 top = "inverter"
+simulation_cycles = [8, 8, 8, 200]
 # LATENCY=0 — combinational output
 [[simulations.parameters]]
 NBITS = 4
@@ -263,6 +278,7 @@ USE_ENABLE = 1
 [[simulations]]
 dir = "BasicModules"
 top = "logical"
+simulation_cycles = [16, 16, 16, 16, 16, 16, 16, 16, 200]
 # AND, 2-input — basic bitwise AND with pipeline
 [[simulations.parameters]]
 NBITS = 4
@@ -323,6 +339,7 @@ USE_ENABLE = 1
 [[simulations]]
 dir = "BasicModules"
 top = "multiplexer"
+simulation_cycles = [16, 16, 16, 16, 200]
 # 2-input, single pipeline stage
 [[simulations.parameters]]
 NBITS = 8
@@ -354,6 +371,7 @@ USE_ENABLE = 1
 [[simulations]]
 dir = "BasicModules"
 top = "register"
+simulation_cycles = [11, 7, 7, 7, 11, 7]
 # USE_RST=1, USE_ENABLE=1, INIT_VAL=0 — reset + enable, reset to 0
 [[simulations.parameters]]
 BITWIDTH = 4
@@ -391,6 +409,7 @@ INIT_VAL = 10
 [[simulations]]
 dir = "BasicModules"
 top = "relational"
+simulation_cycles = [20, 20, 20, 20, 20, 20, 20, 20, 256, 256, 256, 256, 256, 256, 256, 300, 1024, 300]
 # eq, NBITS=4, LATENCY=1
 [[simulations.parameters]]
 NBITS = 4
@@ -497,6 +516,7 @@ USE_ENABLE = 1
 [[simulations]]
 dir = "BasicModules"
 top = "slice"
+simulation_cycles = [513]
 [[simulations.parameters]]
 START_BIT = 2
 WIDTH = 2
@@ -508,6 +528,7 @@ WIDTH = 2
 dir = "Bus"
 top = "adder_subtractor"
 test_data_script = "gen_fixed_point_test_data.py"
+simulation_cycles = [128, 128, 128, 128, 128, 128]
 # Fix_8_4 + Fix_8_4 → Fix_9_4, full precision, combinational
 [[simulations.parameters]]
 N_BITS_A = 8
@@ -604,6 +625,7 @@ LATENCY = 1
 dir = "Bus"
 top = "convert"
 test_data_script = "gen_fixed_point_test_data.py"
+simulation_cycles = [128, 128, 128, 128, 128, 128, 128]
 # Fix_16_8 → Fix_8_4, truncate + wrap, combinational
 [[simulations.parameters]]
 N_BITS_IN = 16
@@ -687,6 +709,7 @@ LATENCY = 0
 dir = "Bus"
 top = "multiplier"
 test_data_script = "gen_fixed_point_test_data.py"
+simulation_cycles = [128, 128, 128, 128, 128]
 # Fix_8_7 × Fix_8_7 → Fix_16_14, full precision, combinational
 [[simulations.parameters]]
 N_BITS_A = 8
@@ -763,6 +786,7 @@ LATENCY = 1
 dir = "Bus"
 top = "negate"
 test_data_script = "gen_fixed_point_test_data.py"
+simulation_cycles = [128, 128, 128, 128, 128, 128]
 # Fix_8_4 → Fix_8_4, wrap (−(−8) wraps to −8), combinational
 [[simulations.parameters]]
 N_BITS_IN = 8
@@ -835,6 +859,7 @@ LATENCY = 1
 dir = "Bus"
 top = "scale"
 test_data_script = "gen_fixed_point_test_data.py"
+simulation_cycles = [128, 128, 128, 128, 128, 128]
 # Fix_16_8 ÷ 8, round half to even
 [[simulations.parameters]]
 N_BITS_IN = 16
@@ -915,6 +940,7 @@ LATENCY = 1
 dir = "Correlator"
 top = "auto_tap"
 test_data_script = "gen_correlator_test_data.py"
+simulation_cycles = [1084, 400, 400, 400]
 # Mask defaults: D = 126, S = 71 (the stored DelayLen values)
 [[simulations.parameters]]
 N_ANTS = 4
@@ -965,6 +991,7 @@ USE_BRAM_DELAY = 1
 dir = "Correlator"
 top = "baseline_tap"
 test_data_script = "gen_correlator_test_data.py"
+simulation_cycles = [572, 400, 400, 400]
 # Mask defaults
 [[simulations.parameters]]
 N_ANTS = 4
@@ -1015,6 +1042,7 @@ USE_BRAM_DELAY = 1
 dir = "Correlator"
 top = "cmac"
 test_data_script = "gen_correlator_test_data.py"
+simulation_cycles = [828, 400, 400, 400, 400]
 # Mask defaults: acc_len 128, Fix_4_3, latency 1+1
 [[simulations.parameters]]
 ACC_LEN = 128
@@ -1071,6 +1099,7 @@ MULTIPLIER_IMPLEMENTATION = 2
 dir = "Correlator"
 top = "cross_multiplier"
 test_data_script = "gen_correlator_test_data.py"
+simulation_cycles = [300, 300, 300, 300]
 # Stored mask values with STREAMS 2: Fix_4_3 -> Fix_9_6 is lossless
 [[simulations.parameters]]
 STREAMS = 2
@@ -1129,6 +1158,7 @@ CONV_LATENCY = 0
 dir = "Correlator"
 top = "dual_pol_cmac"
 test_data_script = "gen_correlator_test_data.py"
+simulation_cycles = [828, 300, 300]
 # Mask defaults: acc_len 128, 4-bit inputs
 [[simulations.parameters]]
 ACC_LEN = 128
@@ -1159,6 +1189,7 @@ MULTIPLIER_IMPLEMENTATION = 0
 dir = "Correlator"
 top = "xeng"
 test_data_script = "gen_correlator_test_data.py"
+simulation_cycles = [6931, 475, 399, 1095, 699, 1639, 275]
 # Mask defaults (N_ANTS 8 from xeng_init.m), periodic sync
 [[simulations.parameters]]
 N_ANTS = 8
@@ -1249,6 +1280,7 @@ MCNT_BITS = 8
 dir = "Correlator"
 top = "xeng_descramble"
 test_data_script = "gen_correlator_test_data.py"
+simulation_cycles = [5271, 2060, 710, 836, 5274, 612]
 # Mask defaults: N 8, demux 8 (W 16, DEL 2, CNT 288)
 [[simulations.parameters]]
 NUM_ANTS = 8
@@ -1297,6 +1329,7 @@ RAM_LATENCY = 1
 dir = "Correlator"
 top = "xeng_descramble_4ant"
 test_data_script = "gen_correlator_test_data.py"
+simulation_cycles = [5595, 382, 1409]
 # Mask defaults: W 25 -> P 32, OW 256, DEL 84, CNT 10
 [[simulations.parameters]]
 N_BITS = 8
@@ -1318,6 +1351,7 @@ DEMUX_FACTOR = 4
 dir = "Correlator"
 top = "xeng_tvg"
 test_data_script = "gen_correlator_test_data.py"
+simulation_cycles = [1600, 1600, 1600, 1600]
 # Mask defaults (internal sync period 2^15: one pulse at t = 2)
 [[simulations.parameters]]
 ANT_BITS = 2
@@ -1350,6 +1384,7 @@ DATA_WIDTH = 8
 dir = "Correlator/Internal"
 top = "cmac_acc"
 test_data_script = "gen_correlator_test_data.py"
+simulation_cycles = [400, 400, 400]
 # 16-bit, random rst (single, back-to-back, long gaps)
 [[simulations.parameters]]
 N_BITS = 16
@@ -1365,6 +1400,7 @@ N_BITS = 1
 dir = "Correlator/Internal"
 top = "read_ctrl"
 test_data_script = "gen_correlator_test_data.py"
+simulation_cycles = [3568, 420, 3840, 1476]
 # xeng_descramble defaults (N 8, demux 8): one word every 3 cycles
 [[simulations.parameters]]
 DEL = 2
@@ -1395,6 +1431,7 @@ RD_BITS = 6
 dir = "Correlator/Internal"
 top = "write_ctrl"
 test_data_script = "gen_correlator_test_data.py"
+simulation_cycles = [3376, 368, 944, 304]
 # N 8, ACC_LEN 128 (W 16), probe words at the end of the negedge_delay extension
 [[simulations.parameters]]
 NUM_ANTS = 8
@@ -1421,6 +1458,7 @@ W = 12
 dir = "Correlator/Internal"
 top = "x_cast"
 test_data_script = "gen_correlator_test_data.py"
+simulation_cycles = [200, 200, 200, 200]
 # W 16 -> P 16, demux 8 (all fields reversed)
 [[simulations.parameters]]
 N_BITS_IN = 16
@@ -1453,6 +1491,7 @@ DEMUX_FACTOR = 1
 dir = "Delays"
 top = "delay_bram"
 test_data_script = "gen_delays_test_data.py"
+simulation_cycles = [256, 256, 256, 512, 2500, 256, 256]
 # shortest RAM-based delay (1-word address range)
 [[simulations.parameters]]
 BITWIDTH = 8
@@ -1487,6 +1526,7 @@ DELAY_LEN = 0
 dir = "Delays"
 top = "delay_srl"
 test_data_script = "gen_delays_test_data.py"
+simulation_cycles = [256, 256, 256, 256, 256, 256]
 # enable + reset
 [[simulations.parameters]]
 BITWIDTH = 8
@@ -1529,6 +1569,7 @@ USE_RST = 1
 dir = "Delays"
 top = "dual_port_ram"
 test_data_script = "gen_delays_test_data.py"
+simulation_cycles = [512, 512, 512]
 # 16 × 8
 [[simulations.parameters]]
 DATA_WIDTH = 8
@@ -1547,6 +1588,7 @@ ADDR_WIDTH = 5
 dir = "Delays"
 top = "pipeline"
 test_data_script = "gen_delays_test_data.py"
+simulation_cycles = [256, 256, 256, 256, 256]
 # LATENCY = 0: combinational pass-through
 [[simulations.parameters]]
 BITWIDTH = 8
@@ -1573,6 +1615,7 @@ LATENCY = 5
 dir = "Delays"
 top = "rom"
 test_data_script = "gen_delays_test_data.py"
+simulation_cycles = [256, 512, 256, 64]
 # 16 × 8
 [[simulations.parameters]]
 DATA_WIDTH = 8
@@ -1598,6 +1641,7 @@ ADDR_WIDTH = 3
 dir = "Delays"
 top = "single_port_ram"
 test_data_script = "gen_delays_test_data.py"
+simulation_cycles = [512, 512, 256, 1024]
 # 16 × 8
 [[simulations.parameters]]
 DATA_WIDTH = 8
@@ -1620,6 +1664,7 @@ ADDR_WIDTH = 8
 dir = "Delays"
 top = "sync_delay"
 test_data_script = "gen_fft_stage_test_data.py"
+simulation_cycles = [512, 512, 512, 512, 512]
 # DELAY_LEN = 0: pass-through
 [[simulations.parameters]]
 DELAY_LEN = 0
@@ -1641,6 +1686,7 @@ DELAY_LEN = 100
 dir = "Delays"
 top = "window_delay"
 test_data_script = "gen_hold_window_test_data.py"
+simulation_cycles = [500, 500, 500, 500, 500]
 # Mask default 10, windows longer than DELAY-1
 [[simulations.parameters]]
 DELAY = 10
@@ -1664,6 +1710,7 @@ DELAY = 12
 dir = "FFTs"
 top = "biplex_core"
 test_data_script = "gen_biplex_test_data.py"
+simulation_cycles = [256, 512, 512, 1024]
 # 8-point, casper defaults, dynamic shift
 [[simulations.parameters]]
 N_INPUTS = 1
@@ -1750,6 +1797,7 @@ COEFF_DIR = "../../../test_data/FFTs/biplex_core/simdata3/"
 dir = "FFTs"
 top = "butterfly_direct"
 test_data_script = "gen_butterfly_test_data.py"
+simulation_cycles = [256, 256, 256, 256, 512, 512, 256, 256]
 # pass_through (biplex stage 1), dynamic shift, round + wrap
 [[simulations.parameters]]
 N_INPUTS = 1
@@ -1935,6 +1983,7 @@ MAX_FANOUT = 4
 dir = "FFTs"
 top = "fft_biplex_real_4x"
 test_data_script = "gen_fft_wideband_test_data.py"
+simulation_cycles = [187, 243, 355, 187]
 # casper defaults, 8-point
 [[simulations.parameters]]
 N_BIPLEX_INPUTS = 1
@@ -2029,6 +2078,7 @@ MAP_DIR = "../../../test_data/FFTs/fft_biplex_real_4x/simdata3/"
 dir = "FFTs"
 top = "fft_direct"
 test_data_script = "gen_fft_wideband_test_data.py"
+simulation_cycles = [139, 139, 139, 139, 139, 139]
 # 4-point, 1 stream, coeff_0 / coeff_1 twiddles only
 [[simulations.parameters]]
 N_STREAMS = 1
@@ -2167,6 +2217,7 @@ COEFF_DIR = "../../../test_data/FFTs/fft_direct/simdata5/"
 dir = "FFTs"
 top = "fft_stage_n"
 test_data_script = "gen_fft_stage_test_data.py"
+simulation_cycles = [512, 512, 512, 512, 512, 512]
 # 16-point stage 1 (pass_through), register delays, fan latency 1
 [[simulations.parameters]]
 N_INPUTS = 1
@@ -2291,6 +2342,7 @@ INIT_FILE = "../../../test_data/FFTs/fft_stage_n/simdata5/twiddle.mem"
 dir = "FFTs"
 top = "fft_unscrambler"
 test_data_script = "gen_fft_unscrambler_test_data.py"
+simulation_cycles = [227, 163, 579, 2115, 227]
 # 2 groups, order 4, distributed map (map latency 1)
 [[simulations.parameters]]
 N_STREAMS = 1
@@ -2342,6 +2394,7 @@ MAP_INIT_FILE = "../../../test_data/FFTs/fft_unscrambler/simdata4/map.mem"
 dir = "FFTs"
 top = "fft_wideband_real"
 test_data_script = "gen_fft_wideband_test_data.py"
+simulation_cycles = [403, 403, 259, 259, 931, 403]
 # casper defaults, 32-point, 4 samples / cycle, unscrambled
 [[simulations.parameters]]
 N_STREAMS = 1
@@ -2500,6 +2553,7 @@ MEM_DIR = "../../../test_data/FFTs/fft_wideband_real/simdata5/"
 dir = "FFTs/Internal"
 top = "bi_real_unscr_4x"
 test_data_script = "gen_fft_internal_test_data.py"
+simulation_cycles = [188, 244, 356, 160, 1924]
 # casper defaults
 [[simulations.parameters]]
 N_INPUTS = 1
@@ -2566,6 +2620,7 @@ MAP_DIR = "../../../../test_data/FFTs/Internal/bi_real_unscr_4x/simdata4/"
 dir = "FFTs/Internal"
 top = "complex_conj"
 test_data_script = "gen_fft_internal_test_data.py"
+simulation_cycles = [128, 128, 128, 128]
 # casper defaults (Wrap)
 [[simulations.parameters]]
 N_INPUTS = 1
@@ -2600,6 +2655,7 @@ OVERFLOW = 1
 dir = "FFTs/Internal"
 top = "hilbert"
 test_data_script = "gen_fft_internal_test_data.py"
+simulation_cycles = [160, 160, 160, 160]
 # casper defaults
 [[simulations.parameters]]
 N_INPUTS = 1
@@ -2634,6 +2690,7 @@ CONV_LATENCY = 0
 dir = "FFTs/Internal"
 top = "mirror_spectrum"
 test_data_script = "gen_fft_internal_test_data.py"
+simulation_cycles = [128, 128, 128]
 # casper defaults
 [[simulations.parameters]]
 N_INPUTS = 1
@@ -2669,6 +2726,7 @@ NEGATE_MODE = 1
 dir = "FFTs/Twiddle"
 top = "twiddle_coeff_0"
 test_data_script = "gen_twiddle_test_data.py"
+simulation_cycles = [256, 256, 256]
 # casper-style latencies (total 5)
 [[simulations.parameters]]
 N_INPUTS = 1
@@ -2699,6 +2757,7 @@ CONV_LATENCY = 0
 dir = "FFTs/Twiddle"
 top = "twiddle_coeff_1"
 test_data_script = "gen_twiddle_test_data.py"
+simulation_cycles = [256, 256, 256]
 # casper-style latencies (total 5)
 [[simulations.parameters]]
 N_INPUTS = 1
@@ -2732,6 +2791,7 @@ CONV_LATENCY = 0
 dir = "FFTs/Twiddle"
 top = "twiddle_general"
 test_data_script = "gen_twiddle_test_data.py"
+simulation_cycles = [512, 512, 512, 512, 256, 1024]
 # 16-point stage coefficients 0..3, casper defaults (round ±inf, wrap)
 [[simulations.parameters]]
 N_INPUTS = 1
@@ -2834,6 +2894,7 @@ INIT_FILE = "../../../../test_data/FFTs/Twiddle/twiddle_general/simdata5/twiddle
 dir = "FFTs/Twiddle"
 top = "twiddle_pass_through"
 test_data_script = "gen_twiddle_test_data.py"
+simulation_cycles = [128, 128]
 # 1 lane, 18-bit
 [[simulations.parameters]]
 N_INPUTS = 1
@@ -2848,6 +2909,7 @@ INPUT_BIT_WIDTH = 8
 dir = "FFTs/Twiddle"
 top = "twiddle_stage_2"
 test_data_script = "gen_twiddle_test_data.py"
+simulation_cycles = [512, 256, 256, 512]
 # casper defaults (FFTSize 5, total latency 7)
 [[simulations.parameters]]
 N_INPUTS = 1
@@ -2895,6 +2957,7 @@ CONV_LATENCY = 1
 [[simulations]]
 dir = "FlowControl"
 top = "bus_create"
+simulation_cycles = [513, 513]
 [[simulations.parameters]]
 NBITS = 8
 NINPUTS = 2
@@ -2906,6 +2969,7 @@ NINPUTS = 4
 [[simulations]]
 dir = "FlowControl"
 top = "bus_expand"
+simulation_cycles = [257]
 [[simulations.parameters]]
 NOUT = 4
 WIDTH = 8
@@ -2917,6 +2981,7 @@ WIDTH = 8
 dir = "Misc"
 top = "adder_tree"
 test_data_script = "gen_adder_tree_test_data.py"
+simulation_cycles = [160, 160, 160, 160, 160, 160, 160, 160]
 # 1 input: no stage, dout = din
 [[simulations.parameters]]
 N_INPUTS = 1
@@ -3018,11 +3083,13 @@ OVERFLOW = 1
 [[simulations]]
 dir = "Misc"
 top = "armed_trigger"
+simulation_cycles = 16
 
 # test bit_reverse
 [[simulations]]
 dir = "Misc"
 top = "bit_reverse"
+simulation_cycles = [256, 300]
 [[simulations.parameters]]
 NBITS = 8
 [[simulations.parameters]]
@@ -3032,6 +3099,7 @@ NBITS = 16
 [[simulations]]
 dir = "Misc"
 top = "c_to_ri"
+simulation_cycles = [100, 100]
 # NBITS=8, BIN_PT=7 — unpack 16-bit complex into two 8-bit parts
 [[simulations.parameters]]
 NBITS = 8
@@ -3046,6 +3114,7 @@ BIN_PT = 15
 dir = "Misc"
 top = "convert_of"
 test_data_script = "gen_butterfly_test_data.py"
+simulation_cycles = [256, 256, 256, 256, 256]
 # Fix_16_8 → Fix_8_4, truncate + wrap, combinational
 [[simulations.parameters]]
 N_BITS_IN = 16
@@ -3096,6 +3165,7 @@ LATENCY = 1
 [[simulations]]
 dir = "Misc"
 top = "edge_detect"
+simulation_cycles = [100, 100, 100, 100, 100, 100]
 # rising edge, active high
 [[simulations.parameters]]
 EDGE_TYPE = 0
@@ -3126,6 +3196,7 @@ OUTPUT_POL = 1
 dir = "Misc"
 top = "negedge_delay"
 test_data_script = "gen_hold_window_test_data.py"
+simulation_cycles = [500, 500, 500, 500]
 # Minimum pulse length 3
 [[simulations.parameters]]
 PULSE_LEN = 3
@@ -3143,6 +3214,7 @@ PULSE_LEN = 16
 [[simulations]]
 dir = "Misc"
 top = "pulse_ext"
+simulation_cycles = [30, 50, 40]
 # PULSE_LEN=3 — single rising edge
 [[simulations.parameters]]
 PULSE_LEN = 3
@@ -3157,6 +3229,7 @@ PULSE_LEN = 4
 [[simulations]]
 dir = "Misc"
 top = "ri_to_c"
+simulation_cycles = [100, 100]
 # NBITS=8 — pack two 8-bit words into 16-bit complex
 [[simulations.parameters]]
 NBITS = 8
@@ -3169,6 +3242,7 @@ NBITS = 16
 dir = "Misc"
 top = "sample_and_hold"
 test_data_script = "gen_hold_window_test_data.py"
+simulation_cycles = [400, 400, 400, 3272]
 # Period 8: free-running resample, syncs restart the period
 [[simulations.parameters]]
 PERIOD = 8
@@ -3193,6 +3267,7 @@ BITWIDTH = 32
 dir = "Multipliers"
 top = "cmult"
 test_data_script = "gen_fixed_point_test_data.py"
+simulation_cycles = [128, 128, 128, 128, 128, 128, 128, 128, 128, 128]
 # cmult_init.m defaults: Fix_18_17 → Fix_37_14, truncate + wrap
 [[simulations.parameters]]
 N_BITS_A = 18
@@ -3379,6 +3454,7 @@ PIPELINE_LATENCY = 2
 dir = "Multipliers"
 top = "complex_multiplier"
 test_data_script = "gen_fixed_point_test_data.py"
+simulation_cycles = [128, 128, 128, 128, 128, 128, 128]
 # Fix_8_7 × Fix_8_7 → Fix_17_14, exact, 4-mult
 [[simulations.parameters]]
 N_BITS_A = 8
@@ -3499,6 +3575,7 @@ ADD_LATENCY = 0
 dir = "PFBs"
 top = "first_tap_real"
 test_data_script = "gen_pfb_test_data.py"
+simulation_cycles = [192, 384, 128]
 # casper mask defaults: delay 32, 4 taps
 [[simulations.parameters]]
 PFB_SIZE = 6
@@ -3535,6 +3612,7 @@ BRAM_LATENCY = 2
 dir = "PFBs"
 top = "last_tap_real"
 test_data_script = "gen_pfb_test_data.py"
+simulation_cycles = [128, 128, 128]
 # mask defaults
 [[simulations.parameters]]
 BIT_WIDTH_IN = 8
@@ -3556,6 +3634,7 @@ MULT_LATENCY = 0
 dir = "PFBs"
 top = "pfb_coeff_gen"
 test_data_script = "gen_pfb_test_data.py"
+simulation_cycles = [128, 128, 128, 128, 128, 128]
 # casper-style: 32 channels, 4 taps, 2 inputs, input 0
 [[simulations.parameters]]
 PFB_SIZE = 5
@@ -3640,6 +3719,7 @@ COEFF_DIR = "../../../test_data/PFBs/pfb_coeff_gen/simdata5/"
 dir = "PFBs"
 top = "pfb_fir_real"
 test_data_script = "gen_pfb_test_data.py"
+simulation_cycles = [192, 144, 144, 288, 208]
 # casper mask defaults (BitWidthOut 0: full adder width)
 [[simulations.parameters]]
 PFB_SIZE = 5
@@ -3766,6 +3846,7 @@ COEFF_DIR = "../../../test_data/PFBs/pfb_fir_real/simdata4/"
 dir = "PFBs"
 top = "tap_real"
 test_data_script = "gen_pfb_test_data.py"
+simulation_cycles = [128, 128, 192, 128]
 # tap_real mask defaults (coeff_frac_width as pfb_fir_real sets it)
 [[simulations.parameters]]
 MULT_LATENCY = 2
@@ -3810,6 +3891,7 @@ N_COEFFS = 2
 dir = "Reorder"
 top = "barrel_switcher"
 test_data_script = "gen_reorder_test_data.py"
+simulation_cycles = [128, 128, 128]
 # 2 lanes
 [[simulations.parameters]]
 LOG2_N_LANES = 1
@@ -3828,6 +3910,7 @@ DATA_WIDTH = 6
 dir = "Reorder"
 top = "reorder"
 test_data_script = "gen_reorder_test_data.py"
+simulation_cycles = [256, 256, 256, 320, 1024, 1792, 256, 256]
 # casper's default map (order 4)
 [[simulations.parameters]]
 N_STREAMS = 1
@@ -3914,6 +3997,7 @@ MAP_INIT_FILE = "../../../test_data/Reorder/reorder/simdata7/map.mem"
 dir = "Reorder"
 top = "square_transposer"
 test_data_script = "gen_reorder_test_data.py"
+simulation_cycles = [256, 256, 256]
 # 2 lanes
 [[simulations.parameters]]
 LOG2_N_LANES = 1
@@ -3933,3 +4017,4 @@ DATA_WIDTH = 12
 [[simulations]]
 dir = "Templates"
 top = "simple_adder"
+simulation_cycles = 101
