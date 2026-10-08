@@ -15,6 +15,11 @@
 //   'Simulink reinterprets each input as unsigned with binary point 0 at its own width and concatenates them, so inputs may differ in width (bus_create_init.m Reinterpret + xbsIndex_r4/Concat). The HDL requires every input to be NBITS wide.',
 // ]
 //
+// [params.INPUT_NUM]
+// mask = 'inputNum'
+// type = 'edit'
+// note = 'same parameter; the mask name is camelCase'
+//
 // [hdl_only]
 // NBITS = 'inherited width: Simulink takes it from the input signal'
 //

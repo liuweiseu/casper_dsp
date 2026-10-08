@@ -39,6 +39,11 @@
 // 0 = 'off'
 // 1 = 'on'
 //
+// [params.DELAY_LEN]
+// mask = 'DelayLen'
+// type = 'edit'
+// note = 'same parameter; the mask name is camelCase'
+//
 // [hdl_only]
 // BITWIDTH = 'inherited width: Simulink takes it from the input signal'
 // USE_RST = 'synchronous reset added by the HDL (rst port)'

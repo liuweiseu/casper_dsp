@@ -64,6 +64,26 @@
 // 0 = 'off'
 // 1 = 'on'
 //
+// [params.PFB_SIZE]
+// mask = 'PFBSize'
+// type = 'edit'
+// note = 'same parameter; the mask name is camelCase'
+//
+// [params.COEFF_BIT_WIDTH]
+// mask = 'CoeffBitWidth'
+// type = 'edit'
+// note = 'same parameter; the mask name is camelCase'
+//
+// [params.TOTAL_TAPS]
+// mask = 'TotalTaps'
+// type = 'edit'
+// note = 'same parameter; the mask name is camelCase'
+//
+// [params.WINDOW_TYPE]
+// mask = 'WindowType'
+// type = 'edit'
+// note = 'free-text mask field (Evaluate off): enter the HDL string value itself, e.g. hamming (unlike pfb_fir_real, where WindowType is a popup)'
+//
 // [hdl_only]
 // DIN_WIDTH = 'inherited width: Simulink takes it from the input signal'
 // COEFF_DIR = 'implementation: memory initialization file'

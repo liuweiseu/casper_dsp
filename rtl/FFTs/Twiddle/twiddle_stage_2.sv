@@ -74,6 +74,11 @@
 // 1 = 'single'
 // 2 = 'custom'
 //
+// [params.FFT_SIZE]
+// mask = 'FFTSize'
+// type = 'edit'
+// note = 'same parameter; the mask name is camelCase'
+//
 // [hdl_only]
 //
 // [mask_missing]

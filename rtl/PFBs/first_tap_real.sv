@@ -51,6 +51,26 @@
 // 0 = 'off'
 // 1 = 'on'
 //
+// [params.PFB_SIZE]
+// mask = 'PFBSize'
+// type = 'edit'
+// note = 'same parameter; the mask name is camelCase'
+//
+// [params.COEFF_BIT_WIDTH]
+// mask = 'CoeffBitWidth'
+// type = 'edit'
+// note = 'same parameter; the mask name is camelCase'
+//
+// [params.TOTAL_TAPS]
+// mask = 'TotalTaps'
+// type = 'edit'
+// note = 'same parameter; the mask name is camelCase'
+//
+// [params.BIT_WIDTH_IN]
+// mask = 'BitWidthIn'
+// type = 'edit'
+// note = 'same parameter; the mask name is camelCase'
+//
 // [hdl_only]
 // PLATFORM = 'implementation: memory / primitive vendor (GENERIC, XILINX, ALTERA)'
 //

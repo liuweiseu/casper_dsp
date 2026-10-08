@@ -35,6 +35,11 @@
 //   'async = on (en input gating counter and RAM) is not implemented.',
 // ]
 //
+// [params.DELAY_LEN]
+// mask = 'DelayLen'
+// type = 'edit'
+// note = 'same parameter; the mask name is camelCase'
+//
 // [hdl_only]
 // BITWIDTH = 'inherited width: Simulink takes it from the input signal'
 // PLATFORM = 'implementation: memory / primitive vendor (GENERIC, XILINX, ALTERA)'

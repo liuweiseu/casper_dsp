@@ -133,6 +133,31 @@
 // 0 = 'off'
 // 1 = 'on'
 //
+// [params.PFB_SIZE]
+// mask = 'PFBSize'
+// type = 'edit'
+// note = 'same parameter; the mask name is camelCase'
+//
+// [params.TOTAL_TAPS]
+// mask = 'TotalTaps'
+// type = 'edit'
+// note = 'same parameter; the mask name is camelCase'
+//
+// [params.BIT_WIDTH_IN]
+// mask = 'BitWidthIn'
+// type = 'edit'
+// note = 'same parameter; the mask name is camelCase'
+//
+// [params.BIT_WIDTH_OUT]
+// mask = 'BitWidthOut'
+// type = 'edit'
+// note = 'same parameter; the mask name is camelCase'
+//
+// [params.COEFF_BIT_WIDTH]
+// mask = 'CoeffBitWidth'
+// type = 'edit'
+// note = 'same parameter; the mask name is camelCase'
+//
 // [hdl_only]
 // BIT_GROWTH = 'pfb_fir_real_init.m local variable (nextpow2 of the max sub-filter gain), exposed as a parameter; compute with gen_pfb_coeffs.py --bit-width-in'
 // ADDER_N_BITS_OUT = 'pfb_fir_real_init.m local variable, exposed as a parameter'

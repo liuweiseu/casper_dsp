@@ -33,6 +33,11 @@
 //   'test vectors in casper_dsp/test_data/FFTs/Internal/hilbert/test_data.md come from a Python reference model (not exported from MATLAB), so cycle/bit equivalence with the Simulink block is unverified',
 // ]
 //
+// [params.BIT_WIDTH]
+// mask = 'BitWidth'
+// type = 'edit'
+// note = 'same parameter; the mask name is camelCase'
+//
 // [hdl_only]
 //
 // [mask_missing]

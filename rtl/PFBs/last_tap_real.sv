@@ -47,6 +47,16 @@
 // 0 = 'off'
 // 1 = 'on'
 //
+// [params.BIT_WIDTH_IN]
+// mask = 'BitWidthIn'
+// type = 'edit'
+// note = 'same parameter; the mask name is camelCase'
+//
+// [params.COEFF_BIT_WIDTH]
+// mask = 'CoeffBitWidth'
+// type = 'edit'
+// note = 'same parameter; the mask name is camelCase'
+//
 // [hdl_only]
 //
 // [mask_missing]

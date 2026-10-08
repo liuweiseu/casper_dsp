@@ -16,6 +16,16 @@
 //   "Simulink's outputs are typed (outputArithmeticType 0=unsigned, 1=signed, 2=Boolean; outputBinaryPt). Type 9 discards that slice and drops its port (bus_expand_init.m:150-158). The HDL outputs raw bit slices and supports only 'divisions of equal size'; the bit values are identical.",
 // ]
 //
+// [params.OUTPUT_NUM]
+// mask = 'outputNum'
+// type = 'edit'
+// note = 'same parameter; the mask name is camelCase'
+//
+// [params.OUTPUT_WIDTH]
+// mask = 'outputWidth'
+// type = 'edit'
+// note = 'same parameter; the mask name is camelCase'
+//
 // [hdl_only]
 //
 // [mask_missing]

@@ -191,6 +191,16 @@
 // 0 = 'off'
 // 1 = 'on'
 //
+// [params.FFT_SIZE]
+// mask = 'FFTSize'
+// type = 'edit'
+// note = 'same parameter; the mask name is camelCase'
+//
+// [params.STEP_PERIOD]
+// mask = 'StepPeriod'
+// type = 'edit'
+// note = 'same parameter; the mask name is camelCase'
+//
 // [hdl_only]
 // N_COEFFS = "length(Coeffs): replaces the mask's vector Coeffs"
 // COEFF_0 = "Coeffs(1): replaces the mask's vector Coeffs"

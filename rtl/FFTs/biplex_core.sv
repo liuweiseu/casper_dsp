@@ -140,6 +140,11 @@
 // 0 = 'off'
 // 1 = 'on'
 //
+// [params.FFT_SIZE]
+// mask = 'FFTSize'
+// type = 'edit'
+// note = 'same parameter; the mask name is camelCase'
+//
 // [hdl_only]
 // COEFF_DIR = 'implementation: memory initialization file'
 // PLATFORM = 'implementation: memory / primitive vendor (GENERIC, XILINX, ALTERA)'
