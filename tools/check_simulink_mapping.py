@@ -34,10 +34,15 @@ The lines in between are TOML once the leading "// " (or "//") is removed:
 Usage:
     python3 tools/check_simulink_mapping.py          # validate, exit 1 on errors
     python3 tools/check_simulink_mapping.py --dump   # print all blocks as JSON
+    python3 tools/check_simulink_mapping.py --dump -o out/mapping.json
+                                                     # save the JSON to a file
+    python3 tools/check_simulink_mapping.py -o out/check.txt
+                                                     # save the check report
 
 Run from any directory: paths are resolved from this file (tools/ -> repository root).
 """
 
+import argparse
 import json
 import re
 import sys
@@ -144,7 +149,18 @@ def load_all():
     return out
 
 
-def main():
+def parse_args(argv):
+    ap = argparse.ArgumentParser(description="Check (and dump) the HDL-Simulink Mapping blocks in rtl/.")
+    ap.add_argument("--dump", action="store_true",
+                    help="output every mapping block as JSON {rtl path: block} instead of the check report")
+    ap.add_argument("-o", "--output", type=Path, metavar="FILE",
+                    help="write the output (JSON with --dump, else the check report) to FILE; "
+                         "missing parent directories are created")
+    return ap.parse_args(argv)
+
+
+def main(argv=None):
+    args = parse_args(argv)
     errors, blocks = [], {}
     for f in rtl_files():
         text = f.read_text()
@@ -158,12 +174,19 @@ def main():
             continue
         blocks[str(f.relative_to(ROOT))] = data
         errors += check(f, data, text)
-    if "--dump" in sys.argv:
-        print(json.dumps(blocks, indent=1, ensure_ascii=False))
-        return 0 if not errors else 1
-    for e in errors:
-        print(e)
-    print(f"{len(blocks)} mapping blocks, {len(errors)} errors")
+    summary = f"{len(blocks)} mapping blocks, {len(errors)} errors"
+    if args.dump:
+        out = json.dumps(blocks, indent=1, ensure_ascii=False) + "\n"
+    else:
+        out = "".join(e + "\n" for e in errors) + summary + "\n"
+    if args.output:
+        args.output.parent.mkdir(parents=True, exist_ok=True)
+        args.output.write_text(out, encoding="utf-8")
+        for e in errors:                 # still show problems on the terminal
+            print(e, file=sys.stderr)
+        print(f"{summary}; written to {args.output}")
+    else:
+        print(out, end="")
     return 1 if errors else 0
 
 

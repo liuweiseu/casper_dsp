@@ -109,7 +109,7 @@ Check `rtl/BasicModules/` for the current set of available primitives before wri
 - VCD output path follows `tests/results/<Category>/<module>/<module>[_N].vcd`.
 - The `SIM` macro is defined during simulation builds (use `ifdef SIM` for sim-only blocks if needed).
 - Parameter names are the casper_library mask variable names in upper case (camelCase → UPPER_SNAKE, e.g. `csp_latency` → `CSP_LATENCY`, `DelayLen` → `DELAY_LEN`).
-- A module with a casper_library Simulink block records every difference from that block in an **HDL-Simulink Mapping** section at the end of its header comment: TOML between `// @simulink-mapping begin` and `// @simulink-mapping end` (strip the leading `// `). Fields: `block`, `deviations`, `params` (numeric value → mask option text, verbatim), `hdl_only`, `mask_missing`, `ports` (`renamed` HDL → Simulink, `missing`, `extra`). Validate with `python3 tools/check_simulink_mapping.py`; `--dump` prints every block as JSON. See `tools/check_simulink_mapping.py` for the schema.
+- A module with a casper_library Simulink block records every difference from that block in an **HDL-Simulink Mapping** section at the end of its header comment: TOML between `// @simulink-mapping begin` and `// @simulink-mapping end` (strip the leading `// `). Fields: `block`, `deviations`, `params` (numeric value → mask option text, verbatim), `hdl_only`, `mask_missing`, `ports` (`renamed` HDL → Simulink, `missing`, `extra`). Validate with `python3 tools/check_simulink_mapping.py`; `--dump` prints every block as JSON, and `-o FILE` saves the output (JSON or check report) to a file. See `tools/check_simulink_mapping.py` for the schema.
 
 ## Module Categories
 

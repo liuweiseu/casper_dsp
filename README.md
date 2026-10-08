@@ -90,19 +90,22 @@ The repository uses four parallel directory trees, all mirroring `rtl/` structur
 | `test_data/` | CSV simulation input/output data |
 | `docs/` | Per-module documentation |
 
-Two kinds of Python scripts live next to the files they belong to:
+Supporting Python scripts:
 
 | Location | Purpose |
 |----------|---------|
 | `rtl/<Category>/.../scripts/` | Generators a module **needs to be used**, e.g. [rtl/FFTs/Twiddle/scripts/gen_twiddle_coeffs.py](rtl/FFTs/Twiddle/scripts/gen_twiddle_coeffs.py) writes the coefficient table (`.mem`) that `twiddle_general` loads through `INIT_FILE` |
 | `test_data/scripts/` | Test data generators: reference models that write `test_data/<Category>/<module>/` (inputs, expected outputs, `params.json`, `test_data.md`). Each accepts `--module <name>` / `--list` and prints the module's `simulation.toml` entry |
+| `testbench/csv_ports.py` | Shared test data loader: `load_rows` / `load_packed` read a port's CSV file(s) by port name |
+| `tools/` | Developer utilities outside the simulation flow (not copied into the test container), e.g. [tools/check_simulink_mapping.py](tools/check_simulink_mapping.py) (see *HDL-Simulink Mapping* below) |
 
 ### Steps
 
 1. **RTL** — add the Verilog/SystemVerilog file under `rtl/<Category>/`.  
-   Example: [rtl/Templates/simple_adder.v](rtl/Templates/simple_adder.v)
+   Example: [rtl/Templates/simple_adder.v](rtl/Templates/simple_adder.v)  
+   Name the parameters after the Simulink block's mask variables in upper case (camelCase → UPPER_SNAKE, e.g. `csp_latency` → `CSP_LATENCY`, `DelayLen` → `DELAY_LEN`), and record the differences from the Simulink block in an HDL-Simulink Mapping section (see below).
 
-2. **Test data** — create `test_data/<Category>/<module>/` and place CSV files there (e.g. `sim_in.csv`, `sim_out.csv`). For multiple parameter sets use subdirectories `simdata0/`, `simdata1/`, …
+2. **Test data** — create `test_data/<Category>/<module>/` and place CSV files there, one signal per file and one value per line. Each file is named `sim_<port>.csv` after the DUT port it drives or checks (e.g. `sim_din.csv`, `sim_dout.csv`); an array port gets one file per element, `sim_din0.csv`, `sim_din1.csv`, … (file j = `din[j]`). For multiple parameter sets use subdirectories `simdata0/`, `simdata1/`, …
    The data can be imported (e.g. exported from MATLAB) or produced by a generator script in `test_data/scripts/` (see *Test data generation* below).
 
 3. **Testbench** — create `testbench/<Category>/<module>/test_<module>.py`.  
@@ -117,6 +120,40 @@ Two kinds of Python scripts live next to the files they belong to:
 
 5. **Documentation** — create `docs/<Category>/<module>.md` describing the module's function, parameters, and ports.
 
+## 🔗 HDL-Simulink Mapping
+Each module that has a Simulink counterpart (a casper_library block, or a Xilinx System Generator block for the primitives) records every difference from it in its RTL header comment, as TOML between two markers:
+```systemverilog
+// @simulink-mapping begin
+// block = 'casper_library_misc.slx/edge_detect'
+// deviations = []
+//
+// [params.EDGE]
+// mask = 'edge'
+// type = 'popup'
+// [params.EDGE.values]
+// 0 = 'Rising'
+// 1 = 'Falling'
+// 2 = 'Both'
+// ...
+// [hdl_only]
+// [mask_missing]
+// [ports]
+// [ports.renamed]
+// din = 'in'
+// ...
+// @simulink-mapping end
+```
+Fields: `block` (library file / block), `deviations` (behavioural differences), `params` (numeric HDL value → mask option text, verbatim), `hdl_only` / `mask_missing` (parameters on one side only, with the reason), `ports` (`renamed` HDL → Simulink, `missing`, `extra`, `order`).
+
+[tools/check_simulink_mapping.py](tools/check_simulink_mapping.py) validates every block and can export them:
+```bash
+python3 tools/check_simulink_mapping.py                            # check; exit code 1 on errors
+python3 tools/check_simulink_mapping.py --dump                     # print all blocks as JSON {rtl path: block}
+python3 tools/check_simulink_mapping.py --dump -o out/mapping.json # save the JSON to a file
+python3 tools/check_simulink_mapping.py -o out/check.txt           # save the check report
+```
+With `-o`, missing parent directories are created and only a one-line summary is printed.
+
 ## 📦 Run Simulation
 ### Requirements
 The test is done in a container, so [docker](https://www.docker.com) is the only requirement for running the simulation locally.
@@ -130,13 +167,15 @@ Here is an example about testing `bus_create` module with different sets of para
 [[simulations]]
 dir = "FlowControl"
 top = "bus_create"
+simulation_cycles = [513, 513]
 [[simulations.parameters]]
 NBITS = 8
-NINPUTS = 2
+INPUT_NUM = 2
 [[simulations.parameters]]
 NBITS = 10
-NINPUTS = 4
+INPUT_NUM = 4
 ```
+Every key of a `[[simulations.parameters]]` block is passed to the DUT as an HDL parameter. `simulation_cycles` is informational (the test runner does not read it): the number of clock cycles each test runs, one value per `[[simulations.parameters]]` block in the same order, or a single integer for an entry without parameter blocks.
 
 ### Test data generation
 The `[test_data]` table in `tests/simulation.toml` decides whether the tests run on `test_data/` as it is, or regenerate it first with the scripts in `test_data/scripts/`:
