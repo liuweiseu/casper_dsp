@@ -38,6 +38,39 @@
 // Parameters are the xeng_descramble mask initialization values (see
 // xeng_descramble.sv). Unused diagram logic (pos_cnt, Gateway Outs, scope)
 // is not implemented.
+//
+// ── HDL-Simulink Mapping ─────────────────────────────────────────────────────
+// Differences between this HDL and its Simulink block (casper_library
+// or Xilinx blockset). Machine-readable: the lines between the
+// @simulink-mapping markers are TOML after removing the leading "// "
+// (checked by tools/check_simulink_mapping.py). Fields: block,
+// deviations, params (numeric HDL value -> mask option text, verbatim),
+// hdl_only, mask_missing, ports (renamed HDL -> Simulink, missing,
+// extra).
+// @simulink-mapping begin
+// block = 'casper_library_correlator.slx/xeng_descramble/write_ctrl'
+// deviations = []
+//
+// [hdl_only]
+// NUM_ANTS = 'xeng_descramble mask num_ants'
+// ACC_LEN = 'xeng_descramble mask acc_len'
+// W = 'xeng_descramble mask-init n_bits_xeng_out'
+// T = 'mask-init num_taps (derived)'
+// NV = 'mask-init num_validins (derived)'
+// E = 'mask-init num_elements (derived)'
+// PIVOT = 'mask-init pivot_pnt (derived)'
+// WA_BITS = 'ceil(log2(num_elements)) (derived)'
+// K_START = 'ceil(num_validins*3/4) (derived)'
+// PULSE_LEN = 'ceil(num_ants/2)*acc_len (derived)'
+//
+// [mask_missing]
+//
+// [ports]
+// note = 'unmasked subsystem (system_478.xml); the xeng_descramble_4ant copy (system_995.xml) replaces Counter2 by the constant 9 = PIVOT = E-1, functionally identical'
+// [ports.renamed]
+// [ports.missing]
+// [ports.extra]
+// @simulink-mapping end
 
 module write_ctrl #(
     parameter int NUM_ANTS  = 8,
@@ -73,7 +106,7 @@ module write_ctrl #(
     logic [8*W-1:0] dat;
 
     delay #(.LATENCY(1), .BITWIDTH(1)) u_sync_d (.clk(clk), .din(sync), .dout(sync_d));
-    edge_detect #(.EDGE_TYPE(0), .OUTPUT_POL(0)) u_posedge (
+    edge_detect #(.EDGE(0), .POLARITY(0)) u_posedge (
         .clk(clk), .din(window_valid), .dout(win_rise));
     assign rst_in = sync_d | win_rise;
 
@@ -156,7 +189,7 @@ module write_ctrl #(
         assign cpx[i] = dat[2*W*i +: 2*W];
         negate #(
             .N_BITS_IN(W), .BIN_PT_IN(0), .TYPE_IN(1), .N_BITS_OUT(W), .BIN_PT_OUT(0),
-            .TYPE_OUT(1), .QUANTIZATION(0), .OVERFLOW(0), .LATENCY(0)
+            .TYPE_OUT(1), .QUANTIZATION(0), .OVERFLOW(0), .CSP_LATENCY(0)
         ) u_neg (.clk(clk), .din(cpx[i][W-1:0]), .dout(im_neg));
         assign conj[i] = {cpx[i][2*W-1:W], im_neg};
     end
@@ -172,7 +205,7 @@ module write_ctrl #(
     constant #(.NBITS(VI_BITS), .VAL(K_START)) u_k_start (.out(k_start));
     relational #(.NBITS(VI_BITS), .COMP(0), .LATENCY(1), .SIGNED(0)) u_at_k (
         .clk(clk), .a(element), .b(k_start), .out(at_k));
-    edge_detect #(.EDGE_TYPE(0), .OUTPUT_POL(0)) u_posedge1 (
+    edge_detect #(.EDGE(0), .POLARITY(0)) u_posedge1 (
         .clk(clk), .din(at_k), .dout(start_readout));
 
 endmodule

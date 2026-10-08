@@ -1,4 +1,4 @@
 {
   "BITWIDTH": 8,
-  "LATENCY": 1
+  "CSP_LATENCY": 1
 }

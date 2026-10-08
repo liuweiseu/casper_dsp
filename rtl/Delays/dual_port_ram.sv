@@ -20,6 +20,67 @@
 //   "XILINX"  : platform/xilinx/dual_port_ram_xilinx.sv (xpm_memory_tdpram)
 //   "ALTERA"  : platform/altera/dual_port_ram_altera.sv (stub, not
 //               implemented yet)
+//
+// ── HDL-Simulink Mapping ─────────────────────────────────────────────────────
+// Differences between this HDL and its Simulink block (casper_library
+// or Xilinx blockset). Machine-readable: the lines between the
+// @simulink-mapping markers are TOML after removing the leading "// "
+// (checked by tools/check_simulink_mapping.py). Fields: block,
+// deviations, params (numeric HDL value -> mask option text, verbatim),
+// hdl_only, mask_missing, ports (renamed HDL -> Simulink, missing,
+// extra).
+// @simulink-mapping begin
+// block = 'xbsIndex_r4.slx/Dual Port RAM'
+// deviations = [
+//   "Write mode is fixed to READ_FIRST ('Read Before Write') on both ports, but the mask default for write_mode_A/B is 'Read After Write' (write-first: dout = din on a write); 'No Read On Write' (hold last read) is also not implemented.",
+//   "Cross-port collisions: Simulink (xlDPBRAMXPM.sgm) outputs NaN on a port whose address the other port writes (AinvalidatesB/BinvalidatesA), stores NaN on a write-write collision and errors for Boolean data; the HDL GENERIC model returns the old word and lets port B's write win (dual_port_ram.sv:9-13).",
+//   'Asymmetric ports are not supported: Sysgen allows port B to be form_factor times wider than A (xlDPBRAMXPM.sgm: form_factor), the HDL uses one DATA_WIDTH for both ports.',
+//   'Depth must be a power of two (2^ADDR_WIDTH); Simulink errors on addresses >= depth, the HDL wraps them.',
+//   'initVector, init_a/init_b, latency != 1, rst/en ports are not implemented; memory and outputs power up to 0 (Simulink power-on: initVector rounded/saturated to the dina type, outputs = init_a/init_b).',
+// ]
+//
+// [params.ADDR_WIDTH]
+// mask = 'depth'
+// type = 'edit'
+// note = 'depth = 2^ADDR_WIDTH; non-power-of-two depths are not supported'
+//
+// [hdl_only]
+// DATA_WIDTH = 'inherited width: Simulink takes it from dina (and dinb)'
+// PLATFORM = 'implementation: memory / primitive vendor (GENERIC, XILINX, ALTERA)'
+//
+// [mask_missing]
+// initVector = 'memory always powers up to 0'
+// distributed_mem = 'memory type is chosen by PLATFORM / synthesis'
+// init_a = 'output register A powers up to 0; no reset value'
+// init_b = 'output register B powers up to 0; no reset value'
+// rst_a = 'output-register reset port not implemented'
+// rst_b = 'output-register reset port not implemented'
+// en_a = 'port enable not implemented'
+// en_b = 'port enable not implemented'
+// latency = 'read latency fixed at 1'
+// write_mode_A = "fixed to 'Read Before Write' (mask default 'Read After Write')"
+// write_mode_B = "fixed to 'Read Before Write' (mask default 'Read After Write')"
+// optimize = 'implementation only'
+//
+// [ports]
+// order = 'Simulink: addra, dina, wea, addrb, dinb, web -> A, B (icon port_label); HDL: we_a, addr_a, din_a, dout_a, we_b, addr_b, din_b, dout_b'
+// note = 'optional port names rsta/rstb/ena/enb from xlDPBRAMXPM.sgm'
+// [ports.renamed]
+// we_a = 'wea'
+// addr_a = 'addra'
+// din_a = 'dina'
+// dout_a = 'A'
+// we_b = 'web'
+// addr_b = 'addrb'
+// din_b = 'dinb'
+// dout_b = 'B'
+// [ports.missing]
+// rsta = 'rst_a option only (not implemented)'
+// rstb = 'rst_b option only (not implemented)'
+// ena = 'en_a option only (not implemented)'
+// enb = 'en_b option only (not implemented)'
+// [ports.extra]
+// @simulink-mapping end
 
 module dual_port_ram #(
     parameter int    DATA_WIDTH = 8,

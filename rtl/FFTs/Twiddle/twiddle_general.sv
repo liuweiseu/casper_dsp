@@ -42,6 +42,130 @@
 // CAL_BITS, N_BITS_ROTATION, MAX_FANOUT, USE_HDL, USE_EMBEDDED and
 // COEFFS_BIT_LIMIT are ignored. FFT_SIZE documents the table's FFT size; the
 // table itself is fixed by INIT_FILE and N_COEFFS.
+//
+// ── HDL-Simulink Mapping ─────────────────────────────────────────────────────
+// Differences between this HDL and its Simulink block (casper_library
+// or Xilinx blockset). Machine-readable: the lines between the
+// @simulink-mapping markers are TOML after removing the leading "// "
+// (checked by tools/check_simulink_mapping.py). Fields: block,
+// deviations, params (numeric HDL value -> mask option text, verbatim),
+// hdl_only, mask_missing, ports (renamed HDL -> Simulink, missing,
+// extra).
+// @simulink-mapping begin
+// block = 'casper_library_ffts_twiddle.slx/twiddle_general'
+// deviations = [
+//   "latency differs from Simulink: the HDL has LATENCY = BRAM_LATENCY+MULT_LATENCY+ADD_LATENCY+CONV_LATENCY on ao/bwo/sync_out, but casper routes ai/bi/sync through coeff_gen's misc path (twiddle_general_init.m:180-183) so in the common cosin case (in-order Coeffs, or coeff_generation off) they gain the cosin latency bram+add+conv+2 (cosin_init.m:917 mux+add+conv with mux_latency 1, :240 bram, :1018 mux+neg with neg_latency 0; coeff_gen_init.m:452), then bus_mult mult+add (fan_latency 0) and bus_convert conv: bram+mult+2*add+2*conv+2 in total, add+conv+2 cycles more than the HDL (derived from the init scripts, not simulated)",
+//   'with a single coefficient Simulink uses two Constants (no ROM, no latency) quantized to coeff_bit_width-2 fractional bits (coeff_gen_init.m:156-157) giving mult+add+conv latency; the HDL always uses the ROM (COEFF_BIT_WIDTH-1 fractional bits) and BRAM_LATENCY (>= 1) more cycles',
+//   "for bit-reversed Coeffs with coeff_generation='on' and log2(length(Coeffs)) > ceil(log2(mult+add+conv+1))+cal_bits, Simulink generates coefficients with feedback_osc (recursive rotation at n_bits_rotation precision, different latency; coeff_gen_init.m:534) - values and timing then differ from the HDL's flat ROM; COEFF_GENERATION/CAL_BITS/N_BITS_ROTATION are ignored",
+//   "coefficient words: the HDL table (gen_twiddle_coeffs.py) rounds half away from zero and saturates each w[k] directly; cosin stores a partial cycle and derives the rest by negation/swap (Negate 'Saturate', cosin_init.m invert_init), so values at |w| = 1 (e.g. -1.0 = -(saturated +1)) may differ by 1 LSB (unverified)",
+//   'the HDL accepts any N_COEFFS (also non-powers of two, arbitrary order); coeff_gen_init.m:282-290 errors unless the FFT size is a power-of-two multiple of length(Coeffs) and Coeffs are in order or bit-reversed',
+//   "the address counter is cleared by sync_in in both models (coeff_gen Counter rst='on'); the HDL requires BRAM_LATENCY >= 1 ($fatal), Simulink accepts 0",
+//   'add_pipe_latency / mult_pipe_latency (bus_mult pipeline_cmult_en) and max_fanout / use_hdl / use_embedded (multiplier implementation) are not modelled',
+//   'test vectors in casper_dsp/test_data/FFTs/Twiddle/twiddle_general/test_data.md come from a Python reference model (not exported from MATLAB), so cycle/bit equivalence with the Simulink block is unverified',
+// ]
+//
+// [params.QUANTIZATION]
+// mask = 'quantization'
+// type = 'popup'
+// [params.QUANTIZATION.values]
+// 0 = 'Truncate'
+// 1 = 'Round  (unbiased: +/- Inf)'
+// 2 = 'Round  (unbiased: Even Values)'
+//
+// [params.OVERFLOW]
+// mask = 'overflow'
+// type = 'popup'
+// hdl_unsupported = [2]
+// note = "the mask option is 'Error' but twiddle_general_init.m:117/324 only recognise 'Flag as error', so selecting it leaves 'of' undefined and the Simulink mask init fails; the HDL treats 2 as wrap"
+// [params.OVERFLOW.values]
+// 0 = 'Wrap'
+// 1 = 'Saturate'
+// 2 = 'Error'
+//
+// [params.ASYNC]
+// mask = 'async'
+// type = 'checkbox'
+// hdl_unsupported = [1]
+// note = 'async=on (en/dvalid ports) is not implemented: elaboration stops with $fatal'
+// [params.ASYNC.values]
+// 0 = 'off'
+// 1 = 'on'
+//
+// [params.FLOATING_POINT]
+// mask = 'floating_point'
+// type = 'checkbox'
+// hdl_unsupported = [1]
+// note = 'floating point is not implemented: elaboration stops with $fatal'
+// [params.FLOATING_POINT.values]
+// 0 = 'off'
+// 1 = 'on'
+//
+// [params.FLOAT_TYPE]
+// mask = 'float_type'
+// type = 'popup'
+// note = 'mask radiobutton; declared only, ignored by the HDL'
+// [params.FLOAT_TYPE.values]
+// 1 = 'single'
+// 2 = 'custom'
+//
+// [params.COEFF_SHARING]
+// mask = 'coeff_sharing'
+// type = 'checkbox'
+// note = 'declared only, ignored by the HDL (flat coefficient ROM)'
+// [params.COEFF_SHARING.values]
+// 0 = 'off'
+// 1 = 'on'
+//
+// [params.COEFF_DECIMATION]
+// mask = 'coeff_decimation'
+// type = 'checkbox'
+// note = 'declared only, ignored by the HDL (flat coefficient ROM)'
+// [params.COEFF_DECIMATION.values]
+// 0 = 'off'
+// 1 = 'on'
+//
+// [params.COEFF_GENERATION]
+// mask = 'coeff_generation'
+// type = 'checkbox'
+// note = 'declared only, ignored by the HDL (flat coefficient ROM)'
+// [params.COEFF_GENERATION.values]
+// 0 = 'off'
+// 1 = 'on'
+//
+// [params.USE_HDL]
+// mask = 'use_hdl'
+// type = 'checkbox'
+// note = 'declared only, ignored by the HDL (flat coefficient ROM)'
+// [params.USE_HDL.values]
+// 0 = 'off'
+// 1 = 'on'
+//
+// [params.USE_EMBEDDED]
+// mask = 'use_embedded'
+// type = 'checkbox'
+// note = "declared only, ignored by the HDL (flat coefficient ROM); HDL default 0 differs from the mask default 'on'"
+// [params.USE_EMBEDDED.values]
+// 0 = 'off'
+// 1 = 'on'
+//
+// [hdl_only]
+// N_COEFFS = "length(Coeffs): replaces the mask's vector Coeffs"
+// INIT_FILE = 'implementation: memory initialization file'
+// PLATFORM = 'implementation: memory / primitive vendor (GENERIC, XILINX, ALTERA)'
+//
+// [mask_missing]
+// Coeffs = 'vector parameter: replaced by N_COEFFS and the coefficient file'
+// add_pipe_latency = 'not implemented'
+// mult_pipe_latency = 'not implemented'
+//
+// [ports]
+// note = 'each Simulink complex port x is split into x_re / x_im'
+// [ports.renamed]
+// [ports.missing]
+// en = 'async=on only (not implemented)'
+// dvalid = 'async=on only (not implemented)'
+// [ports.extra]
+// @simulink-mapping end
 
 module twiddle_general #(
     parameter int    N_INPUTS         = 1,
@@ -136,7 +260,7 @@ module twiddle_general #(
         .dout(coeff_rom)
     );
 
-    pipeline #(.BITWIDTH(2 * CW), .LATENCY(BRAM_LATENCY - 1)) u_coeff_dly (
+    pipeline #(.BITWIDTH(2 * CW), .CSP_LATENCY(BRAM_LATENCY - 1)) u_coeff_dly (
         .clk(clk), .din(coeff_rom), .dout(coeff));
 
     // ── bi × w per lane ─────────────────────────────────────────────────────
@@ -144,9 +268,9 @@ module twiddle_general #(
         logic [INPUT_BIT_WIDTH-1:0] b_re_d, b_im_d;
         logic [N_BITS_PROD-1:0]     p_re, p_im;
 
-        pipeline #(.BITWIDTH(INPUT_BIT_WIDTH), .LATENCY(BRAM_LATENCY)) u_b_re_dly (
+        pipeline #(.BITWIDTH(INPUT_BIT_WIDTH), .CSP_LATENCY(BRAM_LATENCY)) u_b_re_dly (
             .clk(clk), .din(bi_re[n]), .dout(b_re_d));
-        pipeline #(.BITWIDTH(INPUT_BIT_WIDTH), .LATENCY(BRAM_LATENCY)) u_b_im_dly (
+        pipeline #(.BITWIDTH(INPUT_BIT_WIDTH), .CSP_LATENCY(BRAM_LATENCY)) u_b_im_dly (
             .clk(clk), .din(bi_im[n]), .dout(b_im_d));
 
         // exact product (quantization 0 / overflow 0 cannot lose anything
@@ -172,23 +296,23 @@ module twiddle_general #(
         convert #(
             .N_BITS_IN (N_BITS_PROD),         .BIN_PT_IN (BIN_PT_PROD), .TYPE_IN (1),
             .N_BITS_OUT(INPUT_BIT_WIDTH + 1), .BIN_PT_OUT(BIN_PT_IN),   .TYPE_OUT(1),
-            .QUANTIZATION(QUANTIZATION), .OVERFLOW(OVERFLOW), .LATENCY(CONV_LATENCY)
+            .QUANTIZATION(QUANTIZATION), .OVERFLOW(OVERFLOW), .CSP_LATENCY(CONV_LATENCY)
         ) u_conv_re (.clk(clk), .din(p_re), .dout(bwo_re[n]));
 
         convert #(
             .N_BITS_IN (N_BITS_PROD),         .BIN_PT_IN (BIN_PT_PROD), .TYPE_IN (1),
             .N_BITS_OUT(INPUT_BIT_WIDTH + 1), .BIN_PT_OUT(BIN_PT_IN),   .TYPE_OUT(1),
-            .QUANTIZATION(QUANTIZATION), .OVERFLOW(OVERFLOW), .LATENCY(CONV_LATENCY)
+            .QUANTIZATION(QUANTIZATION), .OVERFLOW(OVERFLOW), .CSP_LATENCY(CONV_LATENCY)
         ) u_conv_im (.clk(clk), .din(p_im), .dout(bwo_im[n]));
 
         // ── a leg: delay-matched only ──────────────────────────────────────
-        pipeline #(.BITWIDTH(INPUT_BIT_WIDTH), .LATENCY(LATENCY)) u_a_re_dly (
+        pipeline #(.BITWIDTH(INPUT_BIT_WIDTH), .CSP_LATENCY(LATENCY)) u_a_re_dly (
             .clk(clk), .din(ai_re[n]), .dout(ao_re[n]));
-        pipeline #(.BITWIDTH(INPUT_BIT_WIDTH), .LATENCY(LATENCY)) u_a_im_dly (
+        pipeline #(.BITWIDTH(INPUT_BIT_WIDTH), .CSP_LATENCY(LATENCY)) u_a_im_dly (
             .clk(clk), .din(ai_im[n]), .dout(ao_im[n]));
     end
 
-    pipeline #(.BITWIDTH(1), .LATENCY(LATENCY)) u_sync_dly (
+    pipeline #(.BITWIDTH(1), .CSP_LATENCY(LATENCY)) u_sync_dly (
         .clk(clk), .din(sync_in), .dout(sync_out));
 
 endmodule

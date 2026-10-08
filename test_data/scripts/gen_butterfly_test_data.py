@@ -74,7 +74,7 @@ def P(names, values):
 
 # ── convert_of ──────────────────────────────────────────────────────────────
 
-COF = ["N_BITS_IN", "BIN_PT_IN", "N_BITS_OUT", "BIN_PT_OUT", "QUANTIZATION", "OVERFLOW", "LATENCY"]
+COF = ["BIT_WIDTH_I", "BINARY_POINT_I", "BIT_WIDTH_O", "BINARY_POINT_O", "QUANTIZATION", "OVERFLOW", "CSP_LATENCY"]
 
 CONVERT_OF_TESTS = [
     (P(COF, [16, 8, 8, 4, 0, 0, 0]), "Fix_16_8 → Fix_8_4, truncate + wrap, combinational"),
@@ -90,17 +90,17 @@ def gen_convert_of():
     mdir = TEST_DATA / "Misc" / name
     for n, (p, _) in enumerate(CONVERT_OF_TESTS):
         rng = random.Random(f"{name}-{n}")
-        w = p["N_BITS_IN"]
+        w = p["BIT_WIDTH_I"]
         m = 1 << (w - 1)
         din = [0, 1, (1 << w) - 1, m, m - 1, m + 1]
         din += [rng.randrange(1 << w) for _ in range(cycles - len(din))]
         dout, of = [], []
         for x in din:
-            v = to_value(x, w, p["BIN_PT_IN"], 1)
-            dout.append(quantize(v, p["N_BITS_OUT"], p["BIN_PT_OUT"], 1,
+            v = to_value(x, w, p["BINARY_POINT_I"], 1)
+            dout.append(quantize(v, p["BIT_WIDTH_O"], p["BINARY_POINT_O"], 1,
                                  p["QUANTIZATION"], p["OVERFLOW"]))
-            of.append(of_flag(v, w, p["BIN_PT_IN"], p["N_BITS_OUT"], p["BIN_PT_OUT"]))
-        lat = p["LATENCY"]
+            of.append(of_flag(v, w, p["BINARY_POINT_I"], p["BIT_WIDTH_O"], p["BINARY_POINT_O"]))
+        lat = p["CSP_LATENCY"]
         dout, of = delay(dout, lat, 0), delay(of, lat, 0)
         if lat == 0:            # first clock edge is at t = 0, before din arrives
             dout[0] = of[0] = 0

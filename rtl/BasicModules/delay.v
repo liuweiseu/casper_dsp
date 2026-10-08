@@ -12,6 +12,45 @@
 // (reg_retiming only selects the HDL style). Ports whose option is off are
 // ignored; rst and en have default values, so instances that do not use
 // them may leave them unconnected.
+//
+// ── HDL-Simulink Mapping ─────────────────────────────────────────────────────
+// Differences between this HDL and its Simulink block (casper_library
+// or Xilinx blockset). Machine-readable: the lines between the
+// @simulink-mapping markers are TOML after removing the leading "// "
+// (checked by tools/check_simulink_mapping.py). Fields: block,
+// deviations, params (numeric HDL value -> mask option text, verbatim),
+// hdl_only, mask_missing, ports (renamed HDL -> Simulink, missing,
+// extra).
+// @simulink-mapping begin
+// block = 'xbsIndex_r4.slx/Delay'
+// deviations = []
+//
+// [params.USE_RST]
+// mask = 'rst'
+// type = 'checkbox'
+// [params.USE_RST.values]
+// 0 = 'off'
+// 1 = 'on'
+//
+// [params.USE_ENABLE]
+// mask = 'en'
+// type = 'checkbox'
+// [params.USE_ENABLE.values]
+// 0 = 'off'
+// 1 = 'on'
+//
+// [hdl_only]
+// BITWIDTH = 'inherited width: Simulink takes it from the input signal'
+//
+// [mask_missing]
+// reg_retiming = 'HDL style only (behavioural vs SRL), no behavioural effect'
+//
+// [ports]
+// note = 'The Sysgen block icon carries no port labels, so ports map by position (no rename recorded); xlDelay.sgm signature delay(d, en, rst) -> q'
+// [ports.renamed]
+// [ports.missing]
+// [ports.extra]
+// @simulink-mapping end
 
 module delay#(
     parameter LATENCY = 1,

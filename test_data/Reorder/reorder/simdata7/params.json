@@ -1,6 +1,6 @@
 {
-  "N_STREAMS": 2,
-  "DATA_WIDTH": 8,
+  "N_INPUTS": 2,
+  "N_BITS": 8,
   "MAP_LEN": 2,
   "ORDER": 1,
   "MAP_LATENCY": 2,

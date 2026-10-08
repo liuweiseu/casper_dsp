@@ -15,6 +15,30 @@
 //
 // The counter state is a BasicModules/register; casper's use_enable and
 // prog_delay variants are not implemented.
+//
+// ── HDL-Simulink Mapping ─────────────────────────────────────────────────────
+// Differences between this HDL and its Simulink block (casper_library
+// or Xilinx blockset). Machine-readable: the lines between the
+// @simulink-mapping markers are TOML after removing the leading "// "
+// (checked by tools/check_simulink_mapping.py). Fields: block,
+// deviations, params (numeric HDL value -> mask option text, verbatim),
+// hdl_only, mask_missing, ports (renamed HDL -> Simulink, missing,
+// extra).
+// @simulink-mapping begin
+// block = 'casper_library_delays.slx/sync_delay'
+// deviations = []
+//
+// [hdl_only]
+//
+// [mask_missing]
+//
+// [ports]
+// [ports.renamed]
+// din = 'In'
+// dout = 'Out'
+// [ports.missing]
+// [ports.extra]
+// @simulink-mapping end
 
 module sync_delay #(
     parameter int DELAY_LEN = 16

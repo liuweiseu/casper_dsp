@@ -22,6 +22,45 @@
 // (casper_library: "must match twiddle_general with single coefficient");
 // BRAM_LATENCY is accepted but, as in casper_library, not used.
 // ASYNC is declared for traceability; must be 0.
+//
+// ── HDL-Simulink Mapping ─────────────────────────────────────────────────────
+// Differences between this HDL and its Simulink block (casper_library
+// or Xilinx blockset). Machine-readable: the lines between the
+// @simulink-mapping markers are TOML after removing the leading "// "
+// (checked by tools/check_simulink_mapping.py). Fields: block,
+// deviations, params (numeric HDL value -> mask option text, verbatim),
+// hdl_only, mask_missing, ports (renamed HDL -> Simulink, missing,
+// extra).
+// @simulink-mapping begin
+// block = 'casper_library_ffts_twiddle.slx/twiddle_coeff_1'
+// deviations = [
+//   "twiddle_coeff_1_init.m:74-78 configures the bus_negate with parameter 'latency', which bus_negate does not have (its mask only has csp_latency, casper_library_bus.slx system_root.xml); add_block/set_param should therefore fail and the Simulink block may not build for n_inputs > 0. If it did build, the negated leg would keep bus_negate's own csp_latency instead of 1+mult+add+conv. The HDL assumes the intended behaviour: every leg delayed by 1+MULT_LATENCY+ADD_LATENCY+CONV_LATENCY (unverified against Simulink)",
+//   "the negation saturates as in casper (bus_negate overflow '1'): bwo_im = -bi_re maps the most negative input to the largest positive value instead of wrapping",
+//   'BRAM_LATENCY is accepted but unused in both models',
+//   'test vectors in casper_dsp/test_data/FFTs/Twiddle/twiddle_coeff_1/test_data.md come from a Python reference model (not exported from MATLAB), so cycle/bit equivalence with the Simulink block is unverified',
+// ]
+//
+// [params.ASYNC]
+// mask = 'async'
+// type = 'checkbox'
+// hdl_unsupported = [1]
+// note = 'async=on (en/dvalid ports) is not implemented: elaboration stops with $fatal'
+// [params.ASYNC.values]
+// 0 = 'off'
+// 1 = 'on'
+//
+// [hdl_only]
+//
+// [mask_missing]
+//
+// [ports]
+// note = 'each Simulink complex port x is split into x_re / x_im'
+// [ports.renamed]
+// [ports.missing]
+// en = 'async=on only (not implemented)'
+// dvalid = 'async=on only (not implemented)'
+// [ports.extra]
+// @simulink-mapping end
 
 module twiddle_coeff_1 #(
     parameter int N_INPUTS        = 1,
@@ -52,24 +91,24 @@ module twiddle_coeff_1 #(
 
     for (genvar n = 0; n < N_INPUTS; n++) begin : GEN_LANE
         // a leg: delay-matched only
-        pipeline #(.BITWIDTH(INPUT_BIT_WIDTH), .LATENCY(LATENCY)) u_a_re (
+        pipeline #(.BITWIDTH(INPUT_BIT_WIDTH), .CSP_LATENCY(LATENCY)) u_a_re (
             .clk(clk), .din(ai_re[n]), .dout(ao_re[n]));
-        pipeline #(.BITWIDTH(INPUT_BIT_WIDTH), .LATENCY(LATENCY)) u_a_im (
+        pipeline #(.BITWIDTH(INPUT_BIT_WIDTH), .CSP_LATENCY(LATENCY)) u_a_im (
             .clk(clk), .din(ai_im[n]), .dout(ao_im[n]));
 
         // imaginary lane, delayed, becomes the real part of bwo
-        pipeline #(.BITWIDTH(INPUT_BIT_WIDTH), .LATENCY(LATENCY)) u_b_im (
+        pipeline #(.BITWIDTH(INPUT_BIT_WIDTH), .CSP_LATENCY(LATENCY)) u_b_im (
             .clk(clk), .din(bi_im[n]), .dout(bwo_re[n]));
 
         // negated (saturating) real lane becomes the imaginary part of bwo
         negate #(
             .N_BITS_IN (INPUT_BIT_WIDTH), .BIN_PT_IN (BIN_PT_IN), .TYPE_IN (1),
             .N_BITS_OUT(INPUT_BIT_WIDTH), .BIN_PT_OUT(BIN_PT_IN), .TYPE_OUT(1),
-            .QUANTIZATION(0), .OVERFLOW(1), .LATENCY(LATENCY)
+            .QUANTIZATION(0), .OVERFLOW(1), .CSP_LATENCY(LATENCY)
         ) u_neg_re (.clk(clk), .din(bi_re[n]), .dout(bwo_im[n]));
     end
 
-    pipeline #(.BITWIDTH(1), .LATENCY(LATENCY)) u_sync (
+    pipeline #(.BITWIDTH(1), .CSP_LATENCY(LATENCY)) u_sync (
         .clk(clk), .din(sync_in), .dout(sync_out));
 
 endmodule

@@ -1,9 +1,9 @@
 {
-  "N_BITS_IN": 12,
-  "BIN_PT_IN": 10,
-  "N_BITS_OUT": 12,
-  "BIN_PT_OUT": 10,
+  "BIT_WIDTH_I": 12,
+  "BINARY_POINT_I": 10,
+  "BIT_WIDTH_O": 12,
+  "BINARY_POINT_O": 10,
   "QUANTIZATION": 0,
   "OVERFLOW": 0,
-  "LATENCY": 2
+  "CSP_LATENCY": 2
 }

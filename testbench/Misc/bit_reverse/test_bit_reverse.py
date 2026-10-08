@@ -17,18 +17,18 @@ async def module_test(dut):
     the expected bit-reversed value in sim_dout.csv.
 
     Parameter sets:
-        simdata0 : NBITS=8,  all 256 input values (0 to 255)
-        simdata1 : NBITS=16, 300 random input values
+        simdata0 : N_BITS=8,  all 256 input values (0 to 255)
+        simdata1 : N_BITS=16, 300 random input values
     """
-    nbits = int(dut.NBITS.value)
-    cocotb.log.info(f"Testing with NBITS={nbits}")
+    nbits = int(dut.N_BITS.value)
+    cocotb.log.info(f"Testing with N_BITS={nbits}")
 
     if nbits == 8:
         datadir = testdatadir / "simdata0"
     elif nbits == 16:
         datadir = testdatadir / "simdata1"
     else:
-        cocotb.log.warning(f"No test data for NBITS={nbits}. Skipping.")
+        cocotb.log.warning(f"No test data for N_BITS={nbits}. Skipping.")
         return
 
     sim_in          = np.loadtxt(datadir / "sim_din.csv",  dtype=int).tolist()

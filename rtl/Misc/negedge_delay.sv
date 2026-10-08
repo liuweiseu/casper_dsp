@@ -16,6 +16,30 @@
 //
 // PULSE_LEN is the only mask parameter (stored default 5). The mask errors
 // out for PULSE_LEN < 3 ("Minimum length is 3."); here that is a $fatal.
+//
+// ── HDL-Simulink Mapping ─────────────────────────────────────────────────────
+// Differences between this HDL and its Simulink block (casper_library
+// or Xilinx blockset). Machine-readable: the lines between the
+// @simulink-mapping markers are TOML after removing the leading "// "
+// (checked by tools/check_simulink_mapping.py). Fields: block,
+// deviations, params (numeric HDL value -> mask option text, verbatim),
+// hdl_only, mask_missing, ports (renamed HDL -> Simulink, missing,
+// extra).
+// @simulink-mapping begin
+// block = 'casper_library_misc.slx/negedge_delay'
+// deviations = []
+//
+// [hdl_only]
+//
+// [mask_missing]
+//
+// [ports]
+// [ports.renamed]
+// din = 'in'
+// dout = 'out'
+// [ports.missing]
+// [ports.extra]
+// @simulink-mapping end
 
 module negedge_delay #(
     parameter int PULSE_LEN = 5
@@ -35,7 +59,7 @@ module negedge_delay #(
     logic          ne, din_d, run;
     logic [NB-1:0] cnt, run_max;
 
-    edge_detect #(.EDGE_TYPE(1), .OUTPUT_POL(0)) u_negedge (
+    edge_detect #(.EDGE(1), .POLARITY(0)) u_negedge (
         .clk(clk), .din(din), .dout(ne));
 
     counter #(

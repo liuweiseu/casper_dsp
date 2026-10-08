@@ -15,6 +15,45 @@
 //
 // All stages power up to 0. With USE_RST = 0 the chain has no reset, which
 // lets synthesis map it to SRL shift-register primitives.
+//
+// ── HDL-Simulink Mapping ─────────────────────────────────────────────────────
+// Differences between this HDL and its Simulink block (casper_library
+// or Xilinx blockset). Machine-readable: the lines between the
+// @simulink-mapping markers are TOML after removing the leading "// "
+// (checked by tools/check_simulink_mapping.py). Fields: block,
+// deviations, params (numeric HDL value -> mask option text, verbatim),
+// hdl_only, mask_missing, ports (renamed HDL -> Simulink, missing,
+// extra).
+// @simulink-mapping begin
+// block = 'casper_library_delays.slx/delay_srl'
+// deviations = [
+//   'HDL defaults are USE_ENABLE = 1 and USE_RST = 1, while the Simulink block has no reset and async defaults to off; set USE_RST = 0 and USE_ENABLE = 0 (or 1 for async = on) to reproduce Simulink.',
+//   'The mask-stored default DelayLen = -1 leaves the Simulink block empty (delay_srl_init.m: DelayLen < 0 -> clean_blocks); the HDL does not check DELAY_LEN < 0.',
+// ]
+//
+// [params.USE_ENABLE]
+// mask = 'async'
+// type = 'checkbox'
+// note = "async = on adds the en input (delay_srl_init.m: Delay blocks with 'en' = async)"
+// [params.USE_ENABLE.values]
+// 0 = 'off'
+// 1 = 'on'
+//
+// [hdl_only]
+// BITWIDTH = 'inherited width: Simulink takes it from the input signal'
+// USE_RST = 'synchronous reset added by the HDL (rst port)'
+//
+// [mask_missing]
+//
+// [ports]
+// order = 'Simulink: in, en (en only with async = on); HDL: rst, en, din'
+// [ports.renamed]
+// din = 'in'
+// dout = 'out'
+// [ports.missing]
+// [ports.extra]
+// rst = 'synchronous reset (USE_RST)'
+// @simulink-mapping end
 
 module delay_srl #(
     parameter int BITWIDTH   = 8,

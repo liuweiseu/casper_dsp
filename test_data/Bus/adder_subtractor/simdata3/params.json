@@ -11,5 +11,5 @@
   "OPMODE": 1,
   "QUANTIZATION": 0,
   "OVERFLOW": 0,
-  "LATENCY": 2
+  "CSP_LATENCY": 2
 }

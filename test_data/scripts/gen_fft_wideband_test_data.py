@@ -256,7 +256,7 @@ def gen_fft_direct():
 
 # ── fft_biplex_real_4x ──────────────────────────────────────────────────────
 
-FB4 = ["N_BIPLEX_INPUTS", "FFT_SIZE", "INPUT_BIT_WIDTH", "BIN_PT_IN", "COEFF_BIT_WIDTH",
+FB4 = ["N_INPUTS", "FFT_SIZE", "INPUT_BIT_WIDTH", "BIN_PT_IN", "COEFF_BIT_WIDTH",
        "ADD_LATENCY", "MULT_LATENCY", "BRAM_LATENCY", "CONV_LATENCY", "QUANTIZATION", "OVERFLOW",
        "DELAYS_BIT_LIMIT", "COEFFS_BIT_LIMIT", "MAX_FANOUT", "BITGROWTH", "MAX_BITS",
        "HARDCODE_SHIFTS", "SHIFT_SCHEDULE"]
@@ -264,7 +264,7 @@ FB4 = ["N_BIPLEX_INPUTS", "FFT_SIZE", "INPUT_BIT_WIDTH", "BIN_PT_IN", "COEFF_BIT
 
 def biplex4x_derived(p):
     """bram_delays, bram_map and output width (fft_biplex_real_4x_init.m)."""
-    f, iw, nb, bl = p["FFT_SIZE"], p["INPUT_BIT_WIDTH"], p["N_BIPLEX_INPUTS"], p["BRAM_LATENCY"]
+    f, iw, nb, bl = p["FFT_SIZE"], p["INPUT_BIT_WIDTH"], p["N_INPUTS"], p["BRAM_LATENCY"]
     half = 2 ** (f - 1)
     bram_delays = int(half * 2 * iw * nb >= 2 ** p["DELAYS_BIT_LIMIT"] and half >= bl + 2)
     bram_map = int(half * (f - 1) >= 2 ** p["COEFFS_BIT_LIMIT"] and half >= bl)
@@ -273,8 +273,8 @@ def biplex4x_derived(p):
 
 
 def m_fft_biplex_real_4x(p, st):
-    """st: pol_in rows (4·N_BIPLEX_INPUTS real words), sync, shift (int)."""
-    nb = p["N_BIPLEX_INPUTS"]
+    """st: pol_in rows (4·N_INPUTS real words), sync, shift (int)."""
+    nb = p["N_INPUTS"]
     bram_delays, bram_map, w_out = biplex4x_derived(p)
     bc = P(BC, [nb, p["FFT_SIZE"], p["INPUT_BIT_WIDTH"], p["BIN_PT_IN"], p["COEFF_BIT_WIDTH"],
                 p["ADD_LATENCY"], p["MULT_LATENCY"], p["BRAM_LATENCY"], p["CONV_LATENCY"],
@@ -329,7 +329,7 @@ def check_biplex4x_is_fft(p, st, out):
         return None
     f, iw, bp = p["FFT_SIZE"], p["INPUT_BIT_WIDTH"], p["BIN_PT_IN"]
     w_out, npts, cycles = biplex4x_derived(p)[2], 1 << p["FFT_SIZE"], len(st["sync"])
-    ni = 4 * p["N_BIPLEX_INPUTS"]
+    ni = 4 * p["N_INPUTS"]
     starts_in = [t + 1 for t, s in enumerate(st["sync"]) if s and t + npts < cycles]
     starts_out = [t + 1 for t, s in enumerate(out["sync_out"]) if s and t + npts < cycles]
 
@@ -360,7 +360,7 @@ def gen_fft_biplex_real_4x():
     name, mdir, sets = "fft_biplex_real_4x", TEST_DATA / "fft_biplex_real_4x", []
     for n, (p, desc) in enumerate(FB4_TESTS):
         rng = random.Random(f"{name}-{n}")
-        f, iw, nb = p["FFT_SIZE"], p["INPUT_BIT_WIDTH"], p["N_BIPLEX_INPUTS"]
+        f, iw, nb = p["FFT_SIZE"], p["INPUT_BIT_WIDTH"], p["N_INPUTS"]
         npts = 1 << f
         cycles = 3 + 7 * npts + 128
         full_scale = n in FB4_FULL_SCALE
@@ -388,7 +388,7 @@ def gen_fft_biplex_real_4x():
                  else f"{chk[0]} ({chk[1]:.2f} LSB)")
         sets.append((full, desc, cycles, bram_delays, bram_map, check))
     md(mdir, name, FB4, sets, ["BRAM delays", "BRAM map", "FFT frames checked"],
-       "`fft_biplex_real_4x` computes the FFTs of 4·N_BIPLEX_INPUTS real "
+       "`fft_biplex_real_4x` computes the FFTs of 4·N_INPUTS real "
        "signals with one biplex_core and a bi_real_unscr_4x. The inputs are "
        "random real signals at 1/4 of full scale and `shift` is all ones, "
        "except in the full-scale set (random shift, so the overflow flags are "

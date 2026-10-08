@@ -17,6 +17,41 @@
 //                  2 = round half to even
 //   OVERFLOW     : 0 = wrap, 1 = saturate (2 = flag as error -> wrap)
 //   LATENCY      : 0 = combinational, N > 0 = N register stages
+//
+// ── HDL-Simulink Mapping ─────────────────────────────────────────────────────
+// Differences between this HDL and its Simulink block (casper_library
+// or Xilinx blockset). Machine-readable: the lines between the
+// @simulink-mapping markers are TOML after removing the leading "// "
+// (checked by tools/check_simulink_mapping.py). Fields: block,
+// deviations, params (numeric HDL value -> mask option text, verbatim),
+// hdl_only, mask_missing, ports (renamed HDL -> Simulink, missing,
+// extra).
+// @simulink-mapping begin
+// block = 'casper_library_bus.slx/bus_scale'
+// deviations = [
+//   'bus_scale is a pure reinterpretation with zero latency. xlScale.sgm only moves the binary point (bin_pt_in - scale_factor), and bus_create concatenates the unchanged bits (bus_scale_init.m:126,140). The HDL adds a requantizing convert plus LATENCY registers, so it is bit- and cycle-exact only with N_BITS_OUT=N_BITS_IN, BIN_PT_OUT=BIN_PT_IN-SCALE_FACTOR, TYPE_OUT=TYPE_IN and LATENCY=0. The HDL default LATENCY=1 adds one cycle.',
+//   'misc: bus_scale passes misci straight to misco with no delay (bus_scale_init.m:160-165); not implemented in the HDL.',
+// ]
+//
+// [hdl_only]
+// N_BITS_OUT = 'the HDL adds a requantizing convert after the scale'
+// BIN_PT_OUT = 'the HDL adds a requantizing convert after the scale'
+// TYPE_OUT = 'the HDL adds a requantizing convert after the scale'
+// QUANTIZATION = 'the HDL adds a requantizing convert after the scale'
+// OVERFLOW = 'the HDL adds a requantizing convert after the scale'
+// LATENCY = 'latency of the HDL requantizer (bus_scale has none)'
+//
+// [mask_missing]
+// cmplx = 'single real lane: complex lanes are not modelled'
+// misc = 'misc pass-through (misci/misco ports) is not implemented'
+//
+// [ports]
+// [ports.renamed]
+// [ports.missing]
+// misci = 'misc=on only (not implemented)'
+// misco = 'misc=on only (not implemented)'
+// [ports.extra]
+// @simulink-mapping end
 
 module scale #(
     parameter int N_BITS_IN    = 16,
@@ -38,7 +73,7 @@ module scale #(
     convert #(
         .N_BITS_IN (N_BITS_IN),  .BIN_PT_IN (BIN_PT_IN - SCALE_FACTOR), .TYPE_IN (TYPE_IN),
         .N_BITS_OUT(N_BITS_OUT), .BIN_PT_OUT(BIN_PT_OUT),               .TYPE_OUT(TYPE_OUT),
-        .QUANTIZATION(QUANTIZATION), .OVERFLOW(OVERFLOW), .LATENCY(LATENCY)
+        .QUANTIZATION(QUANTIZATION), .OVERFLOW(OVERFLOW), .CSP_LATENCY(LATENCY)
     ) u_convert (
         .clk (clk),
         .din (din),

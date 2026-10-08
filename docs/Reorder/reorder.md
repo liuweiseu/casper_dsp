@@ -5,7 +5,7 @@
 Permutes every frame of `MAP_LEN` samples by a fixed map: output step `k` of
 a frame is input sample `map[k]` of the previous frame. It corresponds to
 casper_library's `reorder` with `double_buffer = 0` and `en` always 1, as
-casper's FFT blocks use it. All `N_STREAMS` streams share the addresses and
+casper's FFT blocks use it. All `N_INPUTS` streams share the addresses and
 are stored side by side in one read-before-write
 [`single_port_ram`](../Delays/single_port_ram.md).
 
@@ -41,7 +41,7 @@ python3 rtl/Reorder/scripts/gen_reorder_map.py --unscrambler --fft-size 8 --log2
 
 ### Timing
 
-With `REP = log2(N_STREAMS)` (casper's fan-out tree for the address) and
+With `REP = log2(N_INPUTS)` (casper's fan-out tree for the address) and
 
 ```
 PRE = MAP_LATENCY + 1    (ORDER = 2)
@@ -73,8 +73,8 @@ ignored.
 
 | Parameter | Default | Description |
 |-----------|---------|-------------|
-| `N_STREAMS` | 1 | Number of parallel streams reordered with the same map |
-| `DATA_WIDTH` | 8 | Bits per stream sample |
+| `N_INPUTS` | 1 | Number of parallel streams reordered with the same map |
+| `N_BITS` | 8 | Bits per stream sample |
 | `MAP_LEN` | 8 | Frame length (power of two ≥ 2) |
 | `ORDER` | 4 | Order of the map (from `gen_reorder_map.py`) |
 | `MAP_INIT_FILE` | `""` | Map table, one hex word per line |
@@ -92,7 +92,7 @@ ignored.
 |------|-----------|-------|-------------|
 | `clk` | input | 1 | Clock |
 | `sync` | input | 1 | Frame sync; clears the frame counter |
-| `din` | input | `DATA_WIDTH` × `N_STREAMS` | Input streams |
+| `din` | input | `N_BITS` × `N_INPUTS` | Input streams |
 | `sync_out` | output | 1 | Marks the first sample of the first reordered frame |
 | `valid` | output | 1 | High once the pipeline has filled |
-| `dout` | output | `DATA_WIDTH` × `N_STREAMS` | Reordered streams |
+| `dout` | output | `N_BITS` × `N_INPUTS` | Reordered streams |

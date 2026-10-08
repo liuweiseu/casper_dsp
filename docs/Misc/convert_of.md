@@ -8,7 +8,7 @@ A fixed-point convert with an overflow flag, corresponding to casper_library's
 the output format. The flag follows the rule in `convert_of_init.m`:
 
 ```
-wb_lost = (N_BITS_IN − BIN_PT_IN) − (N_BITS_OUT − BIN_PT_OUT)     integer bits dropped
+wb_lost = (BIT_WIDTH_I − BINARY_POINT_I) − (BIT_WIDTH_O − BINARY_POINT_O)     integer bits dropped
 of      = top (wb_lost + 1) bits of din are not all equal
 ```
 
@@ -18,7 +18,7 @@ of      = top (wb_lost + 1) bits of din are not all equal
   example, the largest value rounding up), `of` is not set. This matches
   casper_library.
 - **`wb_lost ≤ 0`** means overflow is impossible, so `of = 0`.
-- **Latency:** `dout` and `of` both have `LATENCY` pipeline stages, which
+- **Latency:** `dout` and `of` both have `CSP_LATENCY` pipeline stages, which
   power up to 0.
 
 [`butterfly_direct`](../FFTs/butterfly_direct.md) uses one per output
@@ -28,19 +28,19 @@ component for its overflow flag.
 
 | Parameter      | Default | Description |
 |----------------|---------|-------------|
-| `N_BITS_IN`    | 16      | Input width (signed) |
-| `BIN_PT_IN`    | 8       | Input binary point |
-| `N_BITS_OUT`   | 8       | Output width (signed) |
-| `BIN_PT_OUT`   | 4       | Output binary point |
+| `BIT_WIDTH_I`    | 16      | Input width (signed) |
+| `BINARY_POINT_I`    | 8       | Input binary point |
+| `BIT_WIDTH_O`   | 8       | Output width (signed) |
+| `BINARY_POINT_O`   | 4       | Output binary point |
 | `QUANTIZATION` | 0       | `0`=truncate, `1`=round half away from zero, `2`=round half to even |
 | `OVERFLOW`     | 0       | `0`=wrap, `1`=saturate |
-| `LATENCY`      | 0       | Pipeline stages on `dout` and `of`; `0` = combinational |
+| `CSP_LATENCY`      | 0       | Pipeline stages on `dout` and `of`; `0` = combinational |
 
 ## Ports
 
 | Port   | Direction | Width        | Description |
 |--------|-----------|--------------|-------------|
-| `clk`  | input     | 1            | Clock (unused when `LATENCY = 0`) |
-| `din`  | input     | `N_BITS_IN`  | Input word |
-| `dout` | output    | `N_BITS_OUT` | Converted word |
+| `clk`  | input     | 1            | Clock (unused when `CSP_LATENCY = 0`) |
+| `din`  | input     | `BIT_WIDTH_I`  | Input word |
+| `dout` | output    | `BIT_WIDTH_O` | Converted word |
 | `of`   | output    | 1            | Overflow flag, aligned with `dout` |

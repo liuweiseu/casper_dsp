@@ -56,6 +56,51 @@
 // Checks: N_ANTS < 4 (the mask silently uses 4), N_ANTS = 5 (mask error),
 // odd N_ANTS (the descramble needs even), ACC_LEN <= floor(N_ANTS/2+1)
 // (mask error) are $fatal.
+//
+// ── HDL-Simulink Mapping ─────────────────────────────────────────────────────
+// Differences between this HDL and its Simulink block (casper_library
+// or Xilinx blockset). Machine-readable: the lines between the
+// @simulink-mapping markers are TOML after removing the leading "// "
+// (checked by tools/check_simulink_mapping.py). Fields: block,
+// deviations, params (numeric HDL value -> mask option text, verbatim),
+// hdl_only, mask_missing, ports (renamed HDL -> Simulink, missing,
+// extra).
+// @simulink-mapping begin
+// block = 'casper_library_correlator.slx/xeng'
+// deviations = [
+//   'Default N_ANTS = 8 (xeng_init.m default), not the stored mask value 0. With n_ants = 0 xeng_init.m:39-45 clears the block, which then has no ports at all.',
+//   "N_ANTS < 4 is a $fatal, where xeng_init.m:47-52 silently uses 4 and writes it back to the mask. Odd N_ANTS >= 7 is a $fatal, where Simulink only warns ('YMMV', xeng_init.m:69-72) and builds a descramble with a non-integer pivot. N_ANTS = 5 and ACC_LEN <= floor(N_ANTS/2+1) are errors in both.",
+//   "USE_DED_MULT is declared only, which matches Simulink: xeng_init.m:24 reads 'mult_type', which the mask never passes, so every tap gets mult_type 1 (embedded multiplier core). It only selects resources anyway.",
+//   'MCNT_BITS (default 32) makes explicit the width that Simulink takes from mcnt_in. mcnt passes through sample_and_hold registers and one Delay, so its type and signedness do not matter.',
+//   "ACC_LEN that is not a power of 2: the taps' 8*N_BITS_OUT-bit words go to a descramble that slices fields of W = N_BITS_OUT-1 bits from the LSB. The write_ctrl/x_cast Slices are all 'LSB of Input' (system_478.xml, system_588.xml), so the output fields mix bits of neighbouring parts. The HDL reproduces this and issues a $warning. This rests on the diagram; no Simulink run confirmed it.",
+//   'Reproduced library property, not confirmed by a Simulink run: with N_ANTS = 8 and ACC_LEN*N_ANTS/(NV*DEMUX_FACTOR) = 1.6 (ship_el_del = 0), the readout is fast enough to read the last conjugated element (2,7) before the next window rewrites it. That element then comes from the previous frame (4 of 76 legal configurations; the default is unaffected).',
+//   "Power-on, matching the diagram: if window_valid is 1 from cycle 0, window_delay and write_ctrl see a rising edge at cycle 0, because the edge_detect Delay starts at 0. The descramble's spontaneous power-on read pass also appears on acc/valid. In the HDL that pass reads zeros; in Simulink it reads the descramble RAM initVector values (see xeng_descramble).",
+// ]
+//
+// [params.DEMUX_FACTOR]
+// mask = 'demux_factor'
+// type = 'popup'
+// note = 'the option text is the value itself'
+// [params.DEMUX_FACTOR.values]
+// 1 = '1'
+// 2 = '2'
+// 4 = '4'
+// 8 = '8'
+//
+// [hdl_only]
+// MCNT_BITS = 'inherited width: Simulink takes it from the input signal (mcnt_in)'
+// PLATFORM = 'implementation: memory / primitive vendor (GENERIC, XILINX, ALTERA)'
+// N_BITS_OUT = 'derived from other parameters (do not override)'
+// W = 'derived from other parameters (do not override)'
+// OW = 'derived from other parameters (do not override)'
+//
+// [mask_missing]
+//
+// [ports]
+// [ports.renamed]
+// [ports.missing]
+// [ports.extra]
+// @simulink-mapping end
 
 module xeng #(
     parameter int    N_ANTS         = 8,

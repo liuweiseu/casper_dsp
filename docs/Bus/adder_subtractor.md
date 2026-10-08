@@ -8,13 +8,13 @@ block).
 
 ```
 a ──► convert (align) ──┐
-                        ├─► a ± b (full precision) ──► convert (QUANTIZATION, OVERFLOW, LATENCY) ──► dout
+                        ├─► a ± b (full precision) ──► convert (QUANTIZATION, OVERFLOW, CSP_LATENCY) ──► dout
 b ──► convert (align) ──┘
 ```
 
 Both operands are aligned to a common signed full-precision format, so the
 sum or difference is exact. A final `convert` then requantizes it to the output
-format and adds the `LATENCY` pipeline.
+format and adds the `CSP_LATENCY` pipeline.
 
 ## Parameters
 
@@ -32,16 +32,16 @@ format and adds the `LATENCY` pipeline.
 | `OPMODE`       | 0       | `0`=addition (`a + b`), `1`=subtraction (`a − b`) |
 | `QUANTIZATION` | 0       | `0`=truncate, `1`=round half away from zero, `2`=round half to even |
 | `OVERFLOW`     | 0       | `0`=wrap, `1`=saturate, `2`=flag as error (treated as wrap) |
-| `LATENCY`      | 1       | Pipeline stages on the output; `0` = combinational |
+| `CSP_LATENCY`      | 1       | Pipeline stages on the output; `0` = combinational |
 
 ## Ports
 
 | Port   | Direction | Width        | Description |
 |--------|-----------|--------------|-------------|
-| `clk`  | input     | 1            | Clock (unused when `LATENCY = 0`) |
+| `clk`  | input     | 1            | Clock (unused when `CSP_LATENCY = 0`) |
 | `a`    | input     | `N_BITS_A`   | First operand |
 | `b`    | input     | `N_BITS_B`   | Second operand |
-| `dout` | output    | `N_BITS_OUT` | `convert(a ± b)`, delayed by `LATENCY` cycles |
+| `dout` | output    | `N_BITS_OUT` | `convert(a ± b)`, delayed by `CSP_LATENCY` cycles |
 
 ## Functional Description
 

@@ -20,6 +20,33 @@
 //
 // DEL (ship_el_del), CNT (ship_el_cnt), DEL_BITS and RD_BITS are the
 // xeng_descramble mask initialization values.
+//
+// ── HDL-Simulink Mapping ─────────────────────────────────────────────────────
+// Differences between this HDL and its Simulink block (casper_library
+// or Xilinx blockset). Machine-readable: the lines between the
+// @simulink-mapping markers are TOML after removing the leading "// "
+// (checked by tools/check_simulink_mapping.py). Fields: block,
+// deviations, params (numeric HDL value -> mask option text, verbatim),
+// hdl_only, mask_missing, ports (renamed HDL -> Simulink, missing,
+// extra).
+// @simulink-mapping begin
+// block = 'casper_library_correlator.slx/xeng_descramble/read_ctrl'
+// deviations = []
+//
+// [hdl_only]
+// DEL = 'xeng_descramble mask-init ship_el_del'
+// CNT = 'xeng_descramble mask-init ship_el_cnt'
+// DEL_BITS = 'xeng_descramble mask-init ship_el_del_bits'
+// RD_BITS = 'ceil(log2(ship_el_cnt+1)) of xeng_descramble'
+//
+// [mask_missing]
+//
+// [ports]
+// note = 'unmasked subsystem (system_456.xml); identical copy in xeng_descramble_4ant (system_973.xml)'
+// [ports.renamed]
+// [ports.missing]
+// [ports.extra]
+// @simulink-mapping end
 
 module read_ctrl #(
     parameter int DEL      = 2,

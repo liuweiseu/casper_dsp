@@ -14,6 +14,31 @@
 // value). BITWIDTH is not a mask parameter: in Simulink the width of in/out
 // is inherited from the input, here it must be given. PERIOD must be >= 2
 // (PERIOD = 1 would give a 0-bit counter, which Sysgen rejects).
+//
+// ── HDL-Simulink Mapping ─────────────────────────────────────────────────────
+// Differences between this HDL and its Simulink block (casper_library
+// or Xilinx blockset). Machine-readable: the lines between the
+// @simulink-mapping markers are TOML after removing the leading "// "
+// (checked by tools/check_simulink_mapping.py). Fields: block,
+// deviations, params (numeric HDL value -> mask option text, verbatim),
+// hdl_only, mask_missing, ports (renamed HDL -> Simulink, missing,
+// extra).
+// @simulink-mapping begin
+// block = 'casper_library_misc.slx/sample_and_hold'
+// deviations = []
+//
+// [hdl_only]
+// BITWIDTH = 'inherited width: Simulink takes it from the input signal'
+//
+// [mask_missing]
+//
+// [ports]
+// [ports.renamed]
+// din = 'in'
+// dout = 'out'
+// [ports.missing]
+// [ports.extra]
+// @simulink-mapping end
 
 module sample_and_hold #(
     parameter int PERIOD   = 1024,

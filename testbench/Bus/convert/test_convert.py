@@ -10,7 +10,7 @@ _here = Path(__file__).parent
 testdatadir = (_here / "../../../test_data" / _here.parent.name / _here.name).resolve()
 
 PARAMS = ["N_BITS_IN", "BIN_PT_IN", "TYPE_IN", "N_BITS_OUT", "BIN_PT_OUT",
-          "TYPE_OUT", "QUANTIZATION", "OVERFLOW", "LATENCY"]
+          "TYPE_OUT", "QUANTIZATION", "OVERFLOW", "CSP_LATENCY"]
 
 
 def read_param(dut, name):
@@ -33,7 +33,7 @@ async def module_test(dut):
 
     Each simdataN/params.json holds one parameter set (see test_data.md).
     sim_dout.csv[i] = dout read after clock edge i (pre-edge read convention);
-    the first LATENCY values are the zero power-on state of the pipeline.
+    the first CSP_LATENCY values are the zero power-on state of the pipeline.
     """
     clock = Clock(dut.clk, 10, unit="ns")
     cocotb.start_soon(clock.start())

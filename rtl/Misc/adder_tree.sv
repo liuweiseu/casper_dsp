@@ -8,11 +8,11 @@
 //   while cur_n > 1:
 //       n_adds = floor(cur_n / 2), n_dlys = cur_n mod 2
 //       node j < n_adds  = node 2j + node 2j+1 of the previous stage  (AddSub)
-//       node n_adds      = node cur_n-1, delayed LATENCY           (if odd)
+//       node n_adds      = node cur_n-1, delayed CSP_LATENCY           (if odd)
 //       cur_n = n_adds + n_dlys
 //
-// STAGES = ceil(log2(N_INPUTS)) stages, each LATENCY cycles (csp_latency),
-// so dout and sync_out come STAGES·LATENCY cycles after din / sync (a plain
+// STAGES = ceil(log2(N_INPUTS)) stages, each CSP_LATENCY cycles (csp_latency),
+// so dout and sync_out come STAGES·CSP_LATENCY cycles after din / sync (a plain
 // Delay for sync, as in casper). N_INPUTS = 1 wires din[0] to dout.
 //
 // Adder precision:
@@ -30,13 +30,89 @@
 //
 // Declared for traceability only: FIRST_STAGE_HDL and ADDER_IMP (adder
 // implementation choices) are ignored; DVALID_EN and FLOATING_POINT must be 0.
+//
+// ── HDL-Simulink Mapping ─────────────────────────────────────────────────────
+// Differences between this HDL and its Simulink block (casper_library
+// or Xilinx blockset). Machine-readable: the lines between the
+// @simulink-mapping markers are TOML after removing the leading "// "
+// (checked by tools/check_simulink_mapping.py). Fields: block,
+// deviations, params (numeric HDL value -> mask option text, verbatim),
+// hdl_only, mask_missing, ports (renamed HDL -> Simulink, missing,
+// extra).
+// @simulink-mapping begin
+// block = 'casper_library_misc.slx/adder_tree'
+// deviations = [
+//   "Only PRECISION=0 corresponds to the casper_library adder_tree. adder_tree_init.m:257-261 builds every adder as an xbsIndex_r4/AddSub with default 'Full' precision, which grows one integer bit per add (matches the HDL). PRECISION=1 and N_BITS_OUT/BIN_PT_OUT/QUANTIZATION/OVERFLOW reproduce the AddSubs as pfb_fir_real_init.m configures them, not the library block.",
+//   "PRECISION=1 with QUANTIZATION=2 (round to even) has no Xilinx counterpart: the xbsIndex_r4/AddSub quantization popup offers only 'Truncate' and 'Round  (unbiased: +/- Inf)'. With OVERFLOW=2 ('Flag as error'), Simulink stops with an overflow error while the HDL wraps.",
+//   "Simulink takes each din{i}'s format from its own input signal, so inputs may differ in format. The HDL gives every input the same DATA_WIDTH/BIN_PT/TYPE.",
+//   "Simulink's dvalid_en=1 only drives the AddSub enables from dv_in (adder_tree_init.m:264); the Delays and sync_delay are not gated and no dv_out is produced. The HDL does not implement this mode.",
+// ]
+//
+// [params.ADDER_IMP]
+// mask = 'adder_imp'
+// type = 'popup'
+// note = "ignored by the HDL (implementation choice); the encoding assumes popup option order. HDL default 0, mask default 'Fabric'"
+// [params.ADDER_IMP.values]
+// 0 = 'Behavioral'
+// 1 = 'Fabric'
+// 2 = 'DSP48'
+//
+// [params.FIRST_STAGE_HDL]
+// mask = 'first_stage_hdl'
+// type = 'checkbox'
+// note = 'ignored by the HDL (implementation choice). HDL default 0, mask default on'
+// [params.FIRST_STAGE_HDL.values]
+// 0 = 'off'
+// 1 = 'on'
+//
+// [params.DVALID_EN]
+// mask = 'dvalid_en'
+// type = 'checkbox'
+// hdl_unsupported = [1]
+// note = 'DVALID_EN=1 is rejected by the HDL ($fatal)'
+// [params.DVALID_EN.values]
+// 0 = 'off'
+// 1 = 'on'
+//
+// [params.FLOATING_POINT]
+// mask = 'floating_point'
+// type = 'checkbox'
+// hdl_unsupported = [1]
+// note = 'FLOATING_POINT=1 is rejected by the HDL ($fatal)'
+// [params.FLOATING_POINT.values]
+// 0 = 'off'
+// 1 = 'on'
+//
+// [hdl_only]
+// DATA_WIDTH = 'inherited width: Simulink takes it from the input signal'
+// BIN_PT = 'inherited width: Simulink takes it from the input signal'
+// TYPE = 'inherited width: Simulink takes it from the input signal'
+// PRECISION = "not in the adder_tree mask: the standalone block's AddSubs are always Full precision (adder_tree_init.m:257 reuses xbsIndex_r4/AddSub defaults). Models pfb_fir_real_init.m's settings of the inner AddSubs"
+// N_BITS_OUT = "models pfb_fir_real_init.m's settings of the inner AddSubs"
+// BIN_PT_OUT = "models pfb_fir_real_init.m's settings of the inner AddSubs"
+// QUANTIZATION = "models pfb_fir_real_init.m's settings of the inner AddSubs"
+// OVERFLOW = "models pfb_fir_real_init.m's settings of the inner AddSubs"
+// N_BITS_OUT_EFF = 'derived from other parameters (do not override)'
+//
+// [mask_missing]
+// float_type = 'floating point is not implemented (FLOATING_POINT must be 0)'
+// frac_width = 'floating point is not implemented (FLOATING_POINT must be 0)'
+// exp_width = 'floating point is not implemented (FLOATING_POINT must be 0)'
+//
+// [ports]
+// [ports.renamed]
+// din = 'din1..dinN'
+// [ports.missing]
+// dv_in = 'dvalid_en=1 only (DVALID_EN must be 0); adder_tree_init.m:124 adds it as Port 1, clashing with sync. The init never creates a dv_out port'
+// [ports.extra]
+// @simulink-mapping end
 
 module adder_tree #(
     parameter int N_INPUTS        = 3,
     parameter int DATA_WIDTH      = 18,
     parameter int BIN_PT          = 0,
     parameter int TYPE            = 1,
-    parameter int LATENCY         = 1,
+    parameter int CSP_LATENCY     = 1,
     parameter int PRECISION       = 0,
     parameter int N_BITS_OUT      = 18,
     parameter int BIN_PT_OUT      = 0,
@@ -117,8 +193,8 @@ module adder_tree #(
     if (FLOATING_POINT != 0) $fatal(1, "adder_tree: FLOATING_POINT is not implemented");
     if (N_INPUTS < 1)        $fatal(1, "adder_tree: N_INPUTS must be >= 1");
 
-    // sync: casper's sync_delay is a plain Delay of STAGES·LATENCY
-    pipeline #(.BITWIDTH(1), .LATENCY(STAGES * LATENCY)) u_sync_delay (
+    // sync: casper's sync_delay is a plain Delay of STAGES·CSP_LATENCY
+    pipeline #(.BITWIDTH(1), .CSP_LATENCY(STAGES * CSP_LATENCY)) u_sync_delay (
         .clk(clk), .din(sync), .dout(sync_out));
 
     // node values, zero-extended to WMAX; each stage reads the previous one
@@ -152,7 +228,7 @@ module adder_tree #(
                         .OPMODE(0),
                         .QUANTIZATION((PRECISION == 0) ? 0 : QUANTIZATION),
                         .OVERFLOW((PRECISION == 0) ? 0 : OVERFLOW),
-                        .LATENCY(LATENCY)
+                        .CSP_LATENCY(CSP_LATENCY)
                     ) u_addr (
                         .clk(clk),
                         .a(GEN_STAGE[s-1].node[2 * j][WA-1:0]),
@@ -160,7 +236,7 @@ module adder_tree #(
                         .dout(value));
                 end else begin : GEN_DLY
                     // the odd value of the previous stage, delayed
-                    pipeline #(.BITWIDTH(W), .LATENCY(LATENCY)) u_dly (
+                    pipeline #(.BITWIDTH(W), .CSP_LATENCY(CSP_LATENCY)) u_dly (
                         .clk(clk), .din(GEN_STAGE[s-1].node[PREV - 1][W-1:0]), .dout(value));
                 end
             end

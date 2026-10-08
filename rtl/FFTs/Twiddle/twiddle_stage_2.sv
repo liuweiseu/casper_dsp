@@ -30,6 +30,62 @@
 //
 // Declared for traceability only: ASYNC and FLOATING_POINT must be 0;
 // FLOAT_TYPE, EXP_WIDTH and FRAC_WIDTH are ignored.
+//
+// ── HDL-Simulink Mapping ─────────────────────────────────────────────────────
+// Differences between this HDL and its Simulink block (casper_library
+// or Xilinx blockset). Machine-readable: the lines between the
+// @simulink-mapping markers are TOML after removing the leading "// "
+// (checked by tools/check_simulink_mapping.py). Fields: block,
+// deviations, params (numeric HDL value -> mask option text, verbatim),
+// hdl_only, mask_missing, ports (renamed HDL -> Simulink, missing,
+// extra).
+// @simulink-mapping begin
+// block = 'casper_library_ffts_twiddle.slx/twiddle_stage_2'
+// deviations = [
+//   'the HDL negates bi_re after the BRAM_LATENCY delay with a 0-latency negate and puts all MULT+CONV+ADD latency in the output multiplexers; casper negates before the delays (bus_negate csp_latency 1+conv_latency, then delay4 bram+mult+add-2, then mux1 latency 1; twiddle_stage_2_init.m:156,198-200) - same values and LATENCY = BRAM+MULT+CONV+ADD on every output',
+//   'Simulink needs bram_latency+mult_latency+add_latency >= 2 and mult_latency+conv_latency+add_latency >= 1 (delay4, delay2/delay3 latencies in twiddle_stage_2_init.m:167-200 would be negative and error); the HDL also elaborates these combinations',
+//   'FLOAT_TYPE, EXP_WIDTH and FRAC_WIDTH are declared only',
+//   'test vectors in casper_dsp/test_data/FFTs/Twiddle/twiddle_stage_2/test_data.md come from a Python reference model (not exported from MATLAB), so cycle/bit equivalence with the Simulink block is unverified',
+// ]
+//
+// [params.ASYNC]
+// mask = 'async'
+// type = 'checkbox'
+// hdl_unsupported = [1]
+// note = 'async=on (dvi/dvo) is not implemented: elaboration stops with $fatal'
+// [params.ASYNC.values]
+// 0 = 'off'
+// 1 = 'on'
+//
+// [params.FLOATING_POINT]
+// mask = 'floating_point'
+// type = 'checkbox'
+// hdl_unsupported = [1]
+// note = 'floating point is not implemented: elaboration stops with $fatal'
+// [params.FLOATING_POINT.values]
+// 0 = 'off'
+// 1 = 'on'
+//
+// [params.FLOAT_TYPE]
+// mask = 'float_type'
+// type = 'popup'
+// note = 'mask radiobutton; declared only, ignored by the HDL'
+// [params.FLOAT_TYPE.values]
+// 1 = 'single'
+// 2 = 'custom'
+//
+// [hdl_only]
+//
+// [mask_missing]
+//
+// [ports]
+// note = 'each Simulink complex port x is split into x_re / x_im'
+// [ports.renamed]
+// [ports.missing]
+// dvi = 'async=on only (not implemented)'
+// dvo = 'async=on only (not implemented)'
+// [ports.extra]
+// @simulink-mapping end
 
 module twiddle_stage_2 #(
     parameter int N_INPUTS        = 1,
@@ -72,7 +128,7 @@ module twiddle_stage_2 #(
     logic [CNT_BITS-1:0] cnt;
     logic                sel;
 
-    pipeline #(.BITWIDTH(1), .LATENCY(BRAM_LATENCY)) u_sync_d (
+    pipeline #(.BITWIDTH(1), .CSP_LATENCY(BRAM_LATENCY)) u_sync_d (
         .clk(clk), .din(sync_in), .dout(sync_d));
 
     counter #(
@@ -95,15 +151,15 @@ module twiddle_stage_2 #(
     for (genvar n = 0; n < N_INPUTS; n++) begin : GEN_LANE
         logic [INPUT_BIT_WIDTH-1:0] b_re_d, b_im_d, b_re_neg;
 
-        pipeline #(.BITWIDTH(INPUT_BIT_WIDTH), .LATENCY(BRAM_LATENCY)) u_b_re_d (
+        pipeline #(.BITWIDTH(INPUT_BIT_WIDTH), .CSP_LATENCY(BRAM_LATENCY)) u_b_re_d (
             .clk(clk), .din(bi_re[n]), .dout(b_re_d));
-        pipeline #(.BITWIDTH(INPUT_BIT_WIDTH), .LATENCY(BRAM_LATENCY)) u_b_im_d (
+        pipeline #(.BITWIDTH(INPUT_BIT_WIDTH), .CSP_LATENCY(BRAM_LATENCY)) u_b_im_d (
             .clk(clk), .din(bi_im[n]), .dout(b_im_d));
 
         negate #(
             .N_BITS_IN (INPUT_BIT_WIDTH), .BIN_PT_IN (BIN_PT_IN), .TYPE_IN (1),
             .N_BITS_OUT(INPUT_BIT_WIDTH), .BIN_PT_OUT(BIN_PT_IN), .TYPE_OUT(1),
-            .QUANTIZATION(0), .OVERFLOW(1), .LATENCY(0)
+            .QUANTIZATION(0), .OVERFLOW(1), .CSP_LATENCY(0)
         ) u_neg_re (.clk(clk), .din(b_re_d), .dout(b_re_neg));
 
         // mux0: real part of bwo = sel ? im : re
@@ -123,13 +179,13 @@ module twiddle_stage_2 #(
         );
 
         // a leg: delay-matched only
-        pipeline #(.BITWIDTH(INPUT_BIT_WIDTH), .LATENCY(LATENCY)) u_a_re (
+        pipeline #(.BITWIDTH(INPUT_BIT_WIDTH), .CSP_LATENCY(LATENCY)) u_a_re (
             .clk(clk), .din(ai_re[n]), .dout(ao_re[n]));
-        pipeline #(.BITWIDTH(INPUT_BIT_WIDTH), .LATENCY(LATENCY)) u_a_im (
+        pipeline #(.BITWIDTH(INPUT_BIT_WIDTH), .CSP_LATENCY(LATENCY)) u_a_im (
             .clk(clk), .din(ai_im[n]), .dout(ao_im[n]));
     end
 
-    pipeline #(.BITWIDTH(1), .LATENCY(MUX_LATENCY)) u_sync_out (
+    pipeline #(.BITWIDTH(1), .CSP_LATENCY(MUX_LATENCY)) u_sync_out (
         .clk(clk), .din(sync_d), .dout(sync_out));
 
 endmodule

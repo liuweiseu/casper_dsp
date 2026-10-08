@@ -22,6 +22,34 @@
 // DELAY is the only mask parameter (stored default 10). The mask does not
 // check it; DELAY < 1 would give sync_delay a negative length, so it is a
 // $fatal here.
+//
+// ── HDL-Simulink Mapping ─────────────────────────────────────────────────────
+// Differences between this HDL and its Simulink block (casper_library
+// or Xilinx blockset). Machine-readable: the lines between the
+// @simulink-mapping markers are TOML after removing the leading "// "
+// (checked by tools/check_simulink_mapping.py). Fields: block,
+// deviations, params (numeric HDL value -> mask option text, verbatim),
+// hdl_only, mask_missing, ports (renamed HDL -> Simulink, missing,
+// extra).
+// @simulink-mapping begin
+// block = 'casper_library_delays.slx/window_delay'
+// deviations = [
+//   "The library block contains four Gateway Out blocks with hdl_port = 'on' (240:2-240:5, on in, rise_d, fall_d and out) plus a Scope; in a Sysgen netlist these become extra top-level outputs, which the HDL does not have.",
+//   "DELAY < 1 is a $fatal in the HDL; the mask prompt says 'desired delay (>2)' but nothing checks it.",
+// ]
+//
+// [hdl_only]
+//
+// [mask_missing]
+//
+// [ports]
+// note = 'system_240.xml also contains 4 debug Gateway Out blocks (hdl_port = on) and a Scope; they are not modelled'
+// [ports.renamed]
+// din = 'in'
+// dout = 'out'
+// [ports.missing]
+// [ports.extra]
+// @simulink-mapping end
 
 module window_delay #(
     parameter int DELAY = 10
@@ -38,9 +66,9 @@ module window_delay #(
 
     logic rise, fall, rise_d, fall_d;
 
-    edge_detect #(.EDGE_TYPE(0), .OUTPUT_POL(0)) u_posedge (
+    edge_detect #(.EDGE(0), .POLARITY(0)) u_posedge (
         .clk(clk), .din(din), .dout(rise));
-    edge_detect #(.EDGE_TYPE(1), .OUTPUT_POL(0)) u_negedge (
+    edge_detect #(.EDGE(1), .POLARITY(0)) u_negedge (
         .clk(clk), .din(din), .dout(fall));
 
     sync_delay #(.DELAY_LEN(DELAY - 1)) u_rise_dly (.clk(clk), .din(rise), .dout(rise_d));

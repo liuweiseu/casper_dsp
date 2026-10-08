@@ -24,8 +24,42 @@
 // BIN_PT_IN / BIN_PT_OUT may be negative or exceed the word width; only
 // their difference matters for alignment.
 //
-// LATENCY: 0 = combinational, N > 0 = N pipeline stages built from
+// CSP_LATENCY: 0 = combinational, N > 0 = N pipeline stages built from
 // BasicModules/register. Pipeline stages power up to 0.
+//
+// ── HDL-Simulink Mapping ─────────────────────────────────────────────────────
+// Differences between this HDL and its Simulink block (casper_library
+// or Xilinx blockset). Machine-readable: the lines between the
+// @simulink-mapping markers are TOML after removing the leading "// "
+// (checked by tools/check_simulink_mapping.py). Fields: block,
+// deviations, params (numeric HDL value -> mask option text, verbatim),
+// hdl_only, mask_missing, ports (renamed HDL -> Simulink, missing,
+// extra).
+// @simulink-mapping begin
+// block = 'casper_library_bus.slx/bus_convert'
+// deviations = [
+//   "TYPE_IN=0 and TYPE_OUT=0 have no Simulink counterpart. bus_convert always treats the input as signed (bus_expand outputArithmeticType=type_in=1, bus_convert_init.m:167) and always produces a signed output (arith_type 'Signed  (2''s comp)', bus_convert_init.m:247 / convert_of_init.m:120). Unsigned saturation limits and unsigned input extension therefore differ from Simulink.",
+//   "QUANTIZATION=2: bus_convert_init.m:203 passes 'Round  (unbiased: Even Values)'. With of=on (the mask default) that string goes to convert_of, whose popup spells it 'Round  (unbiased: even values)'. Whether set_param accepts this case mismatch is unverified. With of=off it goes to xbsIndex_r4/Convert, which has the option.",
+//   "OVERFLOW=2 means 'Flag as error' (bus_convert_init.m:211): with of=off, Simulink stops with an overflow error; with of=on, convert_of's popup has 'Error', not 'Flag as error', so set_param fails. The HDL wraps.",
+// ]
+//
+// [hdl_only]
+// TYPE_IN = 'bus_convert_init.m default type_in=1, not a mask parameter: Simulink always reinterprets each input lane as signed (bus_convert_init.m:13,167)'
+// TYPE_OUT = "bus_convert_init.m default type_out=1, not a mask parameter: the Convert / convert_of output is always 'Signed  (2''s comp)' (bus_convert_init.m:247, convert_of_init.m:120)"
+//
+// [mask_missing]
+// cmplx = 'single real lane: complex lanes are not modelled'
+// of = 'the overflow output is not implemented; of=on (mask default) also makes Simulink use casper_library_misc/convert_of instead of xbsIndex_r4/Convert (bus_convert_init.m:227-242)'
+// misc = 'misc pass-through (misci/misco ports) is not implemented'
+//
+// [ports]
+// [ports.renamed]
+// [ports.missing]
+// overflow = 'of=on only (not implemented)'
+// misci = 'misc=on only (not implemented)'
+// misco = 'misc=on only (not implemented)'
+// [ports.extra]
+// @simulink-mapping end
 
 module convert #(
     parameter int N_BITS_IN    = 16,
@@ -36,7 +70,7 @@ module convert #(
     parameter int TYPE_OUT     = 1,
     parameter int QUANTIZATION = 0,
     parameter int OVERFLOW     = 0,
-    parameter int LATENCY      = 0
+    parameter int CSP_LATENCY  = 0
 )(
     input  logic                  clk,
     input  logic [N_BITS_IN-1:0]  din,
@@ -113,12 +147,12 @@ module convert #(
 
     // ── optional output pipeline ──────────────────────────────────────────────
     generate
-        if (LATENCY == 0) begin : GEN_COMB
+        if (CSP_LATENCY == 0) begin : GEN_COMB
             assign dout = result;
         end else begin : GEN_PIPE
-            logic [N_BITS_OUT-1:0] stage [0:LATENCY];
+            logic [N_BITS_OUT-1:0] stage [0:CSP_LATENCY];
             assign stage[0] = result;
-            for (genvar i = 0; i < LATENCY; i++) begin : GEN_STAGE
+            for (genvar i = 0; i < CSP_LATENCY; i++) begin : GEN_STAGE
                 register #(
                     .BITWIDTH  (N_BITS_OUT),
                     .USE_RST   (0),
@@ -132,7 +166,7 @@ module convert #(
                     .q  (stage[i+1])
                 );
             end
-            assign dout = stage[LATENCY];
+            assign dout = stage[CSP_LATENCY];
         end
     endgenerate
 

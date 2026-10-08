@@ -12,15 +12,15 @@ cur_n = N_INPUTS
 while cur_n > 1:
     n_adds = floor(cur_n / 2), n_dlys = cur_n mod 2
     node j < n_adds  = node 2j + node 2j+1 of the previous stage   (AddSub)
-    node n_adds      = node cur_n−1, delayed LATENCY                (only if cur_n is odd)
+    node n_adds      = node cur_n−1, delayed CSP_LATENCY                (only if cur_n is odd)
     cur_n = n_adds + n_dlys
 ```
 
 For example, 5 inputs reduce as 5 → 3 → 2 → 1. The fifth input is carried
 through stage 1, then the sum of inputs 3 and 4 is carried through stage 2.
 
-There are `STAGES = ceil(log2(N_INPUTS))` stages of `LATENCY` cycles each
-(casper's `csp_latency`). `dout` and `sync_out` come `STAGES·LATENCY` cycles
+There are `STAGES = ceil(log2(N_INPUTS))` stages of `CSP_LATENCY` cycles each
+(casper's `csp_latency`). `dout` and `sync_out` come `STAGES·CSP_LATENCY` cycles
 after `din` and `sync`; `sync` goes through a plain delay line, as in casper.
 With `N_INPUTS = 1`, `din[0]` is wired straight to `dout`.
 
@@ -53,7 +53,7 @@ ignored. `DVALID_EN` and `FLOATING_POINT` must be 0.
 | `DATA_WIDTH` | 18 | Input width |
 | `BIN_PT` | 0 | Input binary point |
 | `TYPE` | 1 | Input type: `0` = unsigned, `1` = signed |
-| `LATENCY` | 1 | Latency per stage (casper `csp_latency`); `0` = combinational |
+| `CSP_LATENCY` | 1 | Latency per stage (casper `csp_latency`); `0` = combinational |
 | `PRECISION` | 0 | `0` = full precision, `1` = user-defined adder format |
 | `N_BITS_OUT`, `BIN_PT_OUT` | 18, 0 | Adder output format (`PRECISION = 1`) |
 | `QUANTIZATION` | 0 | `0` = truncate, `1` = round ±inf, `2` = round even (`PRECISION = 1`) |
@@ -68,5 +68,5 @@ ignored. `DVALID_EN` and `FLOATING_POINT` must be 0.
 | `clk` | input | 1 | Clock |
 | `sync` | input | 1 | Sync |
 | `din` | input | `DATA_WIDTH` × `N_INPUTS` | Values to sum |
-| `sync_out` | output | 1 | `sync` delayed `STAGES·LATENCY` cycles |
-| `dout` | output | `N_BITS_OUT_EFF` | Sum, `STAGES·LATENCY` cycles later |
+| `sync_out` | output | 1 | `sync` delayed `STAGES·CSP_LATENCY` cycles |
+| `dout` | output | `N_BITS_OUT_EFF` | Sum, `STAGES·CSP_LATENCY` cycles later |

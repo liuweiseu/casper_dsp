@@ -10,7 +10,7 @@ _here = Path(__file__).parent
 testdatadir = (_here / "../../../test_data" / _here.parent.name / _here.name).resolve()
 
 # Integer parameters used to match the DUT against simdataN/params.json
-PARAMS = ['BITWIDTH', 'LATENCY']
+PARAMS = ['BITWIDTH', 'CSP_LATENCY']
 # CSV name (sim_<name>.csv) -> DUT port
 INPUTS = {'din': 'din'}
 OUTPUTS = {'dout': 'dout'}

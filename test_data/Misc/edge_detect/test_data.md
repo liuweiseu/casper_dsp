@@ -1,10 +1,10 @@
 # edge_detect test data
 
-Each subdirectory corresponds to one parameter set. `EDGE_TYPE`: 0 = rising edge, 1 = falling edge, 2 = both edges. `OUTPUT_POL`: 0 = active high, 1 = active low.
+Each subdirectory corresponds to one parameter set. `EDGE`: 0 = rising edge, 1 = falling edge, 2 = both edges. `POLARITY`: 0 = active high, 1 = active low.
 
 **CSV data exported from the corresponding MATLAB Simulink block.**
 
-| Test # | Directory | EDGE_TYPE | OUTPUT_POL | Cycles | Description |
+| Test # | Directory | EDGE | POLARITY | Cycles | Description |
 |--------|-----------|-----------|------------|--------|-------------|
 | 0 | `simdata0` | 0 (rising)  | 0 (active high) | 100 | Detect rising edge, output pulse active high |
 | 1 | `simdata1` | 0 (rising)  | 1 (active low)  | 100 | Detect rising edge, output pulse active low |

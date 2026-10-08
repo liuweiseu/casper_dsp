@@ -104,7 +104,7 @@ def write_set(d, params, ports):
 
 # ── complex_conj ────────────────────────────────────────────────────────────
 
-CC = ["N_INPUTS", "N_BITS", "BIN_PT", "LATENCY", "OVERFLOW"]
+CC = ["N_INPUTS", "N_BITS", "BIN_PT", "CSP_LATENCY", "OVERFLOW"]
 CC_TESTS = [
     (P(CC, [1, 18, 17, 1, 0]), "casper defaults (Wrap)"),
     (P(CC, [2, 8, 7, 0, 1]), "2 lanes, combinational, Saturate"),
@@ -114,7 +114,7 @@ CC_TESTS = [
 
 
 def m_complex_conj(p, re, im):
-    b, bp, lat, ovf = p["N_BITS"], p["BIN_PT"], p["LATENCY"], p["OVERFLOW"]
+    b, bp, lat, ovf = p["N_BITS"], p["BIN_PT"], p["CSP_LATENCY"], p["OVERFLOW"]
     neg = per_lane(lambda x: quantize(-to_value(x, b, bp, 1), b, bp, 1, 0, ovf), im)
     zero = [0] * len(re[0])
     return delay(re, lat, zero), delay(neg, lat, zero)
@@ -134,7 +134,7 @@ def gen_complex_conj():
     md_table(mdir, name, CC, sets,
              "`complex_conj` delays the real part and negates the imaginary part "
              "(bus_negate, Truncate, `OVERFLOW` 0 = Wrap / 1 = Saturate) with "
-             "latency `LATENCY`. Row 0 is zero, then corner words (0, 1, −1, most "
+             "latency `CSP_LATENCY`. Row 0 is zero, then corner words (0, 1, −1, most "
              "negative, …) on every lane, then random words.")
     return toml(CATEGORY, name, [(p, d) for p, d, _ in sets], SCRIPT)
 
@@ -198,7 +198,7 @@ def gen_hilbert():
 
 # ── mirror_spectrum ─────────────────────────────────────────────────────────
 
-MS = ["N_INPUTS", "FFT_SIZE", "INPUT_BIT_WIDTH", "BIN_PT_IN", "BRAM_LATENCY",
+MS = ["N_INPUTS", "FFT_SIZE", "INPUT_BITWIDTH", "BIN_PT_IN", "BRAM_LATENCY",
       "NEGATE_LATENCY", "NEGATE_MODE"]
 MS_TESTS = [
     (P(MS, [1, 3, 18, 17, 2, 1, 0]), "casper defaults"),
@@ -223,7 +223,7 @@ def m_mirror_spectrum(p, st):
     upper = [1 if c > 1 << (f - 1) else 0 for c in m_counter(sync0, f)]
     sel = delay(upper, rep, 0)
     out = {"sync_out": delay(sync0, 1 + rep, 0)}
-    q = P(CC, [n, p["INPUT_BIT_WIDTH"], p["BIN_PT_IN"], cc, 0])
+    q = P(CC, [n, p["INPUT_BITWIDTH"], p["BIN_PT_IN"], cc, 0])
     for i in range(4):
         c_re, c_im = m_complex_conj(q, st[f"reo_in{i}_re"], st[f"reo_in{i}_im"])
         for part, conj in (("re", c_re), ("im", c_im)):
@@ -239,7 +239,7 @@ def gen_mirror_spectrum():
         rng = random.Random(f"{name}-{n}")
         frame = 1 << p["FFT_SIZE"]
         cycles = max(128, 8 * frame)
-        st = {k: lanes_stim(rng, cycles, p["N_INPUTS"], p["INPUT_BIT_WIDTH"]) for k in ins}
+        st = {k: lanes_stim(rng, cycles, p["N_INPUTS"], p["INPUT_BITWIDTH"]) for k in ins}
         sync = sync_every(cycles, frame, 3)
         # one early re-sync mid-run: the counter restarts
         t = cycles // 2 + frame // 3
@@ -288,7 +288,7 @@ def m_bi_real_unscr_4x(p, st):
     maps = {k: bi_real_map(k, f) for k in ("even", "odd", "out")}
 
     def ro(which, streams, din, sync):
-        q = {"N_STREAMS": streams, "MAP_LEN": half, "ORDER": compute_order(maps[which]),
+        q = {"N_INPUTS": streams, "MAP_LEN": half, "ORDER": compute_order(maps[which]),
              "MAP_LATENCY": map_lat, "BRAM_LATENCY": p["BRAM_LATENCY"], "FANOUT_LATENCY": fanout}
         return m_reorder(q, maps[which], {"din": din, "sync": sync})
 

@@ -26,6 +26,51 @@
 // bus (casper infers the width; the remainder is N_COEFFS-1 coefficients).
 // Declared for traceability only: USE_HDL and USE_EMBEDDED (multiplier
 // implementation) are ignored.
+//
+// ── HDL-Simulink Mapping ─────────────────────────────────────────────────────
+// Differences between this HDL and its Simulink block (casper_library
+// or Xilinx blockset). Machine-readable: the lines between the
+// @simulink-mapping markers are TOML after removing the leading "// "
+// (checked by tools/check_simulink_mapping.py). Fields: block,
+// deviations, params (numeric HDL value -> mask option text, verbatim),
+// hdl_only, mask_missing, ports (renamed HDL -> Simulink, missing,
+// extra).
+// @simulink-mapping begin
+// block = 'casper_library_pfbs.slx/tap_real'
+// deviations = [
+//   "BRAM_LATENCY is declared but not passed to delay_bram (tap_real.sv:78), so it has no effect: dout is din delayed exactly DELAY cycles; Simulink's delay_bram (system_39.xml DelayLen=delay, bram_latency=bram_latency) gives the same total delay but errors when delay <= bram_latency+1 (delay_bram_init.m:40-43), which the HDL accepts.",
+//   'The coefficient bus width is fixed by N_COEFFS*COEFF_WIDTH in the HDL, whereas Simulink inherits it from the driving signal; N_COEFFS < 2 is a $fatal (tap_real.sv:76) because coeff_out would be empty.',
+//   "USE_HDL and USE_EMBEDDED are declared only; in Simulink the mask init only sets the Mult's use_behavioral_HDL/use_embedded, so values are unaffected.",
+// ]
+//
+// [params.USE_HDL]
+// mask = 'use_hdl'
+// type = 'checkbox'
+// note = "declared only: selects the Xilinx Mult's behavioural-HDL implementation; no numeric effect (Full precision)"
+// [params.USE_HDL.values]
+// 0 = 'off'
+// 1 = 'on'
+//
+// [params.USE_EMBEDDED]
+// mask = 'use_embedded'
+// type = 'checkbox'
+// note = 'declared only: selects DSP48 vs fabric for the Xilinx Mult; the mask forces it off when use_hdl is on'
+// [params.USE_EMBEDDED.values]
+// 0 = 'off'
+// 1 = 'on'
+//
+// [hdl_only]
+// N_COEFFS = "coefficient count; casper infers the coeff bus width from the input signal (Slice1 'Two Bit Locations' MSB..coeff_width, system_39.xml)"
+// PLATFORM = 'implementation: memory / primitive vendor (GENERIC, XILINX, ALTERA)'
+//
+// [mask_missing]
+//
+// [ports]
+// note = "library MaskType is 'pfb_tap_real' but the library block is named tap_real"
+// [ports.renamed]
+// [ports.missing]
+// [ports.extra]
+// @simulink-mapping end
 
 module tap_real #(
     parameter int    MULT_LATENCY     = 2,
@@ -63,7 +108,7 @@ module tap_real #(
         .N_BITS_A(DATA_WIDTH), .BIN_PT_A(DATA_WIDTH - 1), .TYPE_A(1),
         .N_BITS_B(COEFF_WIDTH), .BIN_PT_B(COEFF_FRAC_WIDTH), .TYPE_B(1),
         .N_BITS_OUT(DATA_WIDTH + COEFF_WIDTH), .BIN_PT_OUT(DATA_WIDTH - 1 + COEFF_FRAC_WIDTH),
-        .TYPE_OUT(1), .QUANTIZATION(0), .OVERFLOW(0), .LATENCY(MULT_LATENCY)
+        .TYPE_OUT(1), .QUANTIZATION(0), .OVERFLOW(0), .MULT_LATENCY(MULT_LATENCY)
     ) u_mult (.clk(clk), .a(din), .b(coeff[COEFF_WIDTH-1:0]), .dout(taps_out));
 
 endmodule

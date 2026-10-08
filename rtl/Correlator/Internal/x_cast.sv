@@ -22,6 +22,34 @@
 // Mask parameters: n_bits_in (W), n_bits_out (P), fix_pnt_pos (binary
 // point; only a type annotation, declared only) and demux_factor (1, 2, 4
 // or 8).
+//
+// ── HDL-Simulink Mapping ─────────────────────────────────────────────────────
+// Differences between this HDL and its Simulink block (casper_library
+// or Xilinx blockset). Machine-readable: the lines between the
+// @simulink-mapping markers are TOML after removing the leading "// "
+// (checked by tools/check_simulink_mapping.py). Fields: block,
+// deviations, params (numeric HDL value -> mask option text, verbatim),
+// hdl_only, mask_missing, ports (renamed HDL -> Simulink, missing,
+// extra).
+// @simulink-mapping begin
+// block = 'casper_library_correlator.slx/xeng_descramble/x_cast'
+// deviations = [
+//   "N_BITS_OUT < N_BITS_IN is a $fatal, while the diagram's Convert blocks (system_588.xml: Signed n_bits_out/fix_pnt_pos, Truncate, Wrap) would silently drop the upper bits of each field; for N_BITS_OUT >= N_BITS_IN both are an exact sign extension.",
+//   'FIX_PNT_POS is declared only: in the diagram it is the binary point of both the Reinterpret and the Convert, so it never changes the bits, and the HDL ignores it.',
+// ]
+//
+// [hdl_only]
+//
+// [mask_missing]
+//
+// [ports]
+// note = 'masked subsystem (system_588.xml, mask in system_411.xml:1277-1309); identical copy in xeng_descramble_4ant (system_1107.xml)'
+// [ports.renamed]
+// din = 'in'
+// dout = 'out'
+// [ports.missing]
+// [ports.extra]
+// @simulink-mapping end
 
 module x_cast #(
     parameter int N_BITS_IN    = 16,

@@ -50,6 +50,170 @@
 // COEFF_DECIMATION, COEFF_GENERATION, CAL_BITS, N_BITS_ROTATION, USE_HDL,
 // USE_EMBEDDED and DSP48_ADDERS are ignored (MAX_FANOUT only sets
 // FAN_LATENCY). COEFFS_BRAM is covered by rom's PLATFORM.
+//
+// ── HDL-Simulink Mapping ─────────────────────────────────────────────────────
+// Differences between this HDL and its Simulink block (casper_library
+// or Xilinx blockset). Machine-readable: the lines between the
+// @simulink-mapping markers are TOML after removing the leading "// "
+// (checked by tools/check_simulink_mapping.py). Fields: block,
+// deviations, params (numeric HDL value -> mask option text, verbatim),
+// hdl_only, mask_missing, ports (renamed HDL -> Simulink, missing,
+// extra).
+// @simulink-mapping begin
+// block = 'casper_library_ffts.slx/butterfly_direct'
+// deviations = [
+//   "The mask's bin_pt_in = -1 backwards-compatibility value (replaced by input_bit_width-1 in butterfly_direct_init.m:178-182) is not recognised: BIN_PT_IN must be given explicitly.",
+//   "OVERFLOW = 2 ('Error') has no working Simulink counterpart: butterfly_direct_init.m:512-514 compares the option against 'Flag as error', so 'Error' leaves the bus_convert overflow argument undefined and the mask init fails, whereas the HDL silently wraps (rtl/Bus/convert.sv saturates only for OVERFLOW = 1).",
+//   "DSP48_ADDERS is ignored, but in Simulink dsp48_adders = 'on' forces add_latency = 2 in every butterfly_direct (butterfly_direct_init.m:194-197), so with the box ticked and ADD_LATENCY != 2 the Simulink data/sync latency differs from the HDL's.",
+//   "ADD_PIPE_LATENCY / MULT_PIPE_LATENCY are ignored: in Simulink a non-zero add_pipe_latency inserts pipeline blocks on the bus_addsub inputs (bus_addsub_init.m:250-275, enabled by butterfly_direct_init.m:156-160) and mult_pipe_latency pipelines twiddle_general's bus_mult (twiddle_general_init.m:250-251), so for non-zero values the HDL has less latency (note Simulink's own fixed-point sync delay, butterfly_direct_init.m:652, does not include add_pipe_latency); only 0 is equivalent.",
+//   "COEFF_GENERATION / CAL_BITS / N_BITS_ROTATION are ignored and the twiddle is always a ROM table, but with coeff_generation = 'on' (mask default) casper's twiddle_general -> coeff_gen uses a feedback_osc oscillator instead of a table for a bit-reversed Coeffs list with log2(length(Coeffs)) > ceil(log2(mult_latency+add_latency+conv_latency+1)) + cal_bits (coeff_gen_init.m:260, 308, 497-530), whose values are not the exactly rounded table values (fft_stage_n passes coeff_generation = 'off', fft_stage_n_init.m:501, so biplex use is unaffected).",
+//   "A single-coefficient twiddle_general (coefficient index other than 0 or 1) is a constant in casper quantized to coeff_bit_width-2 fraction bits (coeff_gen_init.m:156-157, stored as Fix_<cbw>_<cbw-1>), while the HDL's table (rtl/FFTs/Twiddle/scripts/gen_twiddle_coeffs.py:52) uses coeff_bit_width-1 fraction bits, so that twiddle (and the products) can differ by one coefficient LSB; known and left unchanged (mlib_devel_notes/fft_wideband_real_hdl_plan.md Phase 6).",
+//   'The Coeffs vector is replaced by N_COEFFS / COEFF_0 / COEFF_1 (twiddle selection) plus an INIT_FILE table that must be generated separately for the same Coeffs; a wrong or missing file silently gives wrong twiddles (Simulink computes them from Coeffs at init).',
+//   'Bit order of of: the HDL puts lane 0 in bit 0 (of[n] = lane n), but Simulink packs the per-lane flags with bus_create/Concat, lane 0 in the MSB (butterfly_direct_init.m:625-643 munge + bus_relational -> bussify in1 = MSB, bus_relational_init.m:194); the vector is bit-reversed relative to Simulink when it has more than one bit (fft_wideband_real.sv:31-33 and its GEN_OF loop undo this for the top-level of).',
+// ]
+//
+// [params.BIPLEX]
+// mask = 'biplex'
+// type = 'checkbox'
+// [params.BIPLEX.values]
+// 0 = 'off'
+// 1 = 'on'
+//
+// [params.BITGROWTH]
+// mask = 'bitgrowth'
+// type = 'checkbox'
+// [params.BITGROWTH.values]
+// 0 = 'off'
+// 1 = 'on'
+//
+// [params.DOWNSHIFT]
+// mask = 'downshift'
+// type = 'checkbox'
+// [params.DOWNSHIFT.values]
+// 0 = 'off'
+// 1 = 'on'
+//
+// [params.HARDCODE_SHIFTS]
+// mask = 'hardcode_shifts'
+// type = 'checkbox'
+// [params.HARDCODE_SHIFTS.values]
+// 0 = 'off'
+// 1 = 'on'
+//
+// [params.QUANTIZATION]
+// mask = 'quantization'
+// type = 'popup'
+// [params.QUANTIZATION.values]
+// 0 = 'Truncate'
+// 1 = 'Round  (unbiased: +/- Inf)'
+// 2 = 'Round  (unbiased: Even Values)'
+//
+// [params.OVERFLOW]
+// mask = 'overflow'
+// type = 'popup'
+// note = "the HDL treats 2 as wrap (rtl/Bus/convert.sv saturates only for 1); in Simulink 'Error' does not build (butterfly_direct_init.m:512-514 tests for 'Flag as error')"
+// [params.OVERFLOW.values]
+// 0 = 'Wrap'
+// 1 = 'Saturate'
+// 2 = 'Error'
+//
+// [params.ASYNC]
+// mask = 'async'
+// type = 'checkbox'
+// hdl_unsupported = [1]
+// note = '$fatal unless 0 (en/dvalid handshake not implemented)'
+// [params.ASYNC.values]
+// 0 = 'off'
+// 1 = 'on'
+//
+// [params.FLOATING_POINT]
+// mask = 'floating_point'
+// type = 'checkbox'
+// hdl_unsupported = [1]
+// note = '$fatal unless 0 (fixed point only)'
+// [params.FLOATING_POINT.values]
+// 0 = 'off'
+// 1 = 'on'
+//
+// [params.FLOAT_TYPE]
+// mask = 'float_type'
+// type = 'popup'
+// note = 'radiobutton; the init scripts test float_type == 2 (1-based option index); ignored (FLOATING_POINT must be 0)'
+// [params.FLOAT_TYPE.values]
+// 1 = 'single'
+// 2 = 'custom'
+//
+// [params.COEFF_SHARING]
+// mask = 'coeff_sharing'
+// type = 'checkbox'
+// note = 'declared only, ignored by the HDL'
+// [params.COEFF_SHARING.values]
+// 0 = 'off'
+// 1 = 'on'
+//
+// [params.COEFF_DECIMATION]
+// mask = 'coeff_decimation'
+// type = 'checkbox'
+// note = 'declared only, ignored by the HDL'
+// [params.COEFF_DECIMATION.values]
+// 0 = 'off'
+// 1 = 'on'
+//
+// [params.COEFF_GENERATION]
+// mask = 'coeff_generation'
+// type = 'checkbox'
+// note = 'ignored: the HDL always reads a ROM table (see deviations)'
+// [params.COEFF_GENERATION.values]
+// 0 = 'off'
+// 1 = 'on'
+//
+// [params.USE_HDL]
+// mask = 'use_hdl'
+// type = 'checkbox'
+// note = 'declared only, ignored by the HDL (multiplier implementation only)'
+// [params.USE_HDL.values]
+// 0 = 'off'
+// 1 = 'on'
+//
+// [params.USE_EMBEDDED]
+// mask = 'use_embedded'
+// type = 'checkbox'
+// note = 'declared only, ignored by the HDL (multiplier implementation only)'
+// [params.USE_EMBEDDED.values]
+// 0 = 'off'
+// 1 = 'on'
+//
+// [params.DSP48_ADDERS]
+// mask = 'dsp48_adders'
+// type = 'checkbox'
+// note = 'declared only, ignored by the HDL (see deviations: Simulink forces add_latency = 2)'
+// [params.DSP48_ADDERS.values]
+// 0 = 'off'
+// 1 = 'on'
+//
+// [hdl_only]
+// N_COEFFS = "length(Coeffs): replaces the mask's vector Coeffs"
+// COEFF_0 = "Coeffs(1): replaces the mask's vector Coeffs"
+// COEFF_1 = "Coeffs(2): replaces the mask's vector Coeffs"
+// INIT_FILE = 'implementation: memory initialization file'
+// PLATFORM = 'implementation: memory / primitive vendor (GENERIC, XILINX, ALTERA)'
+// N_BITS_OUT = 'derived from other parameters (do not override)'
+//
+// [mask_missing]
+// Coeffs = 'vector parameter: replaced by N_COEFFS and the coefficient file'
+//
+// [ports]
+// note = 'each Simulink complex port x is split into x_re / x_im; the Simulink names are not legal HDL identifiers; the Simulink a, b, a+bw, a-bw buses carry N_INPUTS complex lanes, lane 0 in the MSBs, which become array element 0'
+// [ports.renamed]
+// apbw_re = 'a+bw'
+// apbw_im = 'a+bw'
+// ambw_re = 'a-bw'
+// ambw_im = 'a-bw'
+// [ports.missing]
+// en = 'async=on only (not implemented)'
+// dvalid = 'async=on only (not implemented)'
+// [ports.extra]
+// @simulink-mapping end
 
 module butterfly_direct #(
     parameter int    N_INPUTS          = 1,
@@ -214,7 +378,7 @@ module butterfly_direct #(
     // ── shift select (dynamic shifting only) ─────────────────────────────────
     logic shift_d;
 
-    pipeline #(.BITWIDTH(1), .LATENCY(FAN_LATENCY)) u_shift_dly (
+    pipeline #(.BITWIDTH(1), .CSP_LATENCY(FAN_LATENCY)) u_shift_dly (
         .clk(clk), .din(shift), .dout(shift_d));
 
     // ── per lane: add / subtract, shift, convert ─────────────────────────────
@@ -238,7 +402,7 @@ module butterfly_direct #(
                 .N_BITS_A(IW),    .BIN_PT_A(BP), .TYPE_A(1),
                 .N_BITS_B(BW_W),  .BIN_PT_B(BP), .TYPE_B(1),
                 .N_BITS_OUT(SUM_W), .BIN_PT_OUT(BP), .TYPE_OUT(1),
-                .OPMODE(c / 2), .QUANTIZATION(0), .OVERFLOW(0), .LATENCY(ADD_LATENCY)
+                .OPMODE(c / 2), .QUANTIZATION(0), .OVERFLOW(0), .CSP_LATENCY(ADD_LATENCY)
             ) u_addsub (.clk(clk), .a(a_c[c]), .b(b_c[c]), .dout(sum_c));
 
             if (DYNAMIC != 0) begin : GEN_DYNAMIC
@@ -248,7 +412,7 @@ module butterfly_direct #(
                 convert #(
                     .N_BITS_IN(SUM_W), .BIN_PT_IN(BP), .TYPE_IN(1),
                     .N_BITS_OUT(CONV_IN_W), .BIN_PT_OUT(BP + 1), .TYPE_OUT(1),
-                    .QUANTIZATION(0), .OVERFLOW(0), .LATENCY(0)
+                    .QUANTIZATION(0), .OVERFLOW(0), .CSP_LATENCY(0)
                 ) u_norm0 (.clk(clk), .din(sum_c), .dout(norm0));
                 scale #(
                     .N_BITS_IN(SUM_W), .BIN_PT_IN(BP), .TYPE_IN(1), .SCALE_FACTOR(-1),
@@ -264,9 +428,9 @@ module butterfly_direct #(
             end
 
             convert_of #(
-                .N_BITS_IN (CONV_IN_W),  .BIN_PT_IN (CONV_IN_BP),
-                .N_BITS_OUT(N_BITS_OUT), .BIN_PT_OUT(BP),
-                .QUANTIZATION(QUANTIZATION), .OVERFLOW(OVERFLOW), .LATENCY(CONV_LATENCY)
+                .BIT_WIDTH_I (CONV_IN_W),  .BINARY_POINT_I (CONV_IN_BP),
+                .BIT_WIDTH_O(N_BITS_OUT), .BINARY_POINT_O(BP),
+                .QUANTIZATION(QUANTIZATION), .OVERFLOW(OVERFLOW), .CSP_LATENCY(CONV_LATENCY)
             ) u_convert (.clk(clk), .din(cin_c), .dout(out_c[c]), .of(of_c[c]));
         end
 
@@ -281,7 +445,7 @@ module butterfly_direct #(
     end
 
     // ── sync ─────────────────────────────────────────────────────────────────
-    pipeline #(.BITWIDTH(1), .LATENCY(ADD_LATENCY + MUX_LATENCY + CONV_LATENCY)) u_sync_dly (
+    pipeline #(.BITWIDTH(1), .CSP_LATENCY(ADD_LATENCY + MUX_LATENCY + CONV_LATENCY)) u_sync_dly (
         .clk(clk), .din(tw_sync), .dout(sync_out));
 
 endmodule

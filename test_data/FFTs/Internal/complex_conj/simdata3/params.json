@@ -2,6 +2,6 @@
   "N_INPUTS": 3,
   "N_BITS": 6,
   "BIN_PT": 5,
-  "LATENCY": 1,
+  "CSP_LATENCY": 1,
   "OVERFLOW": 1
 }

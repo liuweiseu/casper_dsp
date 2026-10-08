@@ -34,6 +34,32 @@
 // otherwise; in xeng ANT_SEP <= N_ANTS/2, so it always fits).
 // Derived: BIT_GROWTH = ceil(log2(ACC_LEN)), ANT_BITS = ceil(log2(N_ANTS)),
 // N_BITS_OUT = 2*N_BITS + 1 + BIT_GROWTH.
+//
+// ── HDL-Simulink Mapping ─────────────────────────────────────────────────────
+// Differences between this HDL and its Simulink block (casper_library
+// or Xilinx blockset). Machine-readable: the lines between the
+// @simulink-mapping markers are TOML after removing the leading "// "
+// (checked by tools/check_simulink_mapping.py). Fields: block,
+// deviations, params (numeric HDL value -> mask option text, verbatim),
+// hdl_only, mask_missing, ports (renamed HDL -> Simulink, missing,
+// extra).
+// @simulink-mapping begin
+// block = 'casper_library_correlator.slx/baseline_tap'
+// deviations = [
+//   "ANT_SEP*ACC_LEN must fit the ceil(log2 N_ANTS)+ceil(log2 ACC_LEN)-bit Constant, or the HDL stops with a $fatal; Simulink's Xilinx Constant would quantize it (round/saturate, see xlRegister.sgm's constant convention) and build. Inside xeng ANT_SEP <= N_ANTS/2, so the value always fits.",
+// ]
+//
+// [hdl_only]
+// PLATFORM = 'implementation: memory / primitive vendor (GENERIC, XILINX, ALTERA)'
+// N_BITS_OUT = 'derived from other parameters (do not override)'
+//
+// [mask_missing]
+//
+// [ports]
+// [ports.renamed]
+// [ports.missing]
+// [ports.extra]
+// @simulink-mapping end
 
 module baseline_tap #(
     parameter int    N_ANTS         = 4,

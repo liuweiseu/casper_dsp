@@ -49,6 +49,141 @@
 // COEFF_SHARING, COEFF_DECIMATION, COEFF_GENERATION, CAL_BITS,
 // N_BITS_ROTATION, MULT_SPEC, DSP48_ADDERS, ADD_PIPE_LATENCY and
 // MULT_PIPE_LATENCY are ignored.
+//
+// ── HDL-Simulink Mapping ─────────────────────────────────────────────────────
+// Differences between this HDL and its Simulink block (casper_library
+// or Xilinx blockset). Machine-readable: the lines between the
+// @simulink-mapping markers are TOML after removing the leading "// "
+// (checked by tools/check_simulink_mapping.py). Fields: block,
+// deviations, params (numeric HDL value -> mask option text, verbatim),
+// hdl_only, mask_missing, ports (renamed HDL -> Simulink, missing,
+// extra).
+// @simulink-mapping begin
+// block = 'casper_library_ffts.slx/fft_direct'
+// deviations = [
+//   "Deliberate: with bitgrowth on, fft_direct_init.m:228 sizes the final output bus_expands as min(max_bits, input_bit_width*FFTSize) ('*' typo for '+'), which mis-slices the outputs whenever input_bit_width+FFTSize < max_bits; the HDL uses the real width min(MAX_BITS, INPUT_BIT_WIDTH+FFT_SIZE) (fft_direct.sv:35-38), so Simulink is not reproduced in that case.",
+//   "COEFF_GENERATION / CAL_BITS / N_BITS_ROTATION are ignored and the twiddles always come from ROM tables, but in Simulink coeff_generation = 'on' (mask default) makes coeff_gen build a feedback_osc phase-rotation oscillator instead of a lookup table whenever the butterfly's Coeffs list is bit-reversed and log2(length(Coeffs)) > ceil(log2(mult_latency+add_latency+conv_latency+1)) + cal_bits (coeff_gen_init.m:260, 308, 497-530); the oscillator's twiddle values are not the exactly rounded table values, so outputs can differ in the LSBs (MAP_TAIL = 1 lists of 2^(LARGER_FFT_SIZE-FFT_SIZE) bit-reversed coefficients typically qualify; unverified numerically).",
+//   'With MAP_TAIL = 0 and FFT_SIZE >= 3, every butterfly whose single coefficient index u is >= 2 uses a constant twiddle_general, which casper quantizes to coeff_bit_width-2 fraction bits (coeff_gen_init.m:156-157) while the HDL table (written by rtl/FFTs/scripts/gen_fft_mem_files.py via gen_twiddle_coeffs.py:52) uses coeff_bit_width-1 fraction bits, so those twiddles can differ by one coefficient LSB (known, left unchanged; mlib_devel_notes/fft_wideband_real_hdl_plan.md Phase 6).',
+//   "The mask's bin_pt_in = -1 backwards-compatibility value (replaced by input_bit_width-1 in fft_direct_init.m:187-190) is not recognised: BIN_PT_IN must be given explicitly.",
+//   "OVERFLOW = 2 ('Error') has no working Simulink counterpart: butterfly_direct_init.m:512-514 compares the option against 'Flag as error', so 'Error' leaves the bus_convert overflow argument undefined and the mask init fails, whereas the HDL silently wraps (rtl/Bus/convert.sv saturates only for OVERFLOW = 1).",
+//   "DSP48_ADDERS is ignored, but in Simulink dsp48_adders = 'on' forces add_latency = 2 in every butterfly_direct (butterfly_direct_init.m:194-197), so with the box ticked and ADD_LATENCY != 2 the Simulink data/sync latency differs from the HDL's.",
+//   "ADD_PIPE_LATENCY / MULT_PIPE_LATENCY are ignored: in Simulink a non-zero add_pipe_latency inserts pipeline blocks on the bus_addsub inputs (bus_addsub_init.m:250-275, enabled by butterfly_direct_init.m:156-160) and mult_pipe_latency pipelines twiddle_general's bus_mult (twiddle_general_init.m:250-251), so for non-zero values the HDL has less latency (note Simulink's own fixed-point sync delay, butterfly_direct_init.m:652, does not include add_pipe_latency); only 0 is equivalent.",
+//   "Bit order of of: the HDL puts stream 0 in bit 0 (of[n] = stream n), but Simulink packs the per-stream flags with bus_create/Concat, stream 0 in the MSB (fft_direct_init.m:336 Concat of the butterflies' of buses, Concat input 1 = MSB, then of_expand / combine); the vector is bit-reversed relative to Simulink when it has more than one bit (fft_wideband_real.sv:31-33 and its GEN_OF loop undo this for the top-level of).",
+//   "SHIFT_SCHEDULE is an integer bit mask (bit s = stage s) instead of casper's shift_schedule vector, and MULT_SPEC is a single ignored integer instead of the per-stage vector.",
+// ]
+//
+// [params.MAP_TAIL]
+// mask = 'map_tail'
+// type = 'checkbox'
+// [params.MAP_TAIL.values]
+// 0 = 'off'
+// 1 = 'on'
+//
+// [params.QUANTIZATION]
+// mask = 'quantization'
+// type = 'popup'
+// [params.QUANTIZATION.values]
+// 0 = 'Truncate'
+// 1 = 'Round  (unbiased: +/- Inf)'
+// 2 = 'Round  (unbiased: Even Values)'
+//
+// [params.OVERFLOW]
+// mask = 'overflow'
+// type = 'popup'
+// note = "the HDL treats 2 as wrap (rtl/Bus/convert.sv saturates only for 1); in Simulink 'Error' does not build (butterfly_direct_init.m:512-514 tests for 'Flag as error')"
+// [params.OVERFLOW.values]
+// 0 = 'Wrap'
+// 1 = 'Saturate'
+// 2 = 'Error'
+//
+// [params.BITGROWTH]
+// mask = 'bitgrowth'
+// type = 'checkbox'
+// [params.BITGROWTH.values]
+// 0 = 'off'
+// 1 = 'on'
+//
+// [params.HARDCODE_SHIFTS]
+// mask = 'hardcode_shifts'
+// type = 'checkbox'
+// [params.HARDCODE_SHIFTS.values]
+// 0 = 'off'
+// 1 = 'on'
+//
+// [params.SHIFT_SCHEDULE]
+// mask = 'shift_schedule'
+// type = 'edit'
+// note = "casper's per-stage 0/1 vector becomes a bit mask here: bit k = stage k+1 (bit s = stage s, s = 0 .. FFT_SIZE-1)"
+//
+// [params.MULT_SPEC]
+// mask = 'mult_spec'
+// type = 'edit'
+// note = "casper's per-stage vector (multiplier_specification.m) becomes one ignored scalar; implementation-only (multiplier core choice)"
+//
+// [params.ASYNC]
+// mask = 'async'
+// type = 'checkbox'
+// hdl_unsupported = [1]
+// note = '$fatal unless 0 (en/dvalid handshake not implemented)'
+// [params.ASYNC.values]
+// 0 = 'off'
+// 1 = 'on'
+//
+// [params.COEFF_SHARING]
+// mask = 'coeff_sharing'
+// type = 'checkbox'
+// note = 'declared only, ignored by the HDL'
+// [params.COEFF_SHARING.values]
+// 0 = 'off'
+// 1 = 'on'
+//
+// [params.COEFF_DECIMATION]
+// mask = 'coeff_decimation'
+// type = 'checkbox'
+// note = 'declared only, ignored by the HDL'
+// [params.COEFF_DECIMATION.values]
+// 0 = 'off'
+// 1 = 'on'
+//
+// [params.COEFF_GENERATION]
+// mask = 'coeff_generation'
+// type = 'checkbox'
+// note = 'ignored: the HDL always reads ROM tables (see deviations)'
+// [params.COEFF_GENERATION.values]
+// 0 = 'off'
+// 1 = 'on'
+//
+// [params.DSP48_ADDERS]
+// mask = 'dsp48_adders'
+// type = 'checkbox'
+// note = 'declared only, ignored by the HDL'
+// [params.DSP48_ADDERS.values]
+// 0 = 'off'
+// 1 = 'on'
+//
+// [hdl_only]
+// COEFF_DIR = 'implementation: memory initialization file'
+// PLATFORM = 'implementation: memory / primitive vendor (GENERIC, XILINX, ALTERA)'
+// N_BITS_OUT = 'derived from other parameters (do not override)'
+//
+// [mask_missing]
+// floating_point = 'floating point is not implemented'
+// float_type = 'floating point is not implemented'
+// exp_width = 'floating point is not implemented'
+// frac_width = 'floating point is not implemented'
+//
+// [ports]
+// note = 'array element s*2^FFT_SIZE + n; each Simulink complex port x is split into x_re / x_im'
+// [ports.renamed]
+// din_re = 'in<s><n>'
+// din_im = 'in<s><n>'
+// dout_re = 'out<s><n>'
+// dout_im = 'out<s><n>'
+// [ports.missing]
+// en = 'async=on only (not implemented)'
+// dvalid = 'async=on only (not implemented)'
+// [ports.extra]
+// @simulink-mapping end
 
 module fft_direct #(
     parameter int    N_STREAMS         = 1,

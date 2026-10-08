@@ -50,6 +50,63 @@
 // Ports: a = {re, im} (2*N_BITS_A), b = {re, im} (2*N_BITS_B, the
 // conjugated input), acc_in / acc_out = {re, im} (2*N_BITS_OUT each part
 // signed with binary point BIN_PT_OUT), real parts in the MSBs.
+//
+// ── HDL-Simulink Mapping ─────────────────────────────────────────────────────
+// Differences between this HDL and its Simulink block (casper_library
+// or Xilinx blockset). Machine-readable: the lines between the
+// @simulink-mapping markers are TOML after removing the leading "// "
+// (checked by tools/check_simulink_mapping.py). Fields: block,
+// deviations, params (numeric HDL value -> mask option text, verbatim),
+// hdl_only, mask_missing, ports (renamed HDL -> Simulink, missing,
+// extra).
+// @simulink-mapping begin
+// block = 'casper_library_correlator.slx/cmac'
+// deviations = [
+//   "Constraint A: the HDL stops with a $fatal unless BIN_PT_A+BIN_PT_B == N_BITS_A+N_BITS_B-2. Simulink accepts any binary points: c_to_ri2 hardcodes acc_in's binary point to n_bits_out-bit_growth-3, and the Full-precision relay Mux in acc/acc1 (system_871.xml Mux2) then makes acc_out wider than 2*n_bits_out and shifts acc_in.",
+//   "IN_LATENCY and CONV_LATENCY are declared only and give a $warning when nonzero. In Simulink they are greyed out and the mask init always sets cmult* in_latency/conv_latency to '0' (system_root.xml init), so the behaviour matches.",
+// ]
+//
+// [params.MULTIPLIER_IMPLEMENTATION]
+// mask = 'multiplier_implementation'
+// type = 'popup'
+// [params.MULTIPLIER_IMPLEMENTATION.values]
+// 0 = 'behavioral HDL'
+// 1 = 'standard core'
+// 2 = 'embedded multiplier core'
+//
+// [params.QUANTIZATION]
+// mask = 'quantization'
+// type = 'popup'
+// note = 'declared only: greyed out and hidden on the mask (system_root.xml:175, Enabled/Visible off) and never passed to cmult*, so it has no effect in Simulink either'
+// [params.QUANTIZATION.values]
+// 0 = 'Truncate'
+// 1 = 'Round  (unbiased: +/- Inf)'
+// 2 = 'Round  (unbiased: Even Values)'
+//
+// [params.OVERFLOW]
+// mask = 'overflow'
+// type = 'popup'
+// note = 'declared only: greyed out and hidden on the mask (system_root.xml:184) and never passed to cmult*, so it has no effect in Simulink either'
+// [params.OVERFLOW.values]
+// 0 = 'Wrap'
+// 1 = 'Saturate'
+// 2 = 'Flag as error'
+//
+// [hdl_only]
+// BIT_GROWTH = 'derived from other parameters (do not override)'
+// N_BITS_OUT = 'derived from other parameters (do not override)'
+// BIN_PT_OUT = 'derived from other parameters (do not override)'
+//
+// [mask_missing]
+//
+// [ports]
+// note = 'the Simulink names are not legal HDL identifiers'
+// [ports.renamed]
+// a = 'a+bi'
+// b = 'c+di'
+// [ports.missing]
+// [ports.extra]
+// @simulink-mapping end
 
 module cmac #(
     parameter int ACC_LEN                   = 128,
@@ -107,16 +164,16 @@ module cmac #(
 
     logic [N_BITS_OUT-1:0] prod_re, prod_im, acc_in_re, acc_in_im, out_re, out_im;
 
-    c_to_ri #(.NBITS(N_BITS_OUT), .BIN_PT(BIN_PT_OUT)) u_c_to_ri1 (
+    c_to_ri #(.N_BITS(N_BITS_OUT), .BIN_PT(BIN_PT_OUT)) u_c_to_ri1 (
         .c(prod), .re(prod_re), .im(prod_im));
-    c_to_ri #(.NBITS(N_BITS_OUT), .BIN_PT(N_BITS_A + N_BITS_B - 2)) u_c_to_ri2 (
+    c_to_ri #(.N_BITS(N_BITS_OUT), .BIN_PT(N_BITS_A + N_BITS_B - 2)) u_c_to_ri2 (
         .c(acc_in), .re(acc_in_re), .im(acc_in_im));
 
     // ── sync -> rst ──────────────────────────────────────────────────────────
     logic                  sync_d, rst;
     logic [BIT_GROWTH-1:0] cnt, zero;
 
-    pipeline #(.BITWIDTH(1), .LATENCY(MULT_LATENCY + ADD_LATENCY - 1)) u_sync_dly (
+    pipeline #(.BITWIDTH(1), .CSP_LATENCY(MULT_LATENCY + ADD_LATENCY - 1)) u_sync_dly (
         .clk(clk), .din(sync), .dout(sync_d));
 
     counter #(

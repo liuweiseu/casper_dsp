@@ -7,7 +7,7 @@ Port of casper_library's `cross_multiplier` (`casper_library_correlator.slx`, Bl
 ```
 din[x], din[y] ─ bus_expand / c_to_ri (per sub-stream s) ─ 4 × Delay(1) (operand fan-out registers)
   ─ cmult_4bit_hdl*: real = ac + bd, imag = bc − ad  = x · conj(y), full precision, latency MULT + ADD
-  ─ convert_of (re, im) to Fix(BIT_WIDTH_OUT, BIN_PT_OUT), QUANTIZATION / OVERFLOW, latency CONV
+  ─ convert_of (re, im) to Fix(BIT_WIDTH_OUT, BINARY_POINT_OUT), QUANTISATION / OVERFLOW, latency CONV
   ─ ri_to_c / bus_create ─ dout[k]
 sync_out = Delay(sync_in, 1 + MULT_LATENCY + ADD_LATENCY + CONV_LATENCY)
 ```
@@ -28,11 +28,11 @@ Defaults are the stored mask values, except `STREAMS`. The library stores `strea
 |-----------|---------|-------------|
 | `STREAMS` | 2 | Number of input streams (≥ 1) |
 | `AGGREGATION` | 2 | Complex samples per stream word |
-| `BIT_WIDTH_IN` / `BIN_PT_IN` | 4 / 3 | Input part format (W, P) |
-| `BIT_WIDTH_OUT` / `BIN_PT_OUT` | 9 / 6 | Output part format |
+| `BIT_WIDTH_IN` / `BINARY_POINT_IN` | 4 / 3 | Input part format (W, P) |
+| `BIT_WIDTH_OUT` / `BINARY_POINT_OUT` | 9 / 6 | Output part format |
 | `MULT_LATENCY` / `ADD_LATENCY` | 2 / 1 | Multiplier latencies |
 | `OVERFLOW` | 0 | 0 = Wrap, 1 = Saturate, 2 = Error (treated as wrap in HDL) |
-| `QUANTIZATION` | 0 | 0 = Truncate, 1 = Round (unbiased: ±Inf), 2 = Round (unbiased: even) |
+| `QUANTISATION` | 0 | 0 = Truncate, 1 = Round (unbiased: ±Inf), 2 = Round (unbiased: even) |
 | `CONV_LATENCY` | 0 | Output convert latency |
 | `NOUT` | derived | `STREAMS(STREAMS+1)/2` |
 

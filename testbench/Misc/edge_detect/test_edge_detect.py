@@ -25,8 +25,8 @@ async def power_on_test(dut):
     din_prev, so with din=1 it shows din_prev's initial value. din is set
     back to 0 so module_test starts from the power-on state.
     """
-    edge_type  = int(dut.EDGE_TYPE.value)
-    output_pol = int(dut.OUTPUT_POL.value)
+    edge_type  = int(dut.EDGE.value)
+    output_pol = int(dut.POLARITY.value)
     # din=1, din_prev=0: a rising edge (and any edge), no falling edge
     detect = 0 if edge_type == FALLING else 1
     expected = detect ^ output_pol
@@ -50,19 +50,19 @@ async def module_test(dut):
     compare dout against the expected value in sim_dout.csv after the edge.
 
     Parameter sets:
-        simdata0 : EDGE_TYPE=0(rising),  OUTPUT_POL=0(active_high)
-        simdata1 : EDGE_TYPE=0(rising),  OUTPUT_POL=1(active_low)
-        simdata2 : EDGE_TYPE=1(falling), OUTPUT_POL=0(active_high)
-        simdata3 : EDGE_TYPE=1(falling), OUTPUT_POL=1(active_low)
-        simdata4 : EDGE_TYPE=2(both),    OUTPUT_POL=0(active_high)
-        simdata5 : EDGE_TYPE=2(both),    OUTPUT_POL=1(active_low)
+        simdata0 : EDGE=0(rising),  POLARITY=0(active_high)
+        simdata1 : EDGE=0(rising),  POLARITY=1(active_low)
+        simdata2 : EDGE=1(falling), POLARITY=0(active_high)
+        simdata3 : EDGE=1(falling), POLARITY=1(active_low)
+        simdata4 : EDGE=2(both),    POLARITY=0(active_high)
+        simdata5 : EDGE=2(both),    POLARITY=1(active_low)
     """
     clock = Clock(dut.clk, 10, units="ns")
     cocotb.start_soon(clock.start())
 
-    edge_type  = int(dut.EDGE_TYPE.value)
-    output_pol = int(dut.OUTPUT_POL.value)
-    cocotb.log.info(f"Testing with EDGE_TYPE={edge_type}, OUTPUT_POL={output_pol}")
+    edge_type  = int(dut.EDGE.value)
+    output_pol = int(dut.POLARITY.value)
+    cocotb.log.info(f"Testing with EDGE={edge_type}, POLARITY={output_pol}")
 
     if   edge_type == RISING  and output_pol == ACTIVE_HIGH:
         datadir = testdatadir / "simdata0"
@@ -78,7 +78,7 @@ async def module_test(dut):
         datadir = testdatadir / "simdata5"
     else:
         cocotb.log.warning(
-            f"No test data for EDGE_TYPE={edge_type}, OUTPUT_POL={output_pol}. Skipping."
+            f"No test data for EDGE={edge_type}, POLARITY={output_pol}. Skipping."
         )
         return
 

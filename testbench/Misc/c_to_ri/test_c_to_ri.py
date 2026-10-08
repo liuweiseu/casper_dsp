@@ -16,19 +16,19 @@ async def module_test(dut):
     that re and im outputs match sim_re.csv and sim_im.csv.
 
     Parameter sets:
-        simdata0 : NBITS=8,  BIN_PT=7  — unpack 16-bit complex into two 8-bit parts
-        simdata1 : NBITS=16, BIN_PT=15 — unpack 32-bit complex into two 16-bit parts
+        simdata0 : N_BITS=8,  BIN_PT=7  — unpack 16-bit complex into two 8-bit parts
+        simdata1 : N_BITS=16, BIN_PT=15 — unpack 32-bit complex into two 16-bit parts
     """
-    nbits  = int(dut.NBITS.value)
+    nbits  = int(dut.N_BITS.value)
     bin_pt = int(dut.BIN_PT.value)
-    cocotb.log.info(f"Testing with NBITS={nbits}, BIN_PT={bin_pt}")
+    cocotb.log.info(f"Testing with N_BITS={nbits}, BIN_PT={bin_pt}")
 
     if nbits == 8:
         datadir = testdatadir / "simdata0"
     elif nbits == 16:
         datadir = testdatadir / "simdata1"
     else:
-        cocotb.log.warning(f"No test data for NBITS={nbits}. Skipping.")
+        cocotb.log.warning(f"No test data for N_BITS={nbits}. Skipping.")
         return
 
     sim_in = np.loadtxt(datadir / "sim_c.csv",     dtype=int).tolist()

@@ -16,6 +16,46 @@
 // tap_out: BIT_WIDTH_IN+COEFF_BIT_WIDTH bits, binary point
 // BIT_WIDTH_IN+COEFF_BIT_WIDTH-2, signed. Declared for traceability only:
 // USE_HDL and USE_EMBEDDED are ignored.
+//
+// ── HDL-Simulink Mapping ─────────────────────────────────────────────────────
+// Differences between this HDL and its Simulink block (casper_library
+// or Xilinx blockset). Machine-readable: the lines between the
+// @simulink-mapping markers are TOML after removing the leading "// "
+// (checked by tools/check_simulink_mapping.py). Fields: block,
+// deviations, params (numeric HDL value -> mask option text, verbatim),
+// hdl_only, mask_missing, ports (renamed HDL -> Simulink, missing,
+// extra).
+// @simulink-mapping begin
+// block = 'casper_library_pfbs.slx/last_tap_real'
+// deviations = [
+//   "USE_HDL and USE_EMBEDDED are declared only (last_tap_real.sv header); in Simulink last_tap_real_init.m only copies them to the Mult's use_behavioral_HDL/use_embedded, which does not change the Full-precision product (system_5.xml Mult precision Full, latency mult_latency).",
+// ]
+//
+// [params.USE_HDL]
+// mask = 'use_hdl'
+// type = 'checkbox'
+// note = "declared only: selects the Xilinx Mult's behavioural-HDL implementation; no numeric effect (Full precision)"
+// [params.USE_HDL.values]
+// 0 = 'off'
+// 1 = 'on'
+//
+// [params.USE_EMBEDDED]
+// mask = 'use_embedded'
+// type = 'checkbox'
+// note = 'declared only: selects DSP48 vs fabric for the Xilinx Mult; the mask forces it off when use_hdl is on'
+// [params.USE_EMBEDDED.values]
+// 0 = 'off'
+// 1 = 'on'
+//
+// [hdl_only]
+//
+// [mask_missing]
+//
+// [ports]
+// [ports.renamed]
+// [ports.missing]
+// [ports.extra]
+// @simulink-mapping end
 
 module last_tap_real #(
     parameter int BIT_WIDTH_IN    = 8,
@@ -38,10 +78,10 @@ module last_tap_real #(
         .N_BITS_B(COEFF_BIT_WIDTH), .BIN_PT_B(COEFF_BIT_WIDTH - 1), .TYPE_B(1),
         .N_BITS_OUT(BIT_WIDTH_IN + COEFF_BIT_WIDTH),
         .BIN_PT_OUT(BIT_WIDTH_IN + COEFF_BIT_WIDTH - 2),
-        .TYPE_OUT(1), .QUANTIZATION(0), .OVERFLOW(0), .LATENCY(MULT_LATENCY)
+        .TYPE_OUT(1), .QUANTIZATION(0), .OVERFLOW(0), .MULT_LATENCY(MULT_LATENCY)
     ) u_mult (.clk(clk), .a(din), .b(coeff), .dout(tap_out));
 
-    pipeline #(.BITWIDTH(1), .LATENCY(MULT_LATENCY)) u_delay (
+    pipeline #(.BITWIDTH(1), .CSP_LATENCY(MULT_LATENCY)) u_delay (
         .clk(clk), .din(sync), .dout(sync_out));
 
 endmodule

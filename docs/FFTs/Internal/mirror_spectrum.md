@@ -50,7 +50,7 @@ be 0. Floating point is not implemented.
 |-----------|---------|-------------|
 | `N_INPUTS` | 1 | Complex lanes per channel |
 | `FFT_SIZE` | 8 | log2 of the frame length |
-| `INPUT_BIT_WIDTH` | 18 | Width of the real and imaginary parts (signed) |
+| `INPUT_BITWIDTH` | 18 | Width of the real and imaginary parts (signed) |
 | `BIN_PT_IN` | 17 | Binary point |
 | `BRAM_LATENCY` | 2 | Latency of the reorder feeding `reo_in<i>` (see above) |
 | `NEGATE_LATENCY` | 1 | complex_conj latency (`NEGATE_MODE = 0`) |
@@ -65,7 +65,7 @@ be 0. Floating point is not implemented.
 |------|-----------|-------|-------------|
 | `clk` | input | 1 | Clock |
 | `sync` | input | 1 | Frame sync |
-| `din<i>_re`, `din<i>_im` (i = 0 … 3) | input | `INPUT_BIT_WIDTH` × `N_INPUTS` | Bins in order |
-| `reo_in<i>_re`, `reo_in<i>_im` (i = 0 … 3) | input | `INPUT_BIT_WIDTH` × `N_INPUTS` | Bins in reverse order |
+| `din<i>_re`, `din<i>_im` (i = 0 … 3) | input | `INPUT_BITWIDTH` × `N_INPUTS` | Bins in order |
+| `reo_in<i>_re`, `reo_in<i>_im` (i = 0 … 3) | input | `INPUT_BITWIDTH` × `N_INPUTS` | Bins in reverse order |
 | `sync_out` | output | 1 | Sync, one cycle before the first output sample |
-| `dout<i>_re`, `dout<i>_im` (i = 0 … 3) | output | `INPUT_BIT_WIDTH` × `N_INPUTS` | Full spectra |
+| `dout<i>_re`, `dout<i>_im` (i = 0 … 3) | output | `INPUT_BITWIDTH` × `N_INPUTS` | Full spectra |

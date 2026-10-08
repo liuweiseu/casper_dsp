@@ -20,13 +20,13 @@ frame is the scaled FFT of an input frame, to within 3 output LSB.
 
 ```
 in<s><n> ─► pipeline INPUT_LATENCY ─► fft_biplex_real_4x pol<s·2^NI+n>_in
-   fft_biplex_real_4x: N_BIPLEX_INPUTS = NS·2^(NI−2), FFT_SIZE = F−NI  (first F−NI stages)
+   fft_biplex_real_4x: its N_INPUTS = NB = NS·2^(NI−2), FFT_SIZE = F−NI  (first F−NI stages)
 pol<s·2^NI+n>_out ─► pipeline BIPLEX_DIRECT_LATENCY ─► fft_direct in<s><n>
    fft_direct: N_STREAMS = NS, FFT_SIZE = NI, MAP_TAIL on,
                LARGER_FFT_SIZE = F, START_STAGE = F−NI+1        (last NI stages)
 fft_direct out<s><n>, n < 2^(NI−1)   (the upper half is terminated)
    UNSCRAMBLE: ─► pipeline BIPLEX_DIRECT_LATENCY ─► fft_unscrambler ─► out<s><n>
-               (FFT_SIZE = F−1, LOG2_N_GROUPS = NI−1, N_STREAMS = NS)
+               (FFT_SIZE = F−1, its N_INPUTS = NI−1, N_STREAMS = NS)
    otherwise : ─► out<s><n>
 shift ─► fft_biplex_real_4x (low F−NI bits); shift[F−1 : F−NI] ─► fft_direct
 of = fft_direct of | fft_biplex_real_4x of     (Logical OR, latency 1)
@@ -65,12 +65,12 @@ The blocks are [`fft_biplex_real_4x`](fft_biplex_real_4x.md),
 
 casper's final OR aligns its inputs at the LSB.
 
-- `fft_biplex_real_4x`'s `of` has `N_BIPLEX_INPUTS` bits, with lane 0 as the
+- `fft_biplex_real_4x`'s `of` has `NB` bits (its `N_INPUTS`), with lane 0 as the
   MSB of casper's bus.
 - `fft_direct`'s `of` has `N_STREAMS` bits, with stream 0 as the MSB.
 
-So `of` has `max(N_STREAMS, N_BIPLEX_INPUTS)` bits. Bit `b` is the OR of
-biplex lane `N_BIPLEX_INPUTS−1−b` and fft_direct stream `N_STREAMS−1−b`;
+So `of` has `max(N_STREAMS, NB)` bits. Bit `b` is the OR of
+biplex lane `NB−1−b` and fft_direct stream `N_STREAMS−1−b`;
 a missing bit counts as 0.
 
 ### Memory files
@@ -136,4 +136,4 @@ python3 rtl/FFTs/scripts/gen_fft_mem_files.py wideband_real --fft-size F --n-inp
 | `din` | input | `INPUT_BIT_WIDTH` × `N_STREAMS·2^N_INPUTS` | Real inputs |
 | `sync_out` | output | 1 | Sync, one cycle before the first output of a frame |
 | `dout_re`, `dout_im` | output | `N_BITS_OUT` × `N_STREAMS·2^(N_INPUTS−1)` | Lower half of the spectrum |
-| `of` | output | `max(N_STREAMS, N_BIPLEX_INPUTS)` | Overflow (see above) |
+| `of` | output | `max(N_STREAMS, NB)`, NB = N_STREAMS·2^(N_INPUTS−2) | Overflow (see above) |

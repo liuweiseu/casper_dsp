@@ -7,5 +7,5 @@
   "TYPE_OUT": 1,
   "QUANTIZATION": 2,
   "OVERFLOW": 1,
-  "LATENCY": 2
+  "CSP_LATENCY": 2
 }

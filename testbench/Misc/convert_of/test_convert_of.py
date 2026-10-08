@@ -14,7 +14,7 @@ _tb_root = next(p for p in _here.parents if p.name == "testbench")
 testdatadir = _tb_root.parent / "test_data" / _here.relative_to(_tb_root)
 
 # Integer parameters used to match the DUT against simdataN/params.json
-PARAMS = ['N_BITS_IN', 'BIN_PT_IN', 'N_BITS_OUT', 'BIN_PT_OUT', 'QUANTIZATION', 'OVERFLOW', 'LATENCY']
+PARAMS = ['BIT_WIDTH_I', 'BINARY_POINT_I', 'BIT_WIDTH_O', 'BINARY_POINT_O', 'QUANTIZATION', 'OVERFLOW', 'CSP_LATENCY']
 # sim_<name>.csv -> DUT port; LANE ports are arrays of N_INPUTS words
 LANE_IN = []
 SCALAR_IN = ['din']

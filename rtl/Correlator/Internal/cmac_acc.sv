@@ -16,6 +16,32 @@
 // other times acc_in is relayed with the same 2-cycle delay.
 //
 // The Delay / Delay1 blocks in the diagram have latency 0 (wires).
+//
+// ── HDL-Simulink Mapping ─────────────────────────────────────────────────────
+// Differences between this HDL and its Simulink block (casper_library
+// or Xilinx blockset). Machine-readable: the lines between the
+// @simulink-mapping markers are TOML after removing the leading "// "
+// (checked by tools/check_simulink_mapping.py). Fields: block,
+// deviations, params (numeric HDL value -> mask option text, verbatim),
+// hdl_only, mask_missing, ports (renamed HDL -> Simulink, missing,
+// extra).
+// @simulink-mapping begin
+// block = 'casper_library_correlator.slx/cmac/acc'
+// deviations = [
+//   "The HDL assumes acc_in and din share one binary point; in the diagram Mux2 (system_871.xml) is Full precision, so if acc_in's binary point differs from the Accumulator's (bin_pt_out) Simulink widens acc_out and shifts acc_in (cmac's 'constraint A', which cmac.sv rejects with $fatal).",
+// ]
+//
+// [hdl_only]
+// N_BITS = "parent cmac's n_bits_out (Accumulator n_bits)"
+//
+// [mask_missing]
+//
+// [ports]
+// note = 'also models the identical copy cmac/acc1 (system_886.xml, imaginary part); same ports rst, din, acc_in, valid_in -> acc_out, valid_out'
+// [ports.renamed]
+// [ports.missing]
+// [ports.extra]
+// @simulink-mapping end
 
 module cmac_acc #(
     parameter int N_BITS = 16

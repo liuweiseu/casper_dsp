@@ -28,6 +28,39 @@
 // Timing is that of cmac: acc_in -> acc_out and valid_in -> valid_out
 // 2 cycles, dumps 2 cycles after each rst (sync + MULT + ADD + 1, then every
 // ACC_LEN cycles).
+//
+// ── HDL-Simulink Mapping ─────────────────────────────────────────────────────
+// Differences between this HDL and its Simulink block (casper_library
+// or Xilinx blockset). Machine-readable: the lines between the
+// @simulink-mapping markers are TOML after removing the leading "// "
+// (checked by tools/check_simulink_mapping.py). Fields: block,
+// deviations, params (numeric HDL value -> mask option text, verbatim),
+// hdl_only, mask_missing, ports (renamed HDL -> Simulink, missing,
+// extra).
+// @simulink-mapping begin
+// block = 'casper_library_correlator.slx/dual_pol_cmac'
+// deviations = [
+//   'BIN_PT_IN is declared only. It does nothing in Simulink either: the mask init computes bin_pt_out = 2*bin_pt_in but never uses it, and every cmac gets bin_pt = n_bits_in-1.',
+// ]
+//
+// [params.MULTIPLIER_IMPLEMENTATION]
+// mask = 'multiplier_implementation'
+// type = 'popup'
+// [params.MULTIPLIER_IMPLEMENTATION.values]
+// 0 = 'behavioral HDL'
+// 1 = 'standard core'
+// 2 = 'embedded multiplier core'
+//
+// [hdl_only]
+// N_BITS_OUT = 'derived from other parameters (do not override)'
+//
+// [mask_missing]
+//
+// [ports]
+// [ports.renamed]
+// [ports.missing]
+// [ports.extra]
+// @simulink-mapping end
 
 module dual_pol_cmac #(
     parameter int ACC_LEN                   = 128,

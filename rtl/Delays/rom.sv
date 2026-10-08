@@ -14,6 +14,60 @@
 //               path simulated by this repo's Verilator/cocotb flow.
 //   "XILINX"  : platform/xilinx/rom_xilinx.sv (xpm_memory_sprom)
 //   "ALTERA"  : platform/altera/rom_altera.sv (stub, not implemented yet)
+//
+// ── HDL-Simulink Mapping ─────────────────────────────────────────────────────
+// Differences between this HDL and its Simulink block (casper_library
+// or Xilinx blockset). Machine-readable: the lines between the
+// @simulink-mapping markers are TOML after removing the leading "// "
+// (checked by tools/check_simulink_mapping.py). Fields: block,
+// deviations, params (numeric HDL value -> mask option text, verbatim),
+// hdl_only, mask_missing, ports (renamed HDL -> Simulink, missing,
+// extra).
+// @simulink-mapping begin
+// block = 'xbsIndex_r4.slx/ROM'
+// deviations = [
+//   'Contents: Simulink quantizes the real initVector to {arith_type, n_bits, bin_pt} with Round and Saturate (xlSPROM.sgm: data_xfix_cell); the HDL loads raw hex words from INIT_FILE, so the generator must apply that rounding/saturation; INIT_FILE = "" gives all zeros, whereas the mask default is sin(pi*(0:15)/16).',
+//   'Depth must be a power of two (2^ADDR_WIDTH); Simulink errors on addr > depth-1, the HDL wraps.',
+//   'Read latency is fixed at 1 and dout powers up to 0; latency 0 (distributed, asynchronous read), latency > 1, init_reg != 0 and the rst/en ports are not implemented.',
+// ]
+//
+// [params.ADDR_WIDTH]
+// mask = 'depth'
+// type = 'edit'
+// note = 'depth = 2^ADDR_WIDTH; non-power-of-two depths are not supported'
+//
+// [params.DATA_WIDTH]
+// mask = 'n_bits'
+// type = 'edit'
+//
+// [hdl_only]
+// INIT_FILE = 'replaces initVector: $readmemh file of raw hex words'
+// PLATFORM = 'implementation: memory / primitive vendor (GENERIC, XILINX, ALTERA)'
+//
+// [mask_missing]
+// initVector = 'given as INIT_FILE (raw words) instead'
+// distributed_mem = 'memory type is chosen by PLATFORM / synthesis'
+// rst = 'output-register reset port not implemented'
+// init_reg = 'output register powers up to 0; no reset value'
+// en = 'enable port not implemented'
+// latency = 'read latency fixed at 1'
+// gui_display_data_type = 'HDL stores raw bit patterns (no Boolean / Floating-point)'
+// arith_type = 'interpretation only; INIT_FILE holds the bit patterns'
+// bin_pt = 'interpretation only; INIT_FILE holds the bit patterns'
+// preci_type = 'floating point not implemented'
+// exp_width = 'floating point not implemented'
+// frac_width = 'floating point not implemented'
+// optimize = 'implementation only'
+// use_rpm = 'implementation only'
+//
+// [ports]
+// note = 'addr / dout match the icon port_label'
+// [ports.renamed]
+// [ports.missing]
+// rst = 'rst option only (not implemented)'
+// en = 'en option only (not implemented)'
+// [ports.extra]
+// @simulink-mapping end
 
 module rom #(
     parameter int    DATA_WIDTH = 8,

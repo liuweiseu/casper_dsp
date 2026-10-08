@@ -7,8 +7,11 @@ PathLike = Union[str, os.PathLike]
 def process_verilog_file(v_file: Path, id=-1):
     text = v_file.read_text()
 
-    # 1. get the module name
-    module_match = re.search(r'\bmodule\s+(\w+)', text)
+    # 1. get the module name: the first `module` declaration at the start of a
+    # line, with comments removed (header comments may contain "module ...")
+    code = re.sub(r'/\*.*?\*/', '', text, flags=re.S)
+    code = re.sub(r'//.*', '', code)
+    module_match = re.search(r'^\s*module\s+(\w+)', code, re.M)
     if not module_match:
         print(f"[WARN] No module found in {v_file}")
         return

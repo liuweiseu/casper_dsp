@@ -3,7 +3,7 @@
   "DATA_WIDTH": 24,
   "BIN_PT": 20,
   "TYPE": 1,
-  "LATENCY": 2,
+  "CSP_LATENCY": 2,
   "PRECISION": 1,
   "N_BITS_OUT": 22,
   "BIN_PT_OUT": 17,

@@ -48,6 +48,35 @@
 // X_INT_BITS 5, SYNC_PERIOD 15. DATA_WIDTH (width of data_in, inherited in
 // Simulink) is not a mask parameter; the full-precision Mux3 makes data_out
 // max(DATA_WIDTH, 16) bits, data_in taken as unsigned (zero-extended).
+//
+// ── HDL-Simulink Mapping ─────────────────────────────────────────────────────
+// Differences between this HDL and its Simulink block (casper_library
+// or Xilinx blockset). Machine-readable: the lines between the
+// @simulink-mapping markers are TOML after removing the leading "// "
+// (checked by tools/check_simulink_mapping.py). Fields: block,
+// deviations, params (numeric HDL value -> mask option text, verbatim),
+// hdl_only, mask_missing, ports (renamed HDL -> Simulink, missing,
+// extra).
+// @simulink-mapping begin
+// block = 'casper_library_correlator.slx/xeng_tvg'
+// deviations = [
+//   "tv0..tv7 are an input port instead of internal xps software registers (32-bit, From Processor, io_delay 0). The library diagram drives their simulation ports from Constants 0, 4369, 4369*2 .. 4369*7 (system_717.xml Constant, Constant1, Constant2, Constant8..Constant12). To reproduce Simulink, drive tv[k] = 16'h1111*k; only tv[k][15:0] is used (Slice nbits 16).",
+//   "DATA_WIDTH makes data_in's inherited type explicit, and the HDL treats data_in as unsigned with binary point 0, zero-extended to max(DATA_WIDTH,16). Mux3 (system_717.xml) is Full precision, so in Simulink a signed or fractional data_in changes data_out's type: other inputs are sign-extended or shifted to align binary points.",
+//   'ANT_BITS is declared only. The diagram does not reference it either: the antenna counters are fixed at 3/4 bits.',
+// ]
+//
+// [hdl_only]
+// DATA_WIDTH = 'inherited width: Simulink takes it from the input signal (data_in)'
+// OUT_WIDTH = 'derived from other parameters (do not override)'
+//
+// [mask_missing]
+//
+// [ports]
+// [ports.renamed]
+// [ports.missing]
+// [ports.extra]
+// tv = 'the software registers tv0..tv7 of the diagram, as an input port'
+// @simulink-mapping end
 
 module xeng_tvg #(
     parameter int ANT_BITS    = 2,
@@ -94,7 +123,7 @@ module xeng_tvg #(
         .INIT_VAL((1 << SYNC_PERIOD) - 2), .STEP(1), .ENABLE_SYNC_RST(0), .ENABLE_ENABLE(0)
     ) u_counter4 (.clk(clk), .rst(1'b0), .enable(1'b1), .dout(cnt4));
 
-    edge_detect #(.EDGE_TYPE(2), .OUTPUT_POL(0)) u_edge2 (
+    edge_detect #(.EDGE(2), .POLARITY(0)) u_edge2 (
         .clk(clk), .din(cnt4[SYNC_PERIOD]), .dout(edge2));
 
     logic [0:0] sync_mux_in [2];
@@ -118,7 +147,7 @@ module xeng_tvg #(
         .ENABLE_SYNC_RST(1), .ENABLE_ENABLE(0), .RST_VAL(0)
     ) u_counter (.clk(clk), .rst(sync_int), .enable(1'b1), .dout(cnt));
 
-    edge_detect #(.EDGE_TYPE(2), .OUTPUT_POL(0)) u_ant_edge (
+    edge_detect #(.EDGE(2), .POLARITY(0)) u_ant_edge (
         .clk(clk), .din(cnt[X_INT_BITS]), .dout(ant_en));
 
     counter #(

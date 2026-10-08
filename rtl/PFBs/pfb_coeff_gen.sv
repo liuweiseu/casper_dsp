@@ -26,6 +26,58 @@
 // Declared for traceability only: COEFF_DIST_MEM (distributed vs block RAM;
 // see PLATFORM) is ignored; DEBUG_MODE (ROMs holding coefficient indices)
 // must be 0.
+//
+// ── HDL-Simulink Mapping ─────────────────────────────────────────────────────
+// Differences between this HDL and its Simulink block (casper_library
+// or Xilinx blockset). Machine-readable: the lines between the
+// @simulink-mapping markers are TOML after removing the leading "// "
+// (checked by tools/check_simulink_mapping.py). Fields: block,
+// deviations, params (numeric HDL value -> mask option text, verbatim),
+// hdl_only, mask_missing, ports (renamed HDL -> Simulink, missing,
+// extra).
+// @simulink-mapping begin
+// block = 'casper_library_pfbs.slx/pfb_coeff_gen'
+// deviations = [
+//   "DEBUG_MODE != 0 is a $fatal (pfb_coeff_gen.sv:93); Simulink debug_mode='on' stores coefficient indices as Unsigned ROM words (pfb_coeff_gen_init.m atype/binpt/debug_option).",
+//   'Coefficients are not computed by the HDL: the ROMs are read with $readmemh from COEFF_DIR/pfb_coeff_n<NPUT>_t<a>.mem written by rtl/PFBs/scripts/gen_pfb_coeffs.py, so WINDOW_TYPE and FWIDTH are declared only; changing them without regenerating the files has no effect, and a missing file leaves the ROM all zero with only a simulator warning (rtl/Delays/rom.sv initial block), whereas Simulink evaluates pfb_coeff_gen_calc() at init time.',
+//   "The generator reimplements MATLAB window() in Python and raises an error for 'chebwin' and 'userwindow' (gen_pfb_coeffs.py:157-163); it accepts the mask's 'bohamwin' spelling as bohmanwin, while MATLAB window('bohamwin',N) has no such function and is expected to fail in Simulink (unverified). Fixed defaults assumed: gausswin alpha 2.5, kaiser beta 0.5, tukeywin r 0.5.",
+//   'ROM quantization matches the Xilinx ROM model (xlSPROM.sgm:16 xfix with xlRound, xlSaturate = round half away from zero, saturate) and gen_pfb_coeffs.py quantize_coeff (floor(|x|+0.5), saturate); bit-exactness on exact .5 ties additionally depends on Python and MATLAB producing identical double-precision window*sinc values, which is unverified.',
+//   "BRAM_LATENCY < 1 is a $fatal (pfb_coeff_gen.sv:95): Simulink's Xilinx ROM accepts latency 0 (combinational read, xlSPROM.sgm latency==0 branch); for BRAM_LATENCY >= 1 the HDL uses a 1-cycle ROM plus a BRAM_LATENCY-1 register pipeline, all powering up to 0 like the ROM's output delay line (xlSPROM.sgm, zeros(1,latency)).",
+//   'PFB_SIZE-N_INPUTS < 1 and NPUT outside 0..2^N_INPUTS-1 are $fatal (pfb_coeff_gen.sv:94,96-97); Simulink would build a 0-bit Counter / index past the window and fail or misbehave at compile time.',
+//   'COEFF_DIST_MEM is ignored (memory type follows PLATFORM); in Simulink it only selects distributed vs block RAM for the ROMs, which does not change values.',
+// ]
+//
+// [params.COEFF_DIST_MEM]
+// mask = 'CoeffDistMem'
+// type = 'checkbox'
+// note = 'declared only: Simulink sets ROM distributed_mem (Distributed memory / Block RAM); the HDL memory follows PLATFORM'
+// [params.COEFF_DIST_MEM.values]
+// 0 = 'off'
+// 1 = 'on'
+//
+// [params.DEBUG_MODE]
+// mask = 'debug_mode'
+// type = 'checkbox'
+// hdl_unsupported = [1]
+// note = 'on fills the ROMs with coefficient indices (Unsigned, bin_pt 0) in Simulink'
+// [params.DEBUG_MODE.values]
+// 0 = 'off'
+// 1 = 'on'
+//
+// [hdl_only]
+// DIN_WIDTH = 'inherited width: Simulink takes it from the input signal'
+// COEFF_DIR = 'implementation: memory initialization file'
+// PLATFORM = 'implementation: memory / primitive vendor (GENERIC, XILINX, ALTERA)'
+//
+// [mask_missing]
+//
+// [ports]
+// order = 'Simulink inputs are din(1), sync(2) and outputs dout(1), sync_out(2), coeff(3) (pfb_coeff_gen_init.m reuse_block Port); the HDL declares sync before din and sync_out before dout'
+// note = 'Simulink coeff is one concatenated UFix_(TotalTaps*CoeffBitWidth)_0 bus (Concat, ROM1 in the MSBs, each ROM reinterpreted Unsigned bin_pt 0); the HDL coeff is an array over TOTAL_TAPS with coeff[a-1] = ROM a (raw bits of Fix_COEFF_BIT_WIDTH_(COEFF_BIT_WIDTH-1))'
+// [ports.renamed]
+// [ports.missing]
+// [ports.extra]
+// @simulink-mapping end
 
 module pfb_coeff_gen #(
     parameter int    PFB_SIZE        = 5,
@@ -72,8 +124,8 @@ module pfb_coeff_gen #(
         $fatal(1, "pfb_coeff_gen: NPUT must be in 0 .. 2^N_INPUTS-1");
 
     // ── data and sync delays ────────────────────────────────────────────────
-    pipeline #(.BITWIDTH(DIN_WIDTH), .LATENCY(DLY)) u_delay1 (.clk(clk), .din(din), .dout(dout));
-    pipeline #(.BITWIDTH(1), .LATENCY(DLY)) u_delay (.clk(clk), .din(sync), .dout(sync_out));
+    pipeline #(.BITWIDTH(DIN_WIDTH), .CSP_LATENCY(DLY)) u_delay1 (.clk(clk), .din(din), .dout(dout));
+    pipeline #(.BITWIDTH(1), .CSP_LATENCY(DLY)) u_delay (.clk(clk), .din(sync), .dout(sync_out));
 
     // ── address counter (casper Counter: free running, rst = sync) ─────────
     logic [AW-1:0] cnt;
@@ -88,7 +140,7 @@ module pfb_coeff_gen #(
         logic [AW-1:0]              addr;
         logic [COEFF_BIT_WIDTH-1:0] rom_q, rom_d;
 
-        pipeline #(.BITWIDTH(AW), .LATENCY(FAN_LATENCY)) u_fan_delay (
+        pipeline #(.BITWIDTH(AW), .CSP_LATENCY(FAN_LATENCY)) u_fan_delay (
             .clk(clk), .din(cnt), .dout(addr));
 
         // ROM latency BRAM_LATENCY: rom (1) + pipeline (BRAM_LATENCY-1)
@@ -97,11 +149,11 @@ module pfb_coeff_gen #(
             .INIT_FILE({COEFF_DIR, "pfb_coeff_n", itoa(NPUT), "_t", itoa(a), ".mem"}),
             .PLATFORM(PLATFORM)
         ) u_rom (.clk(clk), .addr(addr), .dout(rom_q));
-        pipeline #(.BITWIDTH(COEFF_BIT_WIDTH), .LATENCY(BRAM_LATENCY - 1)) u_rom_dly (
+        pipeline #(.BITWIDTH(COEFF_BIT_WIDTH), .CSP_LATENCY(BRAM_LATENCY - 1)) u_rom_dly (
             .clk(clk), .din(rom_q), .dout(rom_d));
 
         // Concat + Register (latency 1)
-        pipeline #(.BITWIDTH(COEFF_BIT_WIDTH), .LATENCY(1)) u_register (
+        pipeline #(.BITWIDTH(COEFF_BIT_WIDTH), .CSP_LATENCY(1)) u_register (
             .clk(clk), .din(rom_d), .dout(coeff[a-1]));
     end
 

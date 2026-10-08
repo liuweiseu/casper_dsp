@@ -1,5 +1,5 @@
 {
-  "N_BIPLEX_INPUTS": 2,
+  "N_INPUTS": 2,
   "FFT_SIZE": 4,
   "INPUT_BIT_WIDTH": 12,
   "BIN_PT_IN": 11,

@@ -14,8 +14,8 @@ _tb_root = next(p for p in _here.parents if p.name == "testbench")
 testdatadir = _tb_root.parent / "test_data" / _here.relative_to(_tb_root)
 
 # Integer parameters used to match the DUT against simdataN/params.json
-PARAMS = ['N_BIPLEX_INPUTS', 'FFT_SIZE', 'INPUT_BIT_WIDTH', 'BIN_PT_IN', 'COEFF_BIT_WIDTH', 'ADD_LATENCY', 'MULT_LATENCY', 'BRAM_LATENCY', 'CONV_LATENCY', 'QUANTIZATION', 'OVERFLOW', 'DELAYS_BIT_LIMIT', 'COEFFS_BIT_LIMIT', 'MAX_FANOUT', 'BITGROWTH', 'MAX_BITS', 'HARDCODE_SHIFTS', 'SHIFT_SCHEDULE']
-# sim_<name>.csv -> DUT port; LANE ports are arrays of 4·N_BIPLEX_INPUTS words
+PARAMS = ['N_INPUTS', 'FFT_SIZE', 'INPUT_BIT_WIDTH', 'BIN_PT_IN', 'COEFF_BIT_WIDTH', 'ADD_LATENCY', 'MULT_LATENCY', 'BRAM_LATENCY', 'CONV_LATENCY', 'QUANTIZATION', 'OVERFLOW', 'DELAYS_BIT_LIMIT', 'COEFFS_BIT_LIMIT', 'MAX_FANOUT', 'BITGROWTH', 'MAX_BITS', 'HARDCODE_SHIFTS', 'SHIFT_SCHEDULE']
+# sim_<name>.csv -> DUT port; LANE ports are arrays of 4·N_INPUTS words
 LANE_IN = ['pol_in']
 SCALAR_IN = ['sync', 'shift']
 LANE_OUT = {'pol_out_re': 'pol_out_re', 'pol_out_im': 'pol_out_im'}
@@ -54,7 +54,7 @@ async def module_test(dut):
         cocotb.log.warning(f"No test data for {dut_params}. Skipping.")
         return
 
-    lanes = 4 * int(dut.N_BIPLEX_INPUTS.value)
+    lanes = 4 * int(dut.N_INPUTS.value)
     lanes_out = lanes
     stim = {k: load(datadir, k) for k in LANE_IN + SCALAR_IN}
     expected = {k: load(datadir, k) for k in list(LANE_OUT) + list(SCALAR_OUT)}

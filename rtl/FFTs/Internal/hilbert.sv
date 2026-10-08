@@ -16,6 +16,40 @@
 // BIT_WIDTH bits / BIN_PT_IN with round-half-even and wrap (fixed in
 // hilbert_init.m), latency CONV_LATENCY. All values are signed.
 // Built from Bus/adder_subtractor and Bus/convert.
+//
+// ── HDL-Simulink Mapping ─────────────────────────────────────────────────────
+// Differences between this HDL and its Simulink block (casper_library
+// or Xilinx blockset). Machine-readable: the lines between the
+// @simulink-mapping markers are TOML after removing the leading "// "
+// (checked by tools/check_simulink_mapping.py). Fields: block,
+// deviations, params (numeric HDL value -> mask option text, verbatim),
+// hdl_only, mask_missing, ports (renamed HDL -> Simulink, missing,
+// extra).
+// @simulink-mapping begin
+// block = 'casper_library_ffts_internal.slx/hilbert'
+// deviations = [
+//   "misc='on' (misci/misco, delayed by add_latency+conv_latency in hilbert_init.m) is not implemented: the HDL has no MISC parameter",
+//   "floating_point='on' builds a different datapath in Simulink (no bus_scale/bus_convert, hilbert_init.m floating branch); the HDL implements only the fixed-point path (full-precision BIT_WIDTH+1 add/sub, /2 by binary-point shift, convert to BIT_WIDTH with Round (unbiased: Even Values) + Wrap, as hilbert_init.m bus_convert 'quantization','2','overflow','0')",
+//   'test vectors in casper_dsp/test_data/FFTs/Internal/hilbert/test_data.md come from a Python reference model (not exported from MATLAB), so cycle/bit equivalence with the Simulink block is unverified',
+// ]
+//
+// [hdl_only]
+//
+// [mask_missing]
+// misc = 'misc pass-through (misci/misco ports) is not implemented'
+// floating_point = 'floating point is not implemented'
+// float_type = 'floating point is not implemented'
+// exp_width = 'floating point is not implemented'
+// frac_width = 'floating point is not implemented'
+//
+// [ports]
+// note = 'each Simulink complex port x is split into x_re / x_im'
+// [ports.renamed]
+// [ports.missing]
+// misci = 'misc=on only (not implemented)'
+// misco = 'misc=on only (not implemented)'
+// [ports.extra]
+// @simulink-mapping end
 
 module hilbert #(
     parameter int N_INPUTS     = 1,
@@ -51,14 +85,14 @@ module hilbert #(
                 .N_BITS_B(BW), .BIN_PT_B(BIN_PT_IN), .TYPE_B(1),
                 .N_BITS_OUT(BW + 1), .BIN_PT_OUT(BIN_PT_IN), .TYPE_OUT(1),
                 .OPMODE((i == 1 || i == 2) ? 1 : 0), .QUANTIZATION(0), .OVERFLOW(0),
-                .LATENCY(ADD_LATENCY)
+                .CSP_LATENCY(ADD_LATENCY)
             ) u_addsub (.clk(clk), .a(op_a[i]), .b(op_b[i]), .dout(sum[i]));
 
             // bus_scale(-1) reinterprets sum with BIN_PT_IN+1, then bus_convert
             convert #(
                 .N_BITS_IN(BW + 1), .BIN_PT_IN(BIN_PT_IN + 1), .TYPE_IN(1),
                 .N_BITS_OUT(BW), .BIN_PT_OUT(BIN_PT_IN), .TYPE_OUT(1),
-                .QUANTIZATION(2), .OVERFLOW(0), .LATENCY(CONV_LATENCY)
+                .QUANTIZATION(2), .OVERFLOW(0), .CSP_LATENCY(CONV_LATENCY)
             ) u_convert (.clk(clk), .din(sum[i]), .dout(res[i]));
         end
 

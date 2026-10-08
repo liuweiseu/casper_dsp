@@ -45,6 +45,37 @@
 // xeng_descramble_4ant) and PLATFORM (dual_port_ram vendor) are not mask
 // parameters. NUM_ANTS must be even and >= 4 (PIVOT and the tap map assume
 // it); DEMUX_FACTOR must be 1, 2, 4 or 8 (x_cast).
+//
+// ── HDL-Simulink Mapping ─────────────────────────────────────────────────────
+// Differences between this HDL and its Simulink block (casper_library
+// or Xilinx blockset). Machine-readable: the lines between the
+// @simulink-mapping markers are TOML after removing the leading "// "
+// (checked by tools/check_simulink_mapping.py). Fields: block,
+// deviations, params (numeric HDL value -> mask option text, verbatim),
+// hdl_only, mask_missing, ports (renamed HDL -> Simulink, missing,
+// extra).
+// @simulink-mapping begin
+// block = 'casper_library_correlator.slx/xeng_descramble'
+// deviations = [
+//   'Power-on RAM contents: the HDL RAM powers up to 0. The library Dual Port RAM (system_411.xml) has initVector = [1:36*8], and xlDPBRAM.sgm loads mem = xl_state(init). So the spontaneous power-on read pass (read_ctrl done = 0) outputs narrow words 1, 2, 3, ... in Simulink but zeros in the HDL. How Sysgen fits the 288-entry vector to other depths ((E+1)*D) was not checked.',
+//   "Read/write collision: with write_mode_B = 'No Read On Write', xlDPBRAM.sgm (BinvalidatesA) makes port A return NaN when port B writes the same wide word in the same cycle. The HDL dual_port_ram returns defined data instead. Legal xeng traffic never collides; the tests assert this.",
+//   "NUM_ANTS odd or < 4 is a $fatal. Simulink builds these (the block description says 'NOT TESTED FOR non-2^N antennas'), but the pivot_pnt / Counter2 range is then non-integer or degenerate.",
+// ]
+//
+// [hdl_only]
+// RAM_LATENCY = 'RAM latency fixed in the diagram (1 here, 2 in xeng_descramble_4ant)'
+// PLATFORM = 'implementation: memory / primitive vendor (GENERIC, XILINX, ALTERA)'
+// W = 'derived from other parameters (do not override)'
+// P = 'derived from other parameters (do not override)'
+// OW = 'derived from other parameters (do not override)'
+//
+// [mask_missing]
+//
+// [ports]
+// [ports.renamed]
+// [ports.missing]
+// [ports.extra]
+// @simulink-mapping end
 
 module xeng_descramble #(
     parameter int    NUM_ANTS     = 8,
@@ -130,9 +161,9 @@ module xeng_descramble #(
         .we_b(we), .addr_b(RAM_AW'(waddr)), .din_b(wide_in), .dout_b());
 
     // extra output registers of a RAM_LATENCY > 1 RAM, and the narrow select
-    pipeline #(.BITWIDTH(8 * P), .LATENCY(RAM_LATENCY - 1)) u_rdata_dly (
+    pipeline #(.BITWIDTH(8 * P), .CSP_LATENCY(RAM_LATENCY - 1)) u_rdata_dly (
         .clk(clk), .din(rdata), .dout(rdata_d));
-    pipeline #(.BITWIDTH(SUB_BITS), .LATENCY(RAM_LATENCY)) u_sub_dly (
+    pipeline #(.BITWIDTH(SUB_BITS), .CSP_LATENCY(RAM_LATENCY)) u_sub_dly (
         .clk(clk), .din(ra_sub), .dout(ra_sub_d));
 
     assign acc_out = rdata_d[ra_sub_d * OW +: OW];

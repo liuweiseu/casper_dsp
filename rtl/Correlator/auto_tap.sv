@@ -33,6 +33,32 @@
 //              declared only.
 //   PLATFORM is passed to delay_bram.
 // Derived: N_BITS_OUT = 2*N_BITS + 1 + ceil(log2(ACC_LEN)).
+//
+// ── HDL-Simulink Mapping ─────────────────────────────────────────────────────
+// Differences between this HDL and its Simulink block (casper_library
+// or Xilinx blockset). Machine-readable: the lines between the
+// @simulink-mapping markers are TOML after removing the leading "// "
+// (checked by tools/check_simulink_mapping.py). Fields: block,
+// deviations, params (numeric HDL value -> mask option text, verbatim),
+// hdl_only, mask_missing, ports (renamed HDL -> Simulink, missing,
+// extra).
+// @simulink-mapping begin
+// block = 'casper_library_correlator.slx/auto_tap'
+// deviations = [
+//   'N_SIMULTAN is declared only; it does nothing in Simulink either (the mask field is disabled and auto_tap_init.m never reads it).',
+// ]
+//
+// [hdl_only]
+// PLATFORM = 'implementation: memory / primitive vendor (GENERIC, XILINX, ALTERA)'
+// N_BITS_OUT = 'derived from other parameters (do not override)'
+//
+// [mask_missing]
+//
+// [ports]
+// [ports.renamed]
+// [ports.missing]
+// [ports.extra]
+// @simulink-mapping end
 
 module auto_tap #(
     parameter int    N_ANTS         = 4,

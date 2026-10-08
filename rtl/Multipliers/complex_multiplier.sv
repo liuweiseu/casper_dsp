@@ -40,6 +40,92 @@
 //
 // The two latency parameters follow casper_library bus_mult's
 // mult_latency / add_latency.
+//
+// ── HDL-Simulink Mapping ─────────────────────────────────────────────────────
+// Differences between this HDL and its Simulink block (casper_library
+// or Xilinx blockset). Machine-readable: the lines between the
+// @simulink-mapping markers are TOML after removing the leading "// "
+// (checked by tools/check_simulink_mapping.py). Fields: block,
+// deviations, params (numeric HDL value -> mask option text, verbatim),
+// hdl_only, mask_missing, ports (renamed HDL -> Simulink, missing,
+// extra).
+// @simulink-mapping begin
+// block = 'xbsIndex_r4.slx/Complex Multiplier 6.0 '
+// deviations = [
+//   "No Simulink block is bit/cycle-equivalent: xbsIndex_r4/CMult is a constant multiplier (xlCmult.sgm: cmult(a, en, coef, ...)), and the closest complex block, 'Complex Multiplier 6.0 ' (cmpy IP, note the trailing space in the block name), is an AXI4-Stream core with a single latency setting. The HDL structure follows casper twiddle_general_4mult/3mult (docs/Multipliers/complex_multiplier.md) instead.",
+//   'The IP truncates (or random-rounds) to the MSBs of the full-precision result and cannot overflow; the HDL requantizes in the final adder_subtractor to N_BITS_OUT/BIN_PT_OUT/TYPE_OUT with truncate/round-half-away/round-half-even and wrap/saturate (default QUANTIZATION = 2, OVERFLOW = 1).',
+//   "OVERFLOW = 2 ('flag as error') is silently treated as wrap, not rejected (complex_multiplier.sv:38).",
+//   'Latency is MULT_LATENCY + ADD_LATENCY (MULT_SPEC 0) or MULT_LATENCY + 2*ADD_LATENCY (MULT_SPEC 1), with power-on zero outputs; the IP latency is set by latencyconfig/minimumlatency and its output is qualified by dout_tvalid.',
+// ]
+//
+// [params.MULT_SPEC]
+// mask = 'optimizegoal'
+// type = 'popup'
+// note = 'closest analogue only: cmpy v6.0 with Use_Mults builds 4 multipliers for Performance and 3 for Resources'
+// [params.MULT_SPEC.values]
+// 0 = 'Performance'
+// 1 = 'Resources'
+//
+// [params.N_BITS_OUT]
+// mask = 'outputwidth'
+// type = 'edit'
+// note = 'the IP keeps the MSBs of the full-precision result; the HDL converts to N_BITS_OUT/BIN_PT_OUT with QUANTIZATION/OVERFLOW'
+//
+// [params.QUANTIZATION]
+// mask = 'roundmode'
+// type = 'popup'
+// hdl_unsupported = [1, 2]
+// note = "HDL 1 (round half away from zero) and 2 (round half to even) have no IP option; the IP's Random_Rounding has no HDL value"
+// [params.QUANTIZATION.values]
+// 0 = 'Truncate'
+//
+// [hdl_only]
+// N_BITS_A = 'inherited from the a_tdata_real/imag input type in the IP'
+// BIN_PT_A = 'inherited from the a_tdata_real/imag input type in the IP'
+// TYPE_A = 'IP inputs are always signed'
+// N_BITS_B = 'inherited from the b_tdata_real/imag input type in the IP'
+// BIN_PT_B = 'inherited from the b_tdata_real/imag input type in the IP'
+// TYPE_B = 'IP inputs are always signed'
+// BIN_PT_OUT = 'IP output binary point follows from the MSB-aligned output width'
+// TYPE_OUT = 'IP output is always signed'
+// OVERFLOW = 'IP has no overflow handling (output is MSB-aligned, never overflows)'
+// MULT_LATENCY = 'IP latency is a single value (latencyconfig / minimumlatency)'
+// ADD_LATENCY = 'IP latency is a single value (latencyconfig / minimumlatency)'
+//
+// [mask_missing]
+// hasatlast = 'AXI4-Stream side channels not implemented'
+// hasatuser = 'AXI4-Stream side channels not implemented'
+// atuserwidth = 'AXI4-Stream side channels not implemented'
+// hasbtlast = 'AXI4-Stream side channels not implemented'
+// hasbtuser = 'AXI4-Stream side channels not implemented'
+// btuserwidth = 'AXI4-Stream side channels not implemented'
+// hasctrltlast = 'AXI4-Stream side channels not implemented'
+// hasctrltuser = 'AXI4-Stream side channels not implemented'
+// ctrltuserwidth = 'AXI4-Stream side channels not implemented'
+// outtlastbehv = 'AXI4-Stream side channels not implemented'
+// multtype = 'resource choice only (HDL always uses multipliers)'
+// flowcontrol = 'no AXI handshake: the HDL is always non-blocking'
+// latencyconfig = 'latency is MULT_LATENCY/ADD_LATENCY in the HDL'
+// minimumlatency = 'latency is MULT_LATENCY/ADD_LATENCY in the HDL'
+// aclken = 'clock enable not implemented'
+// aresetn = 'reset not implemented'
+// trim_axipin_name = 'port naming only'
+//
+// [ports]
+// order = 'Simulink (icon port_label): a_tvalid, a_tdata_imag, a_tdata_real, b_tvalid, b_tdata_imag, b_tdata_real -> dout_tvalid, dout_tdata_imag, dout_tdata_real (imag before real); HDL: a_re, a_im, b_re, b_im -> dout_re, dout_im'
+// [ports.renamed]
+// a_re = 'a_tdata_real'
+// a_im = 'a_tdata_imag'
+// b_re = 'b_tdata_real'
+// b_im = 'b_tdata_imag'
+// dout_re = 'dout_tdata_real'
+// dout_im = 'dout_tdata_imag'
+// [ports.missing]
+// a_tvalid = 'AXI4-Stream handshake not implemented'
+// b_tvalid = 'AXI4-Stream handshake not implemented'
+// dout_tvalid = 'AXI4-Stream handshake not implemented'
+// [ports.extra]
+// @simulink-mapping end
 
 module complex_multiplier #(
     parameter int N_BITS_A     = 18,
@@ -83,28 +169,28 @@ module complex_multiplier #(
                 .N_BITS_A(N_BITS_A), .BIN_PT_A(BIN_PT_A), .TYPE_A(TYPE_A),
                 .N_BITS_B(N_BITS_B), .BIN_PT_B(BIN_PT_B), .TYPE_B(TYPE_B),
                 .N_BITS_OUT(N_BITS_P), .BIN_PT_OUT(BIN_PT_P), .TYPE_OUT(1),
-                .QUANTIZATION(0), .OVERFLOW(0), .LATENCY(MULT_LATENCY)
+                .QUANTIZATION(0), .OVERFLOW(0), .MULT_LATENCY(MULT_LATENCY)
             ) u_mult_rr (.clk(clk), .a(a_re), .b(b_re), .dout(p_rr));
 
             multiplier #(
                 .N_BITS_A(N_BITS_A), .BIN_PT_A(BIN_PT_A), .TYPE_A(TYPE_A),
                 .N_BITS_B(N_BITS_B), .BIN_PT_B(BIN_PT_B), .TYPE_B(TYPE_B),
                 .N_BITS_OUT(N_BITS_P), .BIN_PT_OUT(BIN_PT_P), .TYPE_OUT(1),
-                .QUANTIZATION(0), .OVERFLOW(0), .LATENCY(MULT_LATENCY)
+                .QUANTIZATION(0), .OVERFLOW(0), .MULT_LATENCY(MULT_LATENCY)
             ) u_mult_ii (.clk(clk), .a(a_im), .b(b_im), .dout(p_ii));
 
             multiplier #(
                 .N_BITS_A(N_BITS_A), .BIN_PT_A(BIN_PT_A), .TYPE_A(TYPE_A),
                 .N_BITS_B(N_BITS_B), .BIN_PT_B(BIN_PT_B), .TYPE_B(TYPE_B),
                 .N_BITS_OUT(N_BITS_P), .BIN_PT_OUT(BIN_PT_P), .TYPE_OUT(1),
-                .QUANTIZATION(0), .OVERFLOW(0), .LATENCY(MULT_LATENCY)
+                .QUANTIZATION(0), .OVERFLOW(0), .MULT_LATENCY(MULT_LATENCY)
             ) u_mult_ri (.clk(clk), .a(a_re), .b(b_im), .dout(p_ri));
 
             multiplier #(
                 .N_BITS_A(N_BITS_A), .BIN_PT_A(BIN_PT_A), .TYPE_A(TYPE_A),
                 .N_BITS_B(N_BITS_B), .BIN_PT_B(BIN_PT_B), .TYPE_B(TYPE_B),
                 .N_BITS_OUT(N_BITS_P), .BIN_PT_OUT(BIN_PT_P), .TYPE_OUT(1),
-                .QUANTIZATION(0), .OVERFLOW(0), .LATENCY(MULT_LATENCY)
+                .QUANTIZATION(0), .OVERFLOW(0), .MULT_LATENCY(MULT_LATENCY)
             ) u_mult_ir (.clk(clk), .a(a_im), .b(b_re), .dout(p_ir));
 
             // re = p_rr - p_ii
@@ -113,7 +199,7 @@ module complex_multiplier #(
                 .N_BITS_B(N_BITS_P), .BIN_PT_B(BIN_PT_P), .TYPE_B(1),
                 .N_BITS_OUT(N_BITS_OUT), .BIN_PT_OUT(BIN_PT_OUT), .TYPE_OUT(TYPE_OUT),
                 .OPMODE(1), .QUANTIZATION(QUANTIZATION), .OVERFLOW(OVERFLOW),
-                .LATENCY(ADD_LATENCY)
+                .CSP_LATENCY(ADD_LATENCY)
             ) u_sub_re (.clk(clk), .a(p_rr), .b(p_ii), .dout(dout_re));
 
             // im = p_ri + p_ir
@@ -122,7 +208,7 @@ module complex_multiplier #(
                 .N_BITS_B(N_BITS_P), .BIN_PT_B(BIN_PT_P), .TYPE_B(1),
                 .N_BITS_OUT(N_BITS_OUT), .BIN_PT_OUT(BIN_PT_OUT), .TYPE_OUT(TYPE_OUT),
                 .OPMODE(0), .QUANTIZATION(QUANTIZATION), .OVERFLOW(OVERFLOW),
-                .LATENCY(ADD_LATENCY)
+                .CSP_LATENCY(ADD_LATENCY)
             ) u_add_im (.clk(clk), .a(p_ri), .b(p_ir), .dout(dout_im));
 
         end else begin : GEN_3MULT
@@ -147,21 +233,21 @@ module complex_multiplier #(
                 .N_BITS_A(N_BITS_A), .BIN_PT_A(BIN_PT_A), .TYPE_A(TYPE_A),
                 .N_BITS_B(N_BITS_A), .BIN_PT_B(BIN_PT_A), .TYPE_B(TYPE_A),
                 .N_BITS_OUT(N_BITS_SA), .BIN_PT_OUT(BIN_PT_A), .TYPE_OUT(1),
-                .OPMODE(0), .QUANTIZATION(0), .OVERFLOW(0), .LATENCY(ADD_LATENCY)
+                .OPMODE(0), .QUANTIZATION(0), .OVERFLOW(0), .CSP_LATENCY(ADD_LATENCY)
             ) u_pre_sa (.clk(clk), .a(a_re), .b(a_im), .dout(s_a));
 
             adder_subtractor #(
                 .N_BITS_A(N_BITS_B), .BIN_PT_A(BIN_PT_B), .TYPE_A(TYPE_B),
                 .N_BITS_B(N_BITS_B), .BIN_PT_B(BIN_PT_B), .TYPE_B(TYPE_B),
                 .N_BITS_OUT(N_BITS_SB), .BIN_PT_OUT(BIN_PT_B), .TYPE_OUT(1),
-                .OPMODE(1), .QUANTIZATION(0), .OVERFLOW(0), .LATENCY(ADD_LATENCY)
+                .OPMODE(1), .QUANTIZATION(0), .OVERFLOW(0), .CSP_LATENCY(ADD_LATENCY)
             ) u_pre_db (.clk(clk), .a(b_im), .b(b_re), .dout(d_b));
 
             adder_subtractor #(
                 .N_BITS_A(N_BITS_B), .BIN_PT_A(BIN_PT_B), .TYPE_A(TYPE_B),
                 .N_BITS_B(N_BITS_B), .BIN_PT_B(BIN_PT_B), .TYPE_B(TYPE_B),
                 .N_BITS_OUT(N_BITS_SB), .BIN_PT_OUT(BIN_PT_B), .TYPE_OUT(1),
-                .OPMODE(0), .QUANTIZATION(0), .OVERFLOW(0), .LATENCY(ADD_LATENCY)
+                .OPMODE(0), .QUANTIZATION(0), .OVERFLOW(0), .CSP_LATENCY(ADD_LATENCY)
             ) u_pre_sb (.clk(clk), .a(b_re), .b(b_im), .dout(s_b));
 
             // ── delay-match the operands that bypass the pre-adders ─────────
@@ -183,21 +269,21 @@ module complex_multiplier #(
                 .N_BITS_A(N_BITS_B),  .BIN_PT_A(BIN_PT_B), .TYPE_A(TYPE_B),
                 .N_BITS_B(N_BITS_SA), .BIN_PT_B(BIN_PT_A), .TYPE_B(1),
                 .N_BITS_OUT(N_BITS_K), .BIN_PT_OUT(BIN_PT_K), .TYPE_OUT(1),
-                .QUANTIZATION(0), .OVERFLOW(0), .LATENCY(MULT_LATENCY)
+                .QUANTIZATION(0), .OVERFLOW(0), .MULT_LATENCY(MULT_LATENCY)
             ) u_mult_k1 (.clk(clk), .a(b_re_d), .b(s_a), .dout(k1));
 
             multiplier #(
                 .N_BITS_A(N_BITS_A),  .BIN_PT_A(BIN_PT_A), .TYPE_A(TYPE_A),
                 .N_BITS_B(N_BITS_SB), .BIN_PT_B(BIN_PT_B), .TYPE_B(1),
                 .N_BITS_OUT(N_BITS_K), .BIN_PT_OUT(BIN_PT_K), .TYPE_OUT(1),
-                .QUANTIZATION(0), .OVERFLOW(0), .LATENCY(MULT_LATENCY)
+                .QUANTIZATION(0), .OVERFLOW(0), .MULT_LATENCY(MULT_LATENCY)
             ) u_mult_k2 (.clk(clk), .a(a_re_d), .b(d_b), .dout(k2));
 
             multiplier #(
                 .N_BITS_A(N_BITS_A),  .BIN_PT_A(BIN_PT_A), .TYPE_A(TYPE_A),
                 .N_BITS_B(N_BITS_SB), .BIN_PT_B(BIN_PT_B), .TYPE_B(1),
                 .N_BITS_OUT(N_BITS_K), .BIN_PT_OUT(BIN_PT_K), .TYPE_OUT(1),
-                .QUANTIZATION(0), .OVERFLOW(0), .LATENCY(MULT_LATENCY)
+                .QUANTIZATION(0), .OVERFLOW(0), .MULT_LATENCY(MULT_LATENCY)
             ) u_mult_k3 (.clk(clk), .a(a_im_d), .b(s_b), .dout(k3));
 
             // ── post-adders with output requantization ──────────────────────
@@ -207,7 +293,7 @@ module complex_multiplier #(
                 .N_BITS_B(N_BITS_K), .BIN_PT_B(BIN_PT_K), .TYPE_B(1),
                 .N_BITS_OUT(N_BITS_OUT), .BIN_PT_OUT(BIN_PT_OUT), .TYPE_OUT(TYPE_OUT),
                 .OPMODE(1), .QUANTIZATION(QUANTIZATION), .OVERFLOW(OVERFLOW),
-                .LATENCY(ADD_LATENCY)
+                .CSP_LATENCY(ADD_LATENCY)
             ) u_sub_re (.clk(clk), .a(k1), .b(k3), .dout(dout_re));
 
             // im = k1 + k2
@@ -216,7 +302,7 @@ module complex_multiplier #(
                 .N_BITS_B(N_BITS_K), .BIN_PT_B(BIN_PT_K), .TYPE_B(1),
                 .N_BITS_OUT(N_BITS_OUT), .BIN_PT_OUT(BIN_PT_OUT), .TYPE_OUT(TYPE_OUT),
                 .OPMODE(0), .QUANTIZATION(QUANTIZATION), .OVERFLOW(OVERFLOW),
-                .LATENCY(ADD_LATENCY)
+                .CSP_LATENCY(ADD_LATENCY)
             ) u_add_im (.clk(clk), .a(k1), .b(k2), .dout(dout_im));
 
         end

@@ -25,11 +25,62 @@
 // bram_latency + map_latency + 2 + fanout_latency).
 //
 // ASYNC (en / dvalid) is declared for traceability; must be 0.
+//
+// ── HDL-Simulink Mapping ─────────────────────────────────────────────────────
+// Differences between this HDL and its Simulink block (casper_library
+// or Xilinx blockset). Machine-readable: the lines between the
+// @simulink-mapping markers are TOML after removing the leading "// "
+// (checked by tools/check_simulink_mapping.py). Fields: block,
+// deviations, params (numeric HDL value -> mask option text, verbatim),
+// hdl_only, mask_missing, ports (renamed HDL -> Simulink, missing,
+// extra).
+// @simulink-mapping begin
+// block = 'casper_library_ffts_internal.slx/mirror_spectrum'
+// deviations = [
+//   "the library block's saved mask default is async='on' (casper_library_ffts_internal.slx system_root.xml, SID 15), so a freshly dropped block has en/dvalid ports and an enabled counter; the HDL supports only async='off' (ASYNC != 0 -> $fatal)",
+//   "the complex_conj instances are hard-wired to overflow='Wrap' (mirror_spectrum_init.m, '%TODO Wrap really?'): the conjugate of a most-negative imaginary part stays most negative in both models",
+//   'both models require 1 + bram_latency + negate_latency >= ceil(log2(n_inputs)) (negative Delay latency in Simulink, $fatal in the HDL)',
+//   'test vectors in casper_dsp/test_data/FFTs/Internal/mirror_spectrum/test_data.md come from a Python reference model (not exported from MATLAB), so cycle/bit equivalence with the Simulink block is unverified',
+// ]
+//
+// [params.NEGATE_MODE]
+// mask = 'negate_mode'
+// type = 'popup'
+// note = "not the option index: the mask lists 'dsp48e' first; 'dsp48e' only changes the complex_conj latency to 3 (mirror_spectrum_init.m), no DSP48 is used in either model"
+// [params.NEGATE_MODE.values]
+// 0 = 'logic'
+// 1 = 'dsp48e'
+//
+// [params.ASYNC]
+// mask = 'async'
+// type = 'checkbox'
+// hdl_unsupported = [1]
+// note = 'async=on (en/dvalid ports) is not implemented: elaboration stops with $fatal'
+// [params.ASYNC.values]
+// 0 = 'off'
+// 1 = 'on'
+//
+// [hdl_only]
+//
+// [mask_missing]
+// floating_point = 'floating point is not implemented'
+// float_type = 'floating point is not implemented'
+// exp_width = 'floating point is not implemented'
+// frac_width = 'floating point is not implemented'
+//
+// [ports]
+// note = 'each Simulink complex port x is split into x_re / x_im; each port is an array over N_INPUTS'
+// [ports.renamed]
+// [ports.missing]
+// en = 'async=on only (not implemented)'
+// dvalid = 'async=on only (not implemented)'
+// [ports.extra]
+// @simulink-mapping end
 
 module mirror_spectrum #(
     parameter int N_INPUTS        = 1,
     parameter int FFT_SIZE        = 8,
-    parameter int INPUT_BIT_WIDTH = 18,
+    parameter int INPUT_BITWIDTH  = 18,
     parameter int BIN_PT_IN       = 17,
     parameter int BRAM_LATENCY    = 2,
     parameter int NEGATE_LATENCY  = 1,
@@ -38,34 +89,34 @@ module mirror_spectrum #(
 )(
     input  logic                       clk,
     input  logic                       sync,
-    input  logic [INPUT_BIT_WIDTH-1:0] din0_re    [N_INPUTS],
-    input  logic [INPUT_BIT_WIDTH-1:0] din0_im    [N_INPUTS],
-    input  logic [INPUT_BIT_WIDTH-1:0] reo_in0_re [N_INPUTS],
-    input  logic [INPUT_BIT_WIDTH-1:0] reo_in0_im [N_INPUTS],
-    input  logic [INPUT_BIT_WIDTH-1:0] din1_re    [N_INPUTS],
-    input  logic [INPUT_BIT_WIDTH-1:0] din1_im    [N_INPUTS],
-    input  logic [INPUT_BIT_WIDTH-1:0] reo_in1_re [N_INPUTS],
-    input  logic [INPUT_BIT_WIDTH-1:0] reo_in1_im [N_INPUTS],
-    input  logic [INPUT_BIT_WIDTH-1:0] din2_re    [N_INPUTS],
-    input  logic [INPUT_BIT_WIDTH-1:0] din2_im    [N_INPUTS],
-    input  logic [INPUT_BIT_WIDTH-1:0] reo_in2_re [N_INPUTS],
-    input  logic [INPUT_BIT_WIDTH-1:0] reo_in2_im [N_INPUTS],
-    input  logic [INPUT_BIT_WIDTH-1:0] din3_re    [N_INPUTS],
-    input  logic [INPUT_BIT_WIDTH-1:0] din3_im    [N_INPUTS],
-    input  logic [INPUT_BIT_WIDTH-1:0] reo_in3_re [N_INPUTS],
-    input  logic [INPUT_BIT_WIDTH-1:0] reo_in3_im [N_INPUTS],
+    input  logic [INPUT_BITWIDTH-1:0] din0_re    [N_INPUTS],
+    input  logic [INPUT_BITWIDTH-1:0] din0_im    [N_INPUTS],
+    input  logic [INPUT_BITWIDTH-1:0] reo_in0_re [N_INPUTS],
+    input  logic [INPUT_BITWIDTH-1:0] reo_in0_im [N_INPUTS],
+    input  logic [INPUT_BITWIDTH-1:0] din1_re    [N_INPUTS],
+    input  logic [INPUT_BITWIDTH-1:0] din1_im    [N_INPUTS],
+    input  logic [INPUT_BITWIDTH-1:0] reo_in1_re [N_INPUTS],
+    input  logic [INPUT_BITWIDTH-1:0] reo_in1_im [N_INPUTS],
+    input  logic [INPUT_BITWIDTH-1:0] din2_re    [N_INPUTS],
+    input  logic [INPUT_BITWIDTH-1:0] din2_im    [N_INPUTS],
+    input  logic [INPUT_BITWIDTH-1:0] reo_in2_re [N_INPUTS],
+    input  logic [INPUT_BITWIDTH-1:0] reo_in2_im [N_INPUTS],
+    input  logic [INPUT_BITWIDTH-1:0] din3_re    [N_INPUTS],
+    input  logic [INPUT_BITWIDTH-1:0] din3_im    [N_INPUTS],
+    input  logic [INPUT_BITWIDTH-1:0] reo_in3_re [N_INPUTS],
+    input  logic [INPUT_BITWIDTH-1:0] reo_in3_im [N_INPUTS],
     output logic                       sync_out,
-    output logic [INPUT_BIT_WIDTH-1:0] dout0_re   [N_INPUTS],
-    output logic [INPUT_BIT_WIDTH-1:0] dout0_im   [N_INPUTS],
-    output logic [INPUT_BIT_WIDTH-1:0] dout1_re   [N_INPUTS],
-    output logic [INPUT_BIT_WIDTH-1:0] dout1_im   [N_INPUTS],
-    output logic [INPUT_BIT_WIDTH-1:0] dout2_re   [N_INPUTS],
-    output logic [INPUT_BIT_WIDTH-1:0] dout2_im   [N_INPUTS],
-    output logic [INPUT_BIT_WIDTH-1:0] dout3_re   [N_INPUTS],
-    output logic [INPUT_BIT_WIDTH-1:0] dout3_im   [N_INPUTS]
+    output logic [INPUT_BITWIDTH-1:0] dout0_re   [N_INPUTS],
+    output logic [INPUT_BITWIDTH-1:0] dout0_im   [N_INPUTS],
+    output logic [INPUT_BITWIDTH-1:0] dout1_re   [N_INPUTS],
+    output logic [INPUT_BITWIDTH-1:0] dout1_im   [N_INPUTS],
+    output logic [INPUT_BITWIDTH-1:0] dout2_re   [N_INPUTS],
+    output logic [INPUT_BITWIDTH-1:0] dout2_im   [N_INPUTS],
+    output logic [INPUT_BITWIDTH-1:0] dout3_re   [N_INPUTS],
+    output logic [INPUT_BITWIDTH-1:0] dout3_im   [N_INPUTS]
 );
 
-    localparam int BW   = INPUT_BIT_WIDTH;
+    localparam int BW   = INPUT_BITWIDTH;
     localparam int REP  = $clog2(N_INPUTS);
     localparam int DLY  = 1 + BRAM_LATENCY + NEGATE_LATENCY;
     localparam int CC   = (NEGATE_MODE == 1) ? 3 : NEGATE_LATENCY;
@@ -93,8 +144,8 @@ module mirror_spectrum #(
     logic                sync0, upper, sel;
     logic [FFT_SIZE-1:0] cnt;
 
-    pipeline #(.BITWIDTH(1), .LATENCY(DLY - REP)) u_sync_delay0 (.clk(clk), .din(sync), .dout(sync0));
-    pipeline #(.BITWIDTH(1), .LATENCY(1 + REP)) u_sync_delay1 (.clk(clk), .din(sync0), .dout(sync_out));
+    pipeline #(.BITWIDTH(1), .CSP_LATENCY(DLY - REP)) u_sync_delay0 (.clk(clk), .din(sync), .dout(sync0));
+    pipeline #(.BITWIDTH(1), .CSP_LATENCY(1 + REP)) u_sync_delay1 (.clk(clk), .din(sync0), .dout(sync_out));
 
     counter #(
         .COUNTER_TYPE(0), .NBITS(FFT_SIZE), .COUNT_DIR(0), .INIT_VAL(0),
@@ -106,14 +157,14 @@ module mirror_spectrum #(
         .clk(clk), .a(cnt), .b(FFT_SIZE'(HALF)), .out(upper));
 
     // sel_replicate: bus_replicate with latency REP
-    pipeline #(.BITWIDTH(1), .LATENCY(REP)) u_sel_replicate (.clk(clk), .din(upper), .dout(sel));
+    pipeline #(.BITWIDTH(1), .CSP_LATENCY(REP)) u_sel_replicate (.clk(clk), .din(upper), .dout(sel));
 
     // ── data ─────────────────────────────────────────────────────────────────
     for (genvar i = 0; i < 4; i++) begin : GEN_CH
         logic [BW-1:0] conj_re [N_INPUTS], conj_im [N_INPUTS];
 
         complex_conj #(
-            .N_INPUTS(N_INPUTS), .N_BITS(BW), .BIN_PT(BIN_PT_IN), .LATENCY(CC), .OVERFLOW(0)
+            .N_INPUTS(N_INPUTS), .N_BITS(BW), .BIN_PT(BIN_PT_IN), .CSP_LATENCY(CC), .OVERFLOW(0)
         ) u_complex_conj (
             .clk(clk), .din_re(reo_re[i]), .din_im(reo_im[i]),
             .dout_re(conj_re), .dout_im(conj_im));
@@ -121,8 +172,8 @@ module mirror_spectrum #(
         for (genvar n = 0; n < N_INPUTS; n++) begin : GEN_LANE
             logic [BW-1:0] d_re, d_im;
 
-            pipeline #(.BITWIDTH(BW), .LATENCY(DLY)) u_delay_re (.clk(clk), .din(din_re[i][n]), .dout(d_re));
-            pipeline #(.BITWIDTH(BW), .LATENCY(DLY)) u_delay_im (.clk(clk), .din(din_im[i][n]), .dout(d_im));
+            pipeline #(.BITWIDTH(BW), .CSP_LATENCY(DLY)) u_delay_re (.clk(clk), .din(din_re[i][n]), .dout(d_re));
+            pipeline #(.BITWIDTH(BW), .CSP_LATENCY(DLY)) u_delay_im (.clk(clk), .din(din_im[i][n]), .dout(d_im));
 
             // bus_mux (cmplx): d0 = delayed din, d1 = conj(reo_in), latency 1
             multiplexer #(.NBITS(BW), .NINPUTS(2), .LATENCY(1)) u_dmux_re (

@@ -6,7 +6,7 @@
 // 'a' and 'b' have independent fixed-point formats. The sum/difference is
 // first formed at full precision (exact: binary points aligned, one carry bit
 // and one sign bit of growth), then requantized to the output format by a
-// convert instance, which also provides the LATENCY pipeline. Corresponds to
+// convert instance, which also provides the CSP_LATENCY pipeline. Corresponds to
 // a single lane of casper_library's bus_addsub (Xilinx AddSub block).
 //
 // Encodings (common to all fixed-point modules in rtl/Bus/ and
@@ -16,11 +16,50 @@
 //   QUANTIZATION : 0 = truncate, 1 = round half away from zero,
 //                  2 = round half to even
 //   OVERFLOW     : 0 = wrap, 1 = saturate (2 = flag as error -> wrap)
-//   LATENCY      : 0 = combinational, N > 0 = N register stages
+//   CSP_LATENCY      : 0 = combinational, N > 0 = N register stages
 //
 // Full-precision internal format (always signed):
 //   BIN_PT_FULL = max(BIN_PT_A, BIN_PT_B)
 //   N_BITS_FULL = max(N_BITS_A - BIN_PT_A, N_BITS_B - BIN_PT_B) + 2 + BIN_PT_FULL
+//
+// ── HDL-Simulink Mapping ─────────────────────────────────────────────────────
+// Differences between this HDL and its Simulink block (casper_library
+// or Xilinx blockset). Machine-readable: the lines between the
+// @simulink-mapping markers are TOML after removing the leading "// "
+// (checked by tools/check_simulink_mapping.py). Fields: block,
+// deviations, params (numeric HDL value -> mask option text, verbatim),
+// hdl_only, mask_missing, ports (renamed HDL -> Simulink, missing,
+// extra).
+// @simulink-mapping begin
+// block = 'casper_library_bus.slx/bus_addsub'
+// deviations = [
+//   "QUANTIZATION=2 (round half to even) has no Simulink counterpart: bus_addsub_init.m:333-338 maps only 0->'Truncate' and 1->'Round  (unbiased: +/- Inf)' (quant is left undefined for 2, so the init fails), and xbsIndex_r4/AddSub's quantization popup offers only those two options.",
+//   "OVERFLOW=2 is mapped by bus_addsub_init.m:344-345 to the AddSub 'Flag as error' mode, where Simulink stops with an overflow error; the HDL wraps instead.",
+// ]
+//
+// [hdl_only]
+//
+// [mask_missing]
+// cmplx = 'single real lane: complex lanes are not modelled'
+// misc = 'misc pass-through (misci/misco ports) is not implemented'
+// async = 'async mode (en/dvalid ports) is not implemented'
+// floating_point = 'floating point is not implemented'
+// float_type = 'floating point is not implemented'
+// exp_width = 'floating point is not implemented'
+// frac_width = 'floating point is not implemented'
+// add_implementation = 'implementation option, not modelled'
+// pipeline_en = 'input pipeline not implemented: pipeline_en=on puts a casper pipeline of pipeline_latency cycles on a and b (bus_addsub_init.m:250-289), adding latency; the HDL equals pipeline_en=off'
+// pipeline_latency = 'input pipeline not implemented (only used when pipeline_en=on)'
+//
+// [ports]
+// [ports.renamed]
+// [ports.missing]
+// misci = 'misc=on only (not implemented)'
+// misco = 'misc=on only (not implemented)'
+// en = 'async=on only (not implemented)'
+// dvalid = 'async=on only (not implemented)'
+// [ports.extra]
+// @simulink-mapping end
 
 module adder_subtractor #(
     parameter int N_BITS_A     = 8,
@@ -35,7 +74,7 @@ module adder_subtractor #(
     parameter int OPMODE       = 0,
     parameter int QUANTIZATION = 0,
     parameter int OVERFLOW     = 0,
-    parameter int LATENCY      = 1
+    parameter int CSP_LATENCY  = 1
 )(
     input  logic                  clk,
     input  logic [N_BITS_A-1:0]   a,
@@ -57,7 +96,7 @@ module adder_subtractor #(
     convert #(
         .N_BITS_IN (N_BITS_A),    .BIN_PT_IN (BIN_PT_A),    .TYPE_IN (TYPE_A),
         .N_BITS_OUT(N_BITS_FULL), .BIN_PT_OUT(BIN_PT_FULL), .TYPE_OUT(1),
-        .QUANTIZATION(0), .OVERFLOW(0), .LATENCY(0)
+        .QUANTIZATION(0), .OVERFLOW(0), .CSP_LATENCY(0)
     ) u_align_a (
         .clk (clk),
         .din (a),
@@ -67,7 +106,7 @@ module adder_subtractor #(
     convert #(
         .N_BITS_IN (N_BITS_B),    .BIN_PT_IN (BIN_PT_B),    .TYPE_IN (TYPE_B),
         .N_BITS_OUT(N_BITS_FULL), .BIN_PT_OUT(BIN_PT_FULL), .TYPE_OUT(1),
-        .QUANTIZATION(0), .OVERFLOW(0), .LATENCY(0)
+        .QUANTIZATION(0), .OVERFLOW(0), .CSP_LATENCY(0)
     ) u_align_b (
         .clk (clk),
         .din (b),
@@ -87,7 +126,7 @@ module adder_subtractor #(
     convert #(
         .N_BITS_IN (N_BITS_FULL), .BIN_PT_IN (BIN_PT_FULL), .TYPE_IN (1),
         .N_BITS_OUT(N_BITS_OUT),  .BIN_PT_OUT(BIN_PT_OUT),  .TYPE_OUT(TYPE_OUT),
-        .QUANTIZATION(QUANTIZATION), .OVERFLOW(OVERFLOW), .LATENCY(LATENCY)
+        .QUANTIZATION(QUANTIZATION), .OVERFLOW(OVERFLOW), .CSP_LATENCY(CSP_LATENCY)
     ) u_convert (
         .clk (clk),
         .din (full),

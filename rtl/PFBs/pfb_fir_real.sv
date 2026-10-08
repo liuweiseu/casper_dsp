@@ -39,6 +39,120 @@
 // Declared for traceability only: WINDOW_TYPE and FWIDTH only shape the
 // coefficient files; MULT_SPEC, ADDER_FOLDING, ADDER_IMP and COEFF_DIST_MEM
 // (implementation choices) are ignored.
+//
+// ── HDL-Simulink Mapping ─────────────────────────────────────────────────────
+// Differences between this HDL and its Simulink block (casper_library
+// or Xilinx blockset). Machine-readable: the lines between the
+// @simulink-mapping markers are TOML after removing the leading "// "
+// (checked by tools/check_simulink_mapping.py). Fields: block,
+// deviations, params (numeric HDL value -> mask option text, verbatim),
+// hdl_only, mask_missing, ports (renamed HDL -> Simulink, missing,
+// extra).
+// @simulink-mapping begin
+// block = 'casper_library_pfbs.slx/pfb_fir_real'
+// deviations = [
+//   'BIT_GROWTH (and ADDER_N_BITS_OUT, ADDER_BIN_PT_OUT, SCALE_FACTOR) are not derived from the coefficients in the HDL: pfb_fir_real_init.m computes bit_growth = nextpow2(max(sum(abs(all_filters),2))) (gain floored at 1) from the unquantized window, so they must be supplied from gen_pfb_coeffs.py --bit-width-in; any mismatch with WINDOW_TYPE/FWIDTH/PFB_SIZE/TOTAL_TAPS silently changes adder widths, the scale and the output values (default BIT_GROWTH = 1 is correct for the default hamming, PFB_SIZE 5, TOTAL_TAPS 2).',
+//   "The coefficients come from COEFF_DIR .mem files (see pfb_coeff_gen); WINDOW_TYPE and FWIDTH are declared only, WindowType 'chebwin' and 'userwindow' cannot be generated (gen_pfb_coeffs.py:157-163), and missing files give all-zero coefficients.",
+//   'MULT_SPEC is a scalar int in the HDL and ignored; the Simulink mask accepts a per-tap vector (default [2 2] in pfb_fir_real_init.m) expanded by multiplier_specification.m into per-tap use_hdl/use_embedded, which only selects the multiplier implementation and does not change values.',
+//   'ADDER_FOLDING (FIRST_STAGE_HDL), ADDER_IMP and COEFF_DIST_MEM are passed through but ignored by adder_tree / pfb_coeff_gen (implementation choices only).',
+//   'TOTAL_TAPS < 2 is a $fatal (pfb_fir_real.sv:146); pfb_fir_real_init.m has no check but builds no last tap for TotalTaps = 1, so the Simulink model would not be valid either.',
+//   'The output Convert (Fix_N_BITS_OUT_(N_BITS_OUT-1), Wrap, latency CONV_LATENCY) and the tap Mults/adder_tree are reproduced by Bus/convert, Bus/multiplier and Misc/adder_tree; bit-exactness of the rounding modes on negative halves therefore relies on Bus/convert matching Xilinx Convert (not re-verified here). The Truncate override condition compares N_BITS_OUT with ADDER_BIN_PT_OUT exactly as pfb_fir_real_init.m (BitWidthOut > adder_bin_pt_out), not with the scaled binary point.',
+//   "All delay elements (Xilinx Delay, Register, ROM output, Counter) power up to 0 in both, so the first outputs before the pipeline fills are 0 in the HDL as in Simulink; the Convert latency in pfb_fir_real_init.m is set twice ('latency', add_latency, then conv_latency) and the later value, CONV_LATENCY, is what the HDL uses.",
+// ]
+//
+// [params.WINDOW_TYPE]
+// mask = 'WindowType'
+// type = 'popup'
+// hdl_unsupported = [5, 16]
+// note = 'WINDOW_TYPE is a string parameter that takes the option text itself (e.g. "hamming"), not the index; it is declared only and must match the window used by gen_pfb_coeffs.py, which rejects chebwin and userwindow and accepts bohamwin as bohmanwin'
+// [params.WINDOW_TYPE.values]
+// 0 = 'bartlett'
+// 1 = 'barthannwin'
+// 2 = 'blackman'
+// 3 = 'blackmanharris'
+// 4 = 'bohamwin'
+// 5 = 'chebwin'
+// 6 = 'flattopwin'
+// 7 = 'gausswin'
+// 8 = 'hamming'
+// 9 = 'hann'
+// 10 = 'kaiser'
+// 11 = 'nuttallwin'
+// 12 = 'parzenwin'
+// 13 = 'rectwin'
+// 14 = 'tukeywin'
+// 15 = 'triang'
+// 16 = 'userwindow'
+//
+// [params.MAKE_BIPLEX]
+// mask = 'MakeBiplex'
+// type = 'checkbox'
+// [params.MAKE_BIPLEX.values]
+// 0 = 'off'
+// 1 = 'on'
+//
+// [params.COEFF_DIST_MEM]
+// mask = 'CoeffDistMem'
+// type = 'checkbox'
+// note = 'declared only (passed to pfb_coeff_gen, which ignores it)'
+// [params.COEFF_DIST_MEM.values]
+// 0 = 'off'
+// 1 = 'on'
+//
+// [params.QUANTIZATION]
+// mask = 'quantization'
+// type = 'popup'
+// note = 'forced to Truncate when the output width exceeds ADDER_BIN_PT_OUT, as pfb_fir_real_init.m does'
+// [params.QUANTIZATION.values]
+// 0 = 'Truncate'
+// 1 = 'Round  (unbiased: +/- Inf)'
+// 2 = 'Round  (unbiased: Even Values)'
+//
+// [params.ADDER_FOLDING]
+// mask = 'adder_folding'
+// type = 'checkbox'
+// note = 'passed to adder_tree as FIRST_STAGE_HDL, which ignores it (implementation choice)'
+// [params.ADDER_FOLDING.values]
+// 0 = 'off'
+// 1 = 'on'
+//
+// [params.ADDER_IMP]
+// mask = 'adder_imp'
+// type = 'popup'
+// note = 'passed to adder_tree, which ignores it (implementation choice); HDL default 0 = Behavioral, mask/init default Fabric'
+// [params.ADDER_IMP.values]
+// 0 = 'Behavioral'
+// 1 = 'Fabric'
+// 2 = 'DSP48'
+//
+// [params.COEFFS_SHARE]
+// mask = 'coeffs_share'
+// type = 'checkbox'
+// note = 'only effective with MAKE_BIPLEX = 1, as in pfb_fir_real_init.m'
+// [params.COEFFS_SHARE.values]
+// 0 = 'off'
+// 1 = 'on'
+//
+// [hdl_only]
+// BIT_GROWTH = 'pfb_fir_real_init.m local variable (nextpow2 of the max sub-filter gain), exposed as a parameter; compute with gen_pfb_coeffs.py --bit-width-in'
+// ADDER_N_BITS_OUT = 'pfb_fir_real_init.m local variable, exposed as a parameter'
+// ADDER_BIN_PT_OUT = 'pfb_fir_real_init.m local variable, exposed as a parameter'
+// SCALE_FACTOR = 'pfb_fir_real_init.m local variable, exposed as a parameter'
+// COEFF_DIR = 'implementation: memory initialization file'
+// PLATFORM = 'implementation: memory / primitive vendor (GENERIC, XILINX, ALTERA)'
+// N_BITS_OUT = 'derived from other parameters (do not override)'
+// POLS = 'derived from other parameters (do not override)'
+//
+// [mask_missing]
+//
+// [ports]
+// note = 'array element (p-1)*2^N_INPUTS + (n-1); Simulink port numbers: sync / sync_out = 1, pol<p>_in<n> / pol<p>_out<n> = 1 + (p-1)*2^n_inputs + n'
+// [ports.renamed]
+// din = 'pol<p>_in<n>'
+// dout = 'pol<p>_out<n>'
+// [ports.missing]
+// [ports.extra]
+// @simulink-mapping end
 
 module pfb_fir_real #(
     parameter int    PFB_SIZE         = 5,
@@ -107,7 +221,7 @@ module pfb_fir_real #(
 
             // ── coefficients ─────────────────────────────────────────────────
             if (p == 1 && SHARE != 0) begin : GEN_SHARED
-                pipeline #(.BITWIDTH(BW), .LATENCY(CG_DLY)) u_delay (
+                pipeline #(.BITWIDTH(BW), .CSP_LATENCY(CG_DLY)) u_delay (
                     .clk(clk), .din(din[K]), .dout(cg_data));
                 assign cg_coeff = GEN_POL[0].GEN_IN[n].cg_coeff;
                 assign cg_sync  = 1'b0;                  // unused
@@ -183,7 +297,7 @@ module pfb_fir_real #(
             logic                        sum_sync;
 
             adder_tree #(
-                .N_INPUTS(T), .DATA_WIDTH(PW), .BIN_PT(PW - 2), .TYPE(1), .LATENCY(ADD_LATENCY),
+                .N_INPUTS(T), .DATA_WIDTH(PW), .BIN_PT(PW - 2), .TYPE(1), .CSP_LATENCY(ADD_LATENCY),
                 .PRECISION(1), .N_BITS_OUT(ADDER_N_BITS_OUT), .BIN_PT_OUT(ADDER_BIN_PT_OUT),
                 .QUANTIZATION(0), .OVERFLOW(0), .FIRST_STAGE_HDL(ADDER_FOLDING), .ADDER_IMP(ADDER_IMP)
             ) u_adder (
@@ -200,11 +314,11 @@ module pfb_fir_real #(
             convert #(
                 .N_BITS_IN(ADDER_N_BITS_OUT), .BIN_PT_IN(ADDER_BIN_PT_OUT - SCALE_FACTOR), .TYPE_IN(1),
                 .N_BITS_OUT(N_BITS_OUT), .BIN_PT_OUT(N_BITS_OUT - 1), .TYPE_OUT(1),
-                .QUANTIZATION(OUT_QUANT), .OVERFLOW(0), .LATENCY(CONV_LATENCY)
+                .QUANTIZATION(OUT_QUANT), .OVERFLOW(0), .CSP_LATENCY(CONV_LATENCY)
             ) u_convert (.clk(clk), .din(scaled), .dout(dout[K]));
 
             if (p == 0 && n == 0) begin : GEN_SYNC_OUT
-                pipeline #(.BITWIDTH(1), .LATENCY(CONV_LATENCY)) u_delay1 (
+                pipeline #(.BITWIDTH(1), .CSP_LATENCY(CONV_LATENCY)) u_delay1 (
                     .clk(clk), .din(sum_sync), .dout(sync_out));
             end
         end

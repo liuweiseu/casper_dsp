@@ -1193,8 +1193,8 @@ def gen_xeng():
 
 
 # ── cross_multiplier ─────────────────────────────────────────────────────────
-CM_KEYS = ["STREAMS", "AGGREGATION", "BIT_WIDTH_IN", "BIN_PT_IN", "BIT_WIDTH_OUT",
-           "BIN_PT_OUT", "MULT_LATENCY", "ADD_LATENCY", "OVERFLOW", "QUANTIZATION", "CONV_LATENCY"]
+CM_KEYS = ["STREAMS", "AGGREGATION", "BIT_WIDTH_IN", "BINARY_POINT_IN", "BIT_WIDTH_OUT",
+           "BINARY_POINT_OUT", "MULT_LATENCY", "ADD_LATENCY", "OVERFLOW", "QUANTISATION", "CONV_LATENCY"]
 
 
 def m_cross_multiplier(p, sync, din):
@@ -1202,8 +1202,8 @@ def m_cross_multiplier(p, sync, din):
     of NOUT raw words per cycle)."""
     from fractions import Fraction
     from gen_fixed_point_test_data import quantize
-    S_, A, w, bp = p["STREAMS"], p["AGGREGATION"], p["BIT_WIDTH_IN"], p["BIN_PT_IN"]
-    wo, bpo = p["BIT_WIDTH_OUT"], p["BIN_PT_OUT"]
+    S_, A, w, bp = p["STREAMS"], p["AGGREGATION"], p["BIT_WIDTH_IN"], p["BINARY_POINT_IN"]
+    wo, bpo = p["BIT_WIDTH_OUT"], p["BINARY_POINT_OUT"]
     lat = 1 + p["MULT_LATENCY"] + p["ADD_LATENCY"] + p["CONV_LATENCY"]
     ovf = 1 if p["OVERFLOW"] == 1 else 0
     scale = Fraction(1, 1 << (2 * bp))
@@ -1218,7 +1218,7 @@ def m_cross_multiplier(p, sync, din):
                     yr, yi = unpack(words[y] >> (2 * w * (A - 1 - sub)), w, 2)
                     re = (xr * yr + xi * yi) * scale
                     im = (xi * yr - xr * yi) * scale
-                    q = (wo, bpo, 1, p["QUANTIZATION"], ovf)
+                    q = (wo, bpo, 1, p["QUANTISATION"], ovf)
                     word = (word << 2 * wo) | (quantize(re, *q) << wo) | quantize(im, *q)
                 outs.append(word)
         res.append(outs)

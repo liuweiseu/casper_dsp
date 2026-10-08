@@ -1,7 +1,7 @@
 {
   "N_STREAMS": 1,
   "FFT_SIZE": 5,
-  "LOG2_N_GROUPS": 1,
+  "N_INPUTS": 1,
   "N_BITS_IN": 8,
   "BRAM_LATENCY": 2,
   "COEFFS_BIT_LIMIT": 8,

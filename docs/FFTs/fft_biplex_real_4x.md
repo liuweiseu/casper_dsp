@@ -2,9 +2,9 @@
 
 ## Description
 
-A biplex FFT of `4·N_BIPLEX_INPUTS` real signals. It corresponds to
+A biplex FFT of `4·N_INPUTS` real signals. It corresponds to
 casper_library's `fft_biplex_real_4x` (fixed point, sync mode,
-`fft_biplex_real_4x_init.m`); casper's `n_inputs` is `N_BIPLEX_INPUTS`
+`fft_biplex_real_4x_init.m`); casper's `n_inputs` is `N_INPUTS`
 here. The real inputs are paired into complex signals and fed to one
 [`biplex_core`](biplex_core.md).
 [`bi_real_unscr_4x`](Internal/bi_real_unscr_4x.md) then separates the four
@@ -29,7 +29,7 @@ F = `FFT_SIZE`, IW = `INPUT_BIT_WIDTH`:
 
 | Quantity | Value |
 |----------|-------|
-| `bram_delays` | `2^(F−1)·2·IW·N_BIPLEX_INPUTS ≥ 2^DELAYS_BIT_LIMIT` and `2^(F−1) ≥ BRAM_LATENCY+2` |
+| `bram_delays` | `2^(F−1)·2·IW·N_INPUTS ≥ 2^DELAYS_BIT_LIMIT` and `2^(F−1) ≥ BRAM_LATENCY+2` |
 | `bram_map` | `2^(F−1)·(F−1) ≥ 2^COEFFS_BIT_LIMIT` and `2^(F−1) ≥ BRAM_LATENCY` |
 | output width `N_BITS_OUT` | `BITGROWTH ? min(IW+F, MAX_BITS) : IW`, binary point `BIN_PT_IN` |
 
@@ -60,7 +60,7 @@ python3 rtl/FFTs/scripts/gen_fft_mem_files.py biplex_real_4x --fft-size F --coef
 
 | Parameter | Default | Description |
 |-----------|---------|-------------|
-| `N_BIPLEX_INPUTS` | 1 | casper `n_inputs`: complex biplex lanes (4 real signals each) |
+| `N_INPUTS` | 1 | casper `n_inputs`: complex biplex lanes (4 real signals each) |
 | `FFT_SIZE` | 2 | log2 of the FFT length |
 | `INPUT_BIT_WIDTH` | 18 | Real input width (signed) |
 | `BIN_PT_IN` | 17 | Binary point |
@@ -82,7 +82,7 @@ python3 rtl/FFTs/scripts/gen_fft_mem_files.py biplex_real_4x --fft-size F --coef
 | `clk` | input | 1 | Clock |
 | `sync` | input | 1 | Frame sync |
 | `shift` | input | `FFT_SIZE` | Dynamic downshift (bit `s−1` = stage `s`) |
-| `pol_in` | input | `INPUT_BIT_WIDTH` × `4·N_BIPLEX_INPUTS` | Real inputs |
+| `pol_in` | input | `INPUT_BIT_WIDTH` × `4·N_INPUTS` | Real inputs |
 | `sync_out` | output | 1 | Sync, one cycle before bin 0 |
-| `pol_out_re`, `pol_out_im` | output | `N_BITS_OUT` × `4·N_BIPLEX_INPUTS` | Spectrum of each input, bins 0 … 2^F−1 |
-| `of` | output | `N_BIPLEX_INPUTS` | biplex_core overflow per lane |
+| `pol_out_re`, `pol_out_im` | output | `N_BITS_OUT` × `4·N_INPUTS` | Spectrum of each input, bins 0 … 2^F−1 |
+| `of` | output | `N_INPUTS` | biplex_core overflow per lane |

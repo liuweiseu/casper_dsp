@@ -28,6 +28,134 @@
 // FLOAT_TYPE, EXP_WIDTH, FRAC_WIDTH, ADD_PIPE_LATENCY, MULT_PIPE_LATENCY,
 // COEFFS_BIT_LIMIT, COEFF_SHARING, COEFF_DECIMATION, MULT_SPEC and
 // DSP48_ADDERS are ignored.
+//
+// ── HDL-Simulink Mapping ─────────────────────────────────────────────────────
+// Differences between this HDL and its Simulink block (casper_library
+// or Xilinx blockset). Machine-readable: the lines between the
+// @simulink-mapping markers are TOML after removing the leading "// "
+// (checked by tools/check_simulink_mapping.py). Fields: block,
+// deviations, params (numeric HDL value -> mask option text, verbatim),
+// hdl_only, mask_missing, ports (renamed HDL -> Simulink, missing,
+// extra).
+// @simulink-mapping begin
+// block = 'casper_library_ffts.slx/biplex_core'
+// deviations = [
+//   "The mask's bin_pt_in = -1 backwards-compatibility value (replaced by input_bit_width-1 in biplex_core_init.m:132-136) is not recognised: BIN_PT_IN must be given explicitly.",
+//   "Per-stage DELAYS_BRAM is derived numerically (2^(FFT_SIZE-s) > BRAM_LATENCY), but biplex_core_init.m:160 compares 2^(FFTSize-stage) > num2str(bram_latency), i.e. against the character code(s) ('2' = 50); the two agree only when DELAYS_BIT_LIMIT >= 5, otherwise the HDL can choose BRAM delays (adding BRAM_LATENCY of fan-in latency per stage, fft_stage_n.sv P) where Simulink uses registers.",
+//   "OVERFLOW = 2 ('Error') has no working Simulink counterpart: butterfly_direct_init.m:512-514 compares the option against 'Flag as error', so 'Error' leaves the bus_convert overflow argument undefined and the mask init fails, whereas the HDL silently wraps (rtl/Bus/convert.sv saturates only for OVERFLOW = 1).",
+//   "DSP48_ADDERS is ignored, but in Simulink dsp48_adders = 'on' forces add_latency = 2 in every butterfly_direct (butterfly_direct_init.m:194-197), so with the box ticked and ADD_LATENCY != 2 the Simulink data/sync latency differs from the HDL's.",
+//   "ADD_PIPE_LATENCY / MULT_PIPE_LATENCY are ignored: in Simulink a non-zero add_pipe_latency inserts pipeline blocks on the bus_addsub inputs (bus_addsub_init.m:250-275, enabled by butterfly_direct_init.m:156-160) and mult_pipe_latency pipelines twiddle_general's bus_mult (twiddle_general_init.m:250-251), so for non-zero values the HDL has less latency (note Simulink's own fixed-point sync delay, butterfly_direct_init.m:652, does not include add_pipe_latency); only 0 is equivalent.",
+//   'Bit order of of: the HDL puts lane 0 in bit 0 (of[n] = lane n), but Simulink packs the per-lane flags with bus_create/Concat, lane 0 in the MSB (butterfly_direct_init.m:625-643 munge + bus_relational -> bussify in1 = MSB, bus_relational_init.m:194); the vector is bit-reversed relative to Simulink when it has more than one bit (fft_wideband_real.sv:31-33 and its GEN_OF loop undo this for the top-level of).',
+//   "SHIFT_SCHEDULE is an integer bit mask (bit s-1 = stage s) instead of casper's shift_schedule vector, and MULT_SPEC is a single ignored integer instead of the per-stage vector; convert them when transferring mask values.",
+// ]
+//
+// [params.QUANTIZATION]
+// mask = 'quantization'
+// type = 'popup'
+// [params.QUANTIZATION.values]
+// 0 = 'Truncate'
+// 1 = 'Round  (unbiased: +/- Inf)'
+// 2 = 'Round  (unbiased: Even Values)'
+//
+// [params.OVERFLOW]
+// mask = 'overflow'
+// type = 'popup'
+// note = "the HDL treats 2 as wrap (rtl/Bus/convert.sv saturates only for 1); in Simulink 'Error' does not build (butterfly_direct_init.m:512-514 tests for 'Flag as error')"
+// [params.OVERFLOW.values]
+// 0 = 'Wrap'
+// 1 = 'Saturate'
+// 2 = 'Error'
+//
+// [params.BITGROWTH]
+// mask = 'bitgrowth'
+// type = 'checkbox'
+// [params.BITGROWTH.values]
+// 0 = 'off'
+// 1 = 'on'
+//
+// [params.HARDCODE_SHIFTS]
+// mask = 'hardcode_shifts'
+// type = 'checkbox'
+// [params.HARDCODE_SHIFTS.values]
+// 0 = 'off'
+// 1 = 'on'
+//
+// [params.SHIFT_SCHEDULE]
+// mask = 'shift_schedule'
+// type = 'edit'
+// note = "casper's per-stage 0/1 vector becomes a bit mask here: bit k = stage k+1 (bit s-1 = stage s)"
+//
+// [params.MULT_SPEC]
+// mask = 'mult_spec'
+// type = 'edit'
+// note = "casper's per-stage vector (multiplier_specification.m) becomes one ignored scalar; implementation-only (multiplier core choice)"
+//
+// [params.ASYNC]
+// mask = 'async'
+// type = 'checkbox'
+// hdl_unsupported = [1]
+// note = '$fatal unless 0 (en/dvalid handshake not implemented)'
+// [params.ASYNC.values]
+// 0 = 'off'
+// 1 = 'on'
+//
+// [params.FLOATING_POINT]
+// mask = 'floating_point'
+// type = 'checkbox'
+// hdl_unsupported = [1]
+// note = '$fatal unless 0 (fixed point only)'
+// [params.FLOATING_POINT.values]
+// 0 = 'off'
+// 1 = 'on'
+//
+// [params.FLOAT_TYPE]
+// mask = 'float_type'
+// type = 'popup'
+// note = 'radiobutton; the init scripts test float_type == 2 (1-based option index); ignored (FLOATING_POINT must be 0)'
+// [params.FLOAT_TYPE.values]
+// 1 = 'single'
+// 2 = 'custom'
+//
+// [params.COEFF_SHARING]
+// mask = 'coeff_sharing'
+// type = 'checkbox'
+// note = 'declared only, ignored by the HDL'
+// [params.COEFF_SHARING.values]
+// 0 = 'off'
+// 1 = 'on'
+//
+// [params.COEFF_DECIMATION]
+// mask = 'coeff_decimation'
+// type = 'checkbox'
+// note = 'declared only, ignored by the HDL'
+// [params.COEFF_DECIMATION.values]
+// 0 = 'off'
+// 1 = 'on'
+//
+// [params.DSP48_ADDERS]
+// mask = 'dsp48_adders'
+// type = 'checkbox'
+// note = 'declared only, ignored by the HDL'
+// [params.DSP48_ADDERS.values]
+// 0 = 'off'
+// 1 = 'on'
+//
+// [hdl_only]
+// COEFF_DIR = 'implementation: memory initialization file'
+// PLATFORM = 'implementation: memory / primitive vendor (GENERIC, XILINX, ALTERA)'
+// N_BITS_OUT = 'derived from other parameters (do not override)'
+//
+// [mask_missing]
+//
+// [ports]
+// order = 'Simulink inports sync, shift, pol1, pol2 and outports sync_out, out1, out2, of (biplex_core_init.m:141-144, 255-258); the HDL lists pol1/pol2 before sync/shift and sync_out last'
+// note = 'each Simulink complex port x is split into x_re / x_im; the Simulink bus pol1/pol2/out1/out2 carries N_INPUTS complex lanes, lane 0 in the MSBs, which become array element 0'
+// [ports.renamed]
+// [ports.missing]
+// en = 'async=on only (not implemented)'
+// dvalid = 'async=on only (not implemented)'
+// [ports.extra]
+// @simulink-mapping end
 
 module biplex_core #(
     parameter int    N_INPUTS          = 1,

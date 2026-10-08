@@ -23,7 +23,7 @@ counter.dout ──────────────────► relationa
                           (cnt != PULSE_LEN)
 ```
 
-1. **`edge_detect`** (`EDGE_TYPE=0`, `OUTPUT_POL=0`) — produces a 1-cycle active-high
+1. **`edge_detect`** (`EDGE=0`, `POLARITY=0`) — produces a 1-cycle active-high
    strobe `trig` on each rising edge of `in`. Connected to `counter.rst`.
 2. **`constant`** (`VAL=PULSE_LEN`) — supplies `PULSE_LEN` as the comparison reference
    for `relational.b`.

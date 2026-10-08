@@ -19,6 +19,104 @@
 // signedness only change how the bits are read, not the counting.
 // Ports whose option is off are ignored; load, din and up have default
 // values, so instances that do not use them may leave them unconnected.
+//
+// ── HDL-Simulink Mapping ─────────────────────────────────────────────────────
+// Differences between this HDL and its Simulink block (casper_library
+// or Xilinx blockset). Machine-readable: the lines between the
+// @simulink-mapping markers are TOML after removing the leading "// "
+// (checked by tools/check_simulink_mapping.py). Fields: block,
+// deviations, params (numeric HDL value -> mask option text, verbatim),
+// hdl_only, mask_missing, ports (renamed HDL -> Simulink, missing,
+// extra).
+// @simulink-mapping begin
+// block = 'xbsIndex_r4.slx/Counter'
+// deviations = [
+//   'start_count, cnt_by_val and cnt_to are real values that xlCounter.sgm quantizes to {arith_type, n_bits, bin_pt} with Truncate/Wrap (count_reg_xfix_cell, step_xfix, initial_value_xfix); the HDL takes INIT_VAL, STEP, COUNT_TO_VAL as raw integers, so with bin_pt > 0 multiply by 2^bin_pt (counter.sv:17-19,78-79,95).',
+//   "The mask default cnt_to = 'Inf' has no HDL equivalent (HDL default COUNT_TO_VAL = 0); it is only relevant for Count Limited, where cnt_to must be given as a finite raw value.",
+//   'Priority matches xlCounter.sgm (rst or count-limit hit -> start_count, else en: load -> din, else +/- step; the limit compare is only evaluated while en = 1); the HDL lets RST_VAL differ from INIT_VAL, which Sysgen cannot.',
+//   "din is loaded as a raw bit pattern; Simulink assigns din into the counter type, so din must already have the counter's n_bits/bin_pt/signedness to be bit-exact.",
+//   "The Up/Down mode is unverified against Simulink: xlCounter.sgm itself carries 'TODO: Address bug in 2nd half of xlcounter_tb (up/down counter)'.",
+// ]
+//
+// [params.COUNTER_TYPE]
+// mask = 'cnt_type'
+// type = 'popup'
+// note = 'xlCounter.sgm encodes these as 1 / 2'
+// [params.COUNTER_TYPE.values]
+// 0 = 'Free Running'
+// 1 = 'Count Limited'
+//
+// [params.NBITS]
+// mask = 'n_bits'
+// type = 'edit'
+//
+// [params.COUNT_TO_VAL]
+// mask = 'cnt_to'
+// type = 'edit'
+// note = 'raw bit pattern in the HDL; real value in Simulink'
+//
+// [params.COUNT_DIR]
+// mask = 'operation'
+// type = 'popup'
+// [params.COUNT_DIR.values]
+// 0 = 'Up'
+// 1 = 'Down'
+// 2 = 'Up/Down'
+//
+// [params.INIT_VAL]
+// mask = 'start_count'
+// type = 'edit'
+// note = 'raw bit pattern in the HDL; real value in Simulink'
+//
+// [params.STEP]
+// mask = 'cnt_by_val'
+// type = 'edit'
+// note = 'raw bit pattern in the HDL; real value in Simulink'
+//
+// [params.BIN_P]
+// mask = 'bin_pt'
+// type = 'edit'
+// note = 'interpretation only in the HDL'
+//
+// [params.ENABLE_LOAD]
+// mask = 'load_pin'
+// type = 'checkbox'
+// [params.ENABLE_LOAD.values]
+// 0 = 'off'
+// 1 = 'on'
+//
+// [params.ENABLE_SYNC_RST]
+// mask = 'rst'
+// type = 'checkbox'
+// [params.ENABLE_SYNC_RST.values]
+// 0 = 'off'
+// 1 = 'on'
+//
+// [params.ENABLE_ENABLE]
+// mask = 'en'
+// type = 'checkbox'
+// [params.ENABLE_ENABLE.values]
+// 0 = 'off'
+// 1 = 'on'
+//
+// [hdl_only]
+// RST_VAL = 'HDL extension: reset value separate from start_count (defaults to INIT_VAL, which is what Sysgen does)'
+//
+// [mask_missing]
+// arith_type = 'signedness only changes how the bits are read; counting is bit-identical'
+// explicit_period = 'sample period has no HDL meaning'
+// period = 'sample period has no HDL meaning'
+// use_behavioral_HDL = 'implementation style only'
+// implementation = 'Fabric / DSP48 resource choice only'
+//
+// [ports]
+// order = 'HDL: rst, enable, load, din, up. Simulink shows only the enabled optional ports; casper sync_delay (system_237.xml, Counter 237:6 with load_pin+en) wires load=in1, din=in2, en=in3'
+// note = 'Output port 1 is unlabelled in the Sysgen icon; maps to dout. HDL rst/enable have no default and must be tied off when the option is off'
+// [ports.renamed]
+// enable = 'en'
+// [ports.missing]
+// [ports.extra]
+// @simulink-mapping end
 
 module counter #(
     /* COUNTER_TYPE: 0=free_running, 1=count_limit */

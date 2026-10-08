@@ -1,3 +1,28 @@
+
+
+//
+// ── HDL-Simulink Mapping ─────────────────────────────────────────────────────
+// Differences between this HDL and its Simulink block (casper_library
+// or Xilinx blockset). Machine-readable: the lines between the
+// @simulink-mapping markers are TOML after removing the leading "// "
+// (checked by tools/check_simulink_mapping.py). Fields: block,
+// deviations, params (numeric HDL value -> mask option text, verbatim),
+// hdl_only, mask_missing, ports (renamed HDL -> Simulink, missing,
+// extra).
+// @simulink-mapping begin
+// block = 'casper_library_misc.slx/armed_trigger'
+// deviations = []
+//
+// [hdl_only]
+//
+// [mask_missing]
+//
+// [ports]
+// [ports.renamed]
+// [ports.missing]
+// [ports.extra]
+// @simulink-mapping end
+
 module armed_trigger (
     input  logic clk,
     input  logic arm,
@@ -11,8 +36,8 @@ module armed_trigger (
 
     // Detect rising edge of arm; output is active high for one cycle
     edge_detect #(
-        .EDGE_TYPE  (0),   // rising edge
-        .OUTPUT_POL (0)    // active high
+        .EDGE  (0),   // rising edge
+        .POLARITY (0)    // active high
     ) u_edge_detect (
         .clk  (clk),
         .din  (arm),

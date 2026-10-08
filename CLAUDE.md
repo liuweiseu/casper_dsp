@@ -76,6 +76,7 @@ Test results (`.vcd`, `.xml`) land in `tests/results/`. VCD waveforms can be vie
 | `tests/simulation.toml` | Declares which modules are tested and with what parameters |
 | `tests/test_runner.py` | pytest entry point — reads `simulation.toml`, calls cocotb runner |
 | `tests/prepare_dump.py` | Pre-test script that injects `$dumpfile`/`$dumpvars` into RTL source to produce VCD output |
+| `tools/` | Developer utilities outside the simulation flow (not copied into the test image), e.g. `check_simulink_mapping.py` |
 | `container/Dockerfile` | Two-stage image: compiles Verilator from source, installs cocotb/pytest |
 | `container/docker-compose.local.yml` | Local compose; mounts `tests/results/` for output |
 
@@ -107,6 +108,8 @@ Check `rtl/BasicModules/` for the current set of available primitives before wri
 - Reset is synchronous (`always_ff @(posedge clk)` with `rst` input).
 - VCD output path follows `tests/results/<Category>/<module>/<module>[_N].vcd`.
 - The `SIM` macro is defined during simulation builds (use `ifdef SIM` for sim-only blocks if needed).
+- Parameter names are the casper_library mask variable names in upper case (camelCase → UPPER_SNAKE, e.g. `csp_latency` → `CSP_LATENCY`, `DelayLen` → `DELAY_LEN`).
+- A module with a casper_library Simulink block records every difference from that block in an **HDL-Simulink Mapping** section at the end of its header comment: TOML between `// @simulink-mapping begin` and `// @simulink-mapping end` (strip the leading `// `). Fields: `block`, `deviations`, `params` (numeric value → mask option text, verbatim), `hdl_only`, `mask_missing`, `ports` (`renamed` HDL → Simulink, `missing`, `extra`). Validate with `python3 tools/check_simulink_mapping.py`; `--dump` prints every block as JSON. See `tools/check_simulink_mapping.py` for the schema.
 
 ## Module Categories
 

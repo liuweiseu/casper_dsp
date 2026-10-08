@@ -18,6 +18,38 @@
 // DELAY_LEN < 2 is not worth a RAM: it falls back to a pipeline of DELAY_LEN
 // registers (0 = combinational pass-through).
 // The RAM and the output power up to 0, so the first DELAY_LEN outputs are 0.
+//
+// ── HDL-Simulink Mapping ─────────────────────────────────────────────────────
+// Differences between this HDL and its Simulink block (casper_library
+// or Xilinx blockset). Machine-readable: the lines between the
+// @simulink-mapping markers are TOML after removing the leading "// "
+// (checked by tools/check_simulink_mapping.py). Fields: block,
+// deviations, params (numeric HDL value -> mask option text, verbatim),
+// hdl_only, mask_missing, ports (renamed HDL -> Simulink, missing,
+// extra).
+// @simulink-mapping begin
+// block = 'casper_library_delays.slx/delay_bram'
+// deviations = [
+//   'Simulink (delay_bram_init.m) uses a counter limited to DelayLen-bram_latency-1 and a Read-before-write Single Port RAM with latency bram_latency; the HDL is the bram_latency = 1 case. dout is identical (din delayed by DelayLen, first DelayLen outputs 0) but the RAM output register count differs.',
+//   'delay_bram_init.m errors for DelayLen <= bram_latency + 1 (DelayLen <= 3 with the default bram_latency 2) and deletes all lines for DelayLen = 0 (no din->dout path); the HDL accepts any DELAY_LEN and uses a register pipeline for DELAY_LEN < 2 (0 = wire).',
+//   'async = on (en input gating counter and RAM) is not implemented.',
+// ]
+//
+// [hdl_only]
+// BITWIDTH = 'inherited width: Simulink takes it from the input signal'
+// PLATFORM = 'implementation: memory / primitive vendor (GENERIC, XILINX, ALTERA)'
+//
+// [mask_missing]
+// bram_latency = 'not declared in the HDL; the RAM read latency is fixed at 1 (total delay is still DELAY_LEN)'
+// use_dsp48 = 'counter resource choice only (Fabric vs DSP48)'
+// async = 'async = on (en port) not implemented'
+//
+// [ports]
+// [ports.renamed]
+// [ports.missing]
+// en = 'async=on only (not implemented)'
+// [ports.extra]
+// @simulink-mapping end
 
 module delay_bram #(
     parameter int    BITWIDTH  = 8,
@@ -33,7 +65,7 @@ module delay_bram #(
         if (DELAY_LEN < 2) begin : GEN_SHORT
             pipeline #(
                 .BITWIDTH(BITWIDTH),
-                .LATENCY (DELAY_LEN)
+                .CSP_LATENCY (DELAY_LEN)
             ) u_pipeline (
                 .clk (clk),
                 .din (din),

@@ -5,7 +5,7 @@
 A fixed-point format converter: requantization, bit growth and overflow
 handling, with no arithmetic. `din` is read as a fixed-point number in the input
 format and re-expressed in the output format. Dropped LSBs are handled by
-`QUANTIZATION` and dropped MSBs by `OVERFLOW`. The result is delayed by `LATENCY`
+`QUANTIZATION` and dropped MSBs by `OVERFLOW`. The result is delayed by `CSP_LATENCY`
 pipeline stages. It corresponds to the Xilinx System Generator *Convert* block
 used by casper_library's `bus_convert`.
 
@@ -25,7 +25,7 @@ instance.
 | `TYPE_OUT`     | 1       | Output type: `0`=unsigned, `1`=signed |
 | `QUANTIZATION` | 0       | `0`=truncate, `1`=round half away from zero, `2`=round half to even |
 | `OVERFLOW`     | 0       | `0`=wrap, `1`=saturate, `2`=flag as error (treated as wrap) |
-| `LATENCY`      | 0       | Pipeline stages on the output; `0` = combinational |
+| `CSP_LATENCY`      | 0       | Pipeline stages on the output; `0` = combinational |
 
 The encodings match the casper_library mask prompts: *quantization strategy
 (Truncate=0, Round (unbiased: +/- Inf)=1, Round (unbiased: Even Values)=2)* and
@@ -36,9 +36,9 @@ modules in `rtl/Bus/` and `rtl/Multipliers/` use these encodings.
 
 | Port   | Direction | Width        | Description |
 |--------|-----------|--------------|-------------|
-| `clk`  | input     | 1            | Clock (unused when `LATENCY = 0`) |
+| `clk`  | input     | 1            | Clock (unused when `CSP_LATENCY = 0`) |
 | `din`  | input     | `N_BITS_IN`  | Input word |
-| `dout` | output    | `N_BITS_OUT` | Converted word, delayed by `LATENCY` cycles |
+| `dout` | output    | `N_BITS_OUT` | Converted word, delayed by `CSP_LATENCY` cycles |
 
 ## Functional Description
 
@@ -56,5 +56,5 @@ the unsigned or two's-complement integer, depending on `TYPE`. With
 3. **Overflow**: with wrap, the low `N_BITS_OUT` bits are kept. With saturate,
    the value is clamped to `[−2^(N−1), 2^(N−1)−1]` (signed) or `[0, 2^N−1]`
    (unsigned).
-4. **Pipeline**: `LATENCY` chained `BasicModules/register` stages (no reset or
+4. **Pipeline**: `CSP_LATENCY` chained `BasicModules/register` stages (no reset or
    enable), which power up to 0.

@@ -68,7 +68,7 @@ def delayed_din(ins, n):
 
 
 def m_pipeline(p, stim):
-    return delayed_din(stim["din"], p["LATENCY"])
+    return delayed_din(stim["din"], p["CSP_LATENCY"])
 
 
 def m_single_port_ram(p, stim):
@@ -170,7 +170,7 @@ def P(names, values):
 
 
 SRL = ["BITWIDTH", "DELAY_LEN", "USE_ENABLE", "USE_RST"]
-PIPE = ["BITWIDTH", "LATENCY"]
+PIPE = ["BITWIDTH", "CSP_LATENCY"]   # casper pipeline mask: csp_latency
 RAM = ["DATA_WIDTH", "ADDR_WIDTH"]
 BRAM = ["BITWIDTH", "DELAY_LEN"]
 
@@ -193,9 +193,9 @@ MODULES = {
     "pipeline": dict(
         inputs=["din"], outputs=["dout"],
         stim=lambda rng, p, c: s_din(rng, p["BITWIDTH"], c), model=m_pipeline,
-        prose="`pipeline` delays `din` by `LATENCY` cycles (no reset / enable).",
+        prose="`pipeline` delays `din` by `CSP_LATENCY` cycles (no reset / enable).",
         tests=[
-            (P(PIPE, [8, 0]), 256, "LATENCY = 0: combinational pass-through"),
+            (P(PIPE, [8, 0]), 256, "CSP_LATENCY = 0: combinational pass-through"),
             (P(PIPE, [8, 1]), 256, "single register"),
             (P(PIPE, [8, 3]), 256, "3-stage pipeline"),
             (P(PIPE, [12, 8]), 256, "8-stage pipeline, 12-bit"),

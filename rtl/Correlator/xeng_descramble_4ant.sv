@@ -19,6 +19,35 @@
 // Parameters: N_BITS, ACC_LEN, DEMUX_FACTOR are the mask parameters (stored
 // defaults 8, 256, 1); PLATFORM is passed to the RAM. With the defaults:
 // W = 25, P = 32, OW = 256, DEL = 84, CNT = 10.
+//
+// ── HDL-Simulink Mapping ─────────────────────────────────────────────────────
+// Differences between this HDL and its Simulink block (casper_library
+// or Xilinx blockset). Machine-readable: the lines between the
+// @simulink-mapping markers are TOML after removing the leading "// "
+// (checked by tools/check_simulink_mapping.py). Fields: block,
+// deviations, params (numeric HDL value -> mask option text, verbatim),
+// hdl_only, mask_missing, ports (renamed HDL -> Simulink, missing,
+// extra).
+// @simulink-mapping begin
+// block = 'casper_library_correlator.slx/xeng_descramble_4ant'
+// deviations = [
+//   "Power-on RAM contents: the HDL RAM powers up to 0, while the library RAM (system_928.xml, latency 2) has initVector = [1:36*8]. Simulink's spontaneous power-on read pass therefore outputs initVector words (1, 2, 3, ...), and the HDL outputs zeros. The default depth (E+1)*D = 11 is shorter than the 288-entry vector, and how Sysgen truncates it was not checked.",
+//   "Read/write collision: Simulink returns NaN on port A when port B ('No Read On Write') writes the same wide word in the same cycle (xlDPBRAM.sgm). The HDL returns defined data. This does not happen with legal xeng traffic.",
+// ]
+//
+// [hdl_only]
+// PLATFORM = 'implementation: memory / primitive vendor (GENERIC, XILINX, ALTERA)'
+// W = 'derived from other parameters (do not override)'
+// P = 'derived from other parameters (do not override)'
+// OW = 'derived from other parameters (do not override)'
+//
+// [mask_missing]
+//
+// [ports]
+// [ports.renamed]
+// [ports.missing]
+// [ports.extra]
+// @simulink-mapping end
 
 module xeng_descramble_4ant #(
     parameter int    N_BITS       = 8,

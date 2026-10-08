@@ -1,3 +1,49 @@
+// ── HDL-Simulink Mapping ─────────────────────────────────────────────────────
+// Differences between this HDL and its Simulink block (casper_library
+// or Xilinx blockset). Machine-readable: the lines between the
+// @simulink-mapping markers are TOML after removing the leading "// "
+// (checked by tools/check_simulink_mapping.py). Fields: block,
+// deviations, params (numeric HDL value -> mask option text, verbatim),
+// hdl_only, mask_missing, ports (renamed HDL -> Simulink, missing,
+// extra).
+// @simulink-mapping begin
+// block = 'xbsIndex_r4.slx/Register'
+// deviations = [
+//   "Simulink converts 'init' (a real value) to the type of d with Round and Saturate (xlRegister.sgm: xtype({..., xlRound, xlSaturate}, init)); the HDL loads BITWIDTH'(INIT_VAL) as a raw, wrapped integer, so pass round(init*2^bin_pt) saturated to the type of d (register.sv:20,26).",
+// ]
+//
+// [params.INIT_VAL]
+// mask = 'init'
+// type = 'edit'
+// note = 'raw bit pattern in the HDL; real value in Simulink'
+//
+// [params.USE_RST]
+// mask = 'rst'
+// type = 'checkbox'
+// [params.USE_RST.values]
+// 0 = 'off'
+// 1 = 'on'
+//
+// [params.USE_ENABLE]
+// mask = 'en'
+// type = 'checkbox'
+// [params.USE_ENABLE.values]
+// 0 = 'off'
+// 1 = 'on'
+//
+// [hdl_only]
+// BITWIDTH = 'inherited width: Simulink takes it from the input signal'
+//
+// [mask_missing]
+//
+// [ports]
+// order = 'Simulink: d, rst, en (xlRegister.sgm signature; window_delay system_240 wires Register 240:6 in1=d, in2=rst, in3=en); HDL: rst, en, d'
+// note = 'icon port_label d / q match the HDL; HDL rst and en have no default and must be tied off when unused'
+// [ports.renamed]
+// [ports.missing]
+// [ports.extra]
+// @simulink-mapping end
+
 module register #(
     /* BITWIDTH: data bit width */
     parameter BITWIDTH   = 1,

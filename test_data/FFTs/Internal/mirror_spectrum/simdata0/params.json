@@ -1,7 +1,7 @@
 {
   "N_INPUTS": 1,
   "FFT_SIZE": 3,
-  "INPUT_BIT_WIDTH": 18,
+  "INPUT_BITWIDTH": 18,
   "BIN_PT_IN": 17,
   "BRAM_LATENCY": 2,
   "NEGATE_LATENCY": 1,

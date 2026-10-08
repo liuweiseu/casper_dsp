@@ -13,7 +13,7 @@ _tb_root = next(p for p in _here.parents if p.name == "testbench")
 testdatadir = _tb_root.parent / "test_data" / _here.relative_to(_tb_root)
 
 # Integer parameters matched against simdataN/params.json
-PARAMS = ['STREAMS', 'AGGREGATION', 'BIT_WIDTH_IN', 'BIN_PT_IN', 'BIT_WIDTH_OUT', 'BIN_PT_OUT', 'MULT_LATENCY', 'ADD_LATENCY', 'OVERFLOW', 'QUANTIZATION', 'CONV_LATENCY']
+PARAMS = ['STREAMS', 'AGGREGATION', 'BIT_WIDTH_IN', 'BINARY_POINT_IN', 'BIT_WIDTH_OUT', 'BINARY_POINT_OUT', 'MULT_LATENCY', 'ADD_LATENCY', 'OVERFLOW', 'QUANTISATION', 'CONV_LATENCY']
 # sim_<name>.csv -> DUT port of the same name; a packed array port has one
 # file per element, sim_<name>0.csv, sim_<name>1.csv, ... (see PACKED)
 INPUTS = ['sync_in', 'din']

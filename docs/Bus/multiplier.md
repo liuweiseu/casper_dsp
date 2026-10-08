@@ -8,7 +8,7 @@ block).
 
 ```
 a ──► sign/zero extend ──┐
-                         ├─► a × b (full precision) ──► convert (QUANTIZATION, OVERFLOW, LATENCY) ──► dout
+                         ├─► a × b (full precision) ──► convert (QUANTIZATION, OVERFLOW, MULT_LATENCY) ──► dout
 b ──► sign/zero extend ──┘
 ```
 
@@ -27,16 +27,16 @@ b ──► sign/zero extend ──┘
 | `TYPE_OUT`     | 1       | Output type: `0`=unsigned, `1`=signed |
 | `QUANTIZATION` | 0       | `0`=truncate, `1`=round half away from zero, `2`=round half to even |
 | `OVERFLOW`     | 0       | `0`=wrap, `1`=saturate, `2`=flag as error (treated as wrap) |
-| `LATENCY`      | 1       | Pipeline stages on the output; `0` = combinational |
+| `MULT_LATENCY`      | 1       | Pipeline stages on the output; `0` = combinational |
 
 ## Ports
 
 | Port   | Direction | Width        | Description |
 |--------|-----------|--------------|-------------|
-| `clk`  | input     | 1            | Clock (unused when `LATENCY = 0`) |
+| `clk`  | input     | 1            | Clock (unused when `MULT_LATENCY = 0`) |
 | `a`    | input     | `N_BITS_A`   | First operand |
 | `b`    | input     | `N_BITS_B`   | Second operand |
-| `dout` | output    | `N_BITS_OUT` | `convert(a × b)`, delayed by `LATENCY` cycles |
+| `dout` | output    | `N_BITS_OUT` | `convert(a × b)`, delayed by `MULT_LATENCY` cycles |
 
 ## Functional Description
 
@@ -48,6 +48,6 @@ product:
 - `BIN_PT_FULL = BIN_PT_A + BIN_PT_B`
 
 The product is exact. A [`convert`](convert.md) instance then requantizes it to
-the output format and adds the `LATENCY` pipeline. The multiplication uses the
+the output format and adds the `MULT_LATENCY` pipeline. The multiplication uses the
 generic `*` operator, so synthesis maps it to DSP slices as it chooses. No
 vendor primitives are instantiated.

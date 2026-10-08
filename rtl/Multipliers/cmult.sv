@@ -55,6 +55,109 @@
 // EXP_WIDTH, FRAC_WIDTH and PIPELINED_ENABLE only matter for those modes and
 // are declared only. MULTIPLIER_IMPLEMENTATION only selects the multiplier
 // resource, except that it enables PIPELINE_CMULT_EN (embedded only).
+//
+// ── HDL-Simulink Mapping ─────────────────────────────────────────────────────
+// Differences between this HDL and its Simulink block (casper_library
+// or Xilinx blockset). Machine-readable: the lines between the
+// @simulink-mapping markers are TOML after removing the leading "// "
+// (checked by tools/check_simulink_mapping.py). Fields: block,
+// deviations, params (numeric HDL value -> mask option text, verbatim),
+// hdl_only, mask_missing, ports (renamed HDL -> Simulink, missing,
+// extra).
+// @simulink-mapping begin
+// block = 'casper_library_multipliers.slx/cmult'
+// deviations = [
+//   'ASYNC = 1 and FLOATING_POINT = 1 are not implemented ($fatal, cmult.sv:159-162); FLOAT_TYPE, EXP_WIDTH, FRAC_WIDTH and PIPELINED_ENABLE are declared only.',
+//   "OVERFLOW = 2 ('Flag as error') is a $fatal; in Simulink the output Convert raises a simulation error on overflow and the generated hardware wraps.",
+//   "Default N_BITS_A = 18 differs from the mask-stored n_bits_a = 0 (empty-block shell value, illegal in the HDL), and the mask-stored pipeline_latency = 0 differs from cmult_init.m's default 2; only the stored values matter when instantiating from the library.",
+//   "The output Convert rounding/saturation is the Bus/convert module (see its deviations); products and sums are full precision as in cmult_init.m (Mult/AddSub 'precision' = 'Full').",
+// ]
+//
+// [params.QUANTIZATION]
+// mask = 'quantization'
+// type = 'popup'
+// [params.QUANTIZATION.values]
+// 0 = 'Truncate'
+// 1 = 'Round  (unbiased: +/- Inf)'
+// 2 = 'Round  (unbiased: Even Values)'
+//
+// [params.OVERFLOW]
+// mask = 'overflow'
+// type = 'popup'
+// hdl_unsupported = [2]
+// note = 'OVERFLOW 2 is rejected by the HDL ($fatal)'
+// [params.OVERFLOW.values]
+// 0 = 'Wrap'
+// 1 = 'Saturate'
+// 2 = 'Flag as error'
+//
+// [params.CONJUGATED]
+// mask = 'conjugated'
+// type = 'checkbox'
+// [params.CONJUGATED.values]
+// 0 = 'off'
+// 1 = 'on'
+//
+// [params.ASYNC]
+// mask = 'async'
+// type = 'checkbox'
+// hdl_unsupported = [1]
+// note = 'ASYNC 1 is rejected by the HDL ($fatal)'
+// [params.ASYNC.values]
+// 0 = 'off'
+// 1 = 'on'
+//
+// [params.PIPELINED_ENABLE]
+// mask = 'pipelined_enable'
+// type = 'checkbox'
+// note = 'only used with async = on; declared only'
+// [params.PIPELINED_ENABLE.values]
+// 0 = 'off'
+// 1 = 'on'
+//
+// [params.FLOATING_POINT]
+// mask = 'floating_point'
+// type = 'checkbox'
+// hdl_unsupported = [1]
+// note = 'FLOATING_POINT 1 is rejected by the HDL ($fatal)'
+// [params.FLOATING_POINT.values]
+// 0 = 'off'
+// 1 = 'on'
+//
+// [params.FLOAT_TYPE]
+// mask = 'float_type'
+// type = 'popup'
+// note = 'mask radiobutton; HDL string parameter, declared only (floating point not implemented)'
+// [params.FLOAT_TYPE.values]
+// single = 'single'
+// custom = 'custom'
+//
+// [params.MULTIPLIER_IMPLEMENTATION]
+// mask = 'multiplier_implementation'
+// type = 'popup'
+// [params.MULTIPLIER_IMPLEMENTATION.values]
+// 0 = 'behavioral HDL'
+// 1 = 'standard core'
+// 2 = 'embedded multiplier core'
+//
+// [params.PIPELINE_CMULT_EN]
+// mask = 'pipeline_cmult_en'
+// type = 'checkbox'
+// [params.PIPELINE_CMULT_EN.values]
+// 0 = 'off'
+// 1 = 'on'
+//
+// [hdl_only]
+//
+// [mask_missing]
+//
+// [ports]
+// [ports.renamed]
+// [ports.missing]
+// en = 'async=on only (not implemented)'
+// dvalid = 'async=on only (not implemented)'
+// [ports.extra]
+// @simulink-mapping end
 
 module cmult #(
     parameter int    N_BITS_A                  = 18,
@@ -111,9 +214,9 @@ module cmult #(
     logic [2*N_BITS_A-1:0] a_d;
     logic [2*N_BITS_B-1:0] b_d;
 
-    pipeline #(.BITWIDTH(2*N_BITS_A), .LATENCY(IN_LATENCY)) u_a_dly (
+    pipeline #(.BITWIDTH(2*N_BITS_A), .CSP_LATENCY(IN_LATENCY)) u_a_dly (
         .clk(clk), .din(a), .dout(a_d));
-    pipeline #(.BITWIDTH(2*N_BITS_B), .LATENCY(IN_LATENCY)) u_b_dly (
+    pipeline #(.BITWIDTH(2*N_BITS_B), .CSP_LATENCY(IN_LATENCY)) u_b_dly (
         .clk(clk), .din(b), .dout(b_d));
 
     logic [N_BITS_A-1:0] a_re, a_im;
@@ -128,34 +231,34 @@ module cmult #(
         .N_BITS_A(N_BITS_A), .BIN_PT_A(BIN_PT_A), .TYPE_A(1),
         .N_BITS_B(N_BITS_B), .BIN_PT_B(BIN_PT_B), .TYPE_B(1),
         .N_BITS_OUT(NP), .BIN_PT_OUT(BPP), .TYPE_OUT(1),
-        .QUANTIZATION(0), .OVERFLOW(0), .LATENCY(MULT_LATENCY)
+        .QUANTIZATION(0), .OVERFLOW(0), .MULT_LATENCY(MULT_LATENCY)
     ) u_rere (.clk(clk), .a(a_re), .b(b_re), .dout(rere));
 
     multiplier #(
         .N_BITS_A(N_BITS_A), .BIN_PT_A(BIN_PT_A), .TYPE_A(1),
         .N_BITS_B(N_BITS_B), .BIN_PT_B(BIN_PT_B), .TYPE_B(1),
         .N_BITS_OUT(NP), .BIN_PT_OUT(BPP), .TYPE_OUT(1),
-        .QUANTIZATION(0), .OVERFLOW(0), .LATENCY(MULT_LATENCY)
+        .QUANTIZATION(0), .OVERFLOW(0), .MULT_LATENCY(MULT_LATENCY)
     ) u_imim (.clk(clk), .a(a_im), .b(b_im), .dout(imim));
 
     multiplier #(
         .N_BITS_A(N_BITS_A), .BIN_PT_A(BIN_PT_A), .TYPE_A(1),
         .N_BITS_B(N_BITS_B), .BIN_PT_B(BIN_PT_B), .TYPE_B(1),
         .N_BITS_OUT(NP), .BIN_PT_OUT(BPP), .TYPE_OUT(1),
-        .QUANTIZATION(0), .OVERFLOW(0), .LATENCY(MULT_LATENCY)
+        .QUANTIZATION(0), .OVERFLOW(0), .MULT_LATENCY(MULT_LATENCY)
     ) u_imre (.clk(clk), .a(a_im), .b(b_re), .dout(imre));
 
     multiplier #(
         .N_BITS_A(N_BITS_A), .BIN_PT_A(BIN_PT_A), .TYPE_A(1),
         .N_BITS_B(N_BITS_B), .BIN_PT_B(BIN_PT_B), .TYPE_B(1),
         .N_BITS_OUT(NP), .BIN_PT_OUT(BPP), .TYPE_OUT(1),
-        .QUANTIZATION(0), .OVERFLOW(0), .LATENCY(MULT_LATENCY)
+        .QUANTIZATION(0), .OVERFLOW(0), .MULT_LATENCY(MULT_LATENCY)
     ) u_reim (.clk(clk), .a(a_re), .b(b_im), .dout(reim));
 
     // ── optional pipeline between multipliers and add/subs ───────────────────
     logic [NP-1:0] rere_p, imim_p, imre_p, reim_p;
 
-    pipeline #(.BITWIDTH(4*NP), .LATENCY(PIPE_LAT)) u_prod_dly (
+    pipeline #(.BITWIDTH(4*NP), .CSP_LATENCY(PIPE_LAT)) u_prod_dly (
         .clk(clk), .din({rere, imim, imre, reim}),
         .dout({rere_p, imim_p, imre_p, reim_p}));
 
@@ -167,7 +270,7 @@ module cmult #(
         .N_BITS_B(NP), .BIN_PT_B(BPP), .TYPE_B(1),
         .N_BITS_OUT(NS), .BIN_PT_OUT(BPP), .TYPE_OUT(1),
         .OPMODE((CONJUGATED != 0) ? 0 : 1), .QUANTIZATION(0), .OVERFLOW(0),
-        .LATENCY(ADD_LATENCY)
+        .CSP_LATENCY(ADD_LATENCY)
     ) u_addsub_re (.clk(clk), .a(rere_p), .b(imim_p), .dout(sum_re));
 
     adder_subtractor #(
@@ -175,7 +278,7 @@ module cmult #(
         .N_BITS_B(NP), .BIN_PT_B(BPP), .TYPE_B(1),
         .N_BITS_OUT(NS), .BIN_PT_OUT(BPP), .TYPE_OUT(1),
         .OPMODE((CONJUGATED != 0) ? 1 : 0), .QUANTIZATION(0), .OVERFLOW(0),
-        .LATENCY(ADD_LATENCY)
+        .CSP_LATENCY(ADD_LATENCY)
     ) u_addsub_im (.clk(clk), .a(imre_p), .b(reim_p), .dout(sum_im));
 
     // ── output convert ───────────────────────────────────────────────────────
@@ -184,13 +287,13 @@ module cmult #(
     convert #(
         .N_BITS_IN(NS), .BIN_PT_IN(BPP), .TYPE_IN(1),
         .N_BITS_OUT(N_BITS_AB), .BIN_PT_OUT(BIN_PT_AB), .TYPE_OUT(1),
-        .QUANTIZATION(QUANTIZATION), .OVERFLOW(OVERFLOW), .LATENCY(CONV_LATENCY)
+        .QUANTIZATION(QUANTIZATION), .OVERFLOW(OVERFLOW), .CSP_LATENCY(CONV_LATENCY)
     ) u_convert_re (.clk(clk), .din(sum_re), .dout(ab_re));
 
     convert #(
         .N_BITS_IN(NS), .BIN_PT_IN(BPP), .TYPE_IN(1),
         .N_BITS_OUT(N_BITS_AB), .BIN_PT_OUT(BIN_PT_AB), .TYPE_OUT(1),
-        .QUANTIZATION(QUANTIZATION), .OVERFLOW(OVERFLOW), .LATENCY(CONV_LATENCY)
+        .QUANTIZATION(QUANTIZATION), .OVERFLOW(OVERFLOW), .CSP_LATENCY(CONV_LATENCY)
     ) u_convert_im (.clk(clk), .din(sum_im), .dout(ab_im));
 
     // ri_to_c: real part in the MSBs

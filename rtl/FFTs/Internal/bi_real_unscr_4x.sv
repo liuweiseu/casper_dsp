@@ -38,6 +38,73 @@
 // Complex lanes are packed {im, re} per lane, lane 0 lowest, inside the
 // reorders. Declared for traceability only: DSP48_ADDERS (ignored); ASYNC must
 // be 0.
+//
+// ── HDL-Simulink Mapping ─────────────────────────────────────────────────────
+// Differences between this HDL and its Simulink block (casper_library
+// or Xilinx blockset). Machine-readable: the lines between the
+// @simulink-mapping markers are TOML after removing the leading "// "
+// (checked by tools/check_simulink_mapping.py). Fields: block,
+// deviations, params (numeric HDL value -> mask option text, verbatim),
+// hdl_only, mask_missing, ports (renamed HDL -> Simulink, missing,
+// extra).
+// @simulink-mapping begin
+// block = 'casper_library_ffts_internal.slx/bi_real_unscr_4x'
+// deviations = [
+//   'dsp48_adders is a dead parameter in both models: bi_real_unscr_4x_init.m:90 reads it but never uses it, and the HDL ignores DSP48_ADDERS',
+//   'FFTSize=2 reproduces an upstream casper_library defect bit-exactly: map_even = bit_rev over FFTSize-1 = 1 bit is the identity (reorder order 1, one cycle faster than the order-2 map_odd), so both Simulink and the HDL output a wrong spectrum; only FFT_SIZE >= 3 gives a correct FFT (mlib_devel_notes/fft_wideband_real_hdl_plan.md Phase 5)',
+//   'the reorder maps are not computed in the HDL: MAP_DIR must hold map_even/map_odd/map_out.mem from rtl/Reorder/scripts/gen_reorder_map.py --bi-real; a missing or stale map silently changes the output order',
+//   'test vectors in casper_dsp/test_data/FFTs/Internal/bi_real_unscr_4x/test_data.md come from a Python reference model (not exported from MATLAB), so cycle/bit equivalence with the Simulink block is unverified',
+// ]
+//
+// [params.BRAM_MAP]
+// mask = 'bram_map'
+// type = 'checkbox'
+// [params.BRAM_MAP.values]
+// 0 = 'off'
+// 1 = 'on'
+//
+// [params.BRAM_DELAYS]
+// mask = 'bram_delays'
+// type = 'checkbox'
+// [params.BRAM_DELAYS.values]
+// 0 = 'off'
+// 1 = 'on'
+//
+// [params.DSP48_ADDERS]
+// mask = 'dsp48_adders'
+// type = 'checkbox'
+// note = 'declared only; also unused by bi_real_unscr_4x_init.m (read at line 90, never referenced)'
+// [params.DSP48_ADDERS.values]
+// 0 = 'off'
+// 1 = 'on'
+//
+// [params.ASYNC]
+// mask = 'async'
+// type = 'checkbox'
+// hdl_unsupported = [1]
+// note = 'async=on (en/dvalid ports) is not implemented: elaboration stops with $fatal'
+// [params.ASYNC.values]
+// 0 = 'off'
+// 1 = 'on'
+//
+// [hdl_only]
+// MAP_DIR = 'implementation: memory initialization file'
+// PLATFORM = 'implementation: memory / primitive vendor (GENERIC, XILINX, ALTERA)'
+//
+// [mask_missing]
+// floating_point = 'floating point is not implemented'
+// float_type = 'floating point is not implemented'
+// exp_width = 'floating point is not implemented'
+// frac_width = 'floating point is not implemented'
+//
+// [ports]
+// note = 'each Simulink complex port x is split into x_re / x_im'
+// [ports.renamed]
+// [ports.missing]
+// en = 'async=on only (not implemented)'
+// dvalid = 'async=on only (not implemented)'
+// [ports.extra]
+// @simulink-mapping end
 
 module bi_real_unscr_4x #(
     parameter int    N_INPUTS     = 1,
@@ -105,7 +172,7 @@ module bi_real_unscr_4x #(
     logic         reo_sync;
 
     reorder #(
-        .N_STREAMS(1), .DATA_WIDTH(W), .MAP_LEN(HALF), .ORDER(ORDER_EVEN),
+        .N_INPUTS(1), .N_BITS(W), .MAP_LEN(HALF), .ORDER(ORDER_EVEN),
         .MAP_INIT_FILE({MAP_DIR, "map_even.mem"}), .MAP_LATENCY(MAP_LATENCY),
         .BRAM_LATENCY(BRAM_LATENCY), .FANOUT_LATENCY(FANOUT), .BRAM_MAP(BRAM_MAP),
         .PLATFORM(PLATFORM)
@@ -113,14 +180,14 @@ module bi_real_unscr_4x #(
                       .valid(), .dout(reo_e));
 
     reorder #(
-        .N_STREAMS(1), .DATA_WIDTH(W), .MAP_LEN(HALF), .ORDER(2),
+        .N_INPUTS(1), .N_BITS(W), .MAP_LEN(HALF), .ORDER(2),
         .MAP_INIT_FILE({MAP_DIR, "map_odd.mem"}), .MAP_LATENCY(MAP_LATENCY),
         .BRAM_LATENCY(BRAM_LATENCY), .FANOUT_LATENCY(FANOUT), .BRAM_MAP(BRAM_MAP),
         .PLATFORM(PLATFORM)
     ) u_reorder_odd (.clk(clk), .sync(sync), .din('{odd_w}), .sync_out(), .valid(),
                      .dout(reo_o));
 
-    pipeline #(.BITWIDTH(W), .LATENCY(1)) u_d0 (.clk(clk), .din(reo_o[0]), .dout(odd_d));
+    pipeline #(.BITWIDTH(W), .CSP_LATENCY(1)) u_d0 (.clk(clk), .din(reo_o[0]), .dout(odd_d));
 
     // ── bin 0 / bin N/2 selects ──────────────────────────────────────────────
     logic [FFT_SIZE-1:0] count;
@@ -183,7 +250,7 @@ module bi_real_unscr_4x #(
         end
     end
 
-    pipeline #(.BITWIDTH(1), .LATENCY(ADD_LATENCY + CONV_LATENCY + 1)) u_d2 (
+    pipeline #(.BITWIDTH(1), .CSP_LATENCY(ADD_LATENCY + CONV_LATENCY + 1)) u_d2 (
         .clk(clk), .din(reo_sync), .dout(sync_d2));
 
     if (HALF > 52) begin : GEN_SYNC_DELAY
@@ -203,7 +270,7 @@ module bi_real_unscr_4x #(
     logic [B-1:0] o_re [4][N_INPUTS], o_im [4][N_INPUTS];
 
     reorder #(
-        .N_STREAMS(4), .DATA_WIDTH(W), .MAP_LEN(HALF), .ORDER(2),
+        .N_INPUTS(4), .N_BITS(W), .MAP_LEN(HALF), .ORDER(2),
         .MAP_INIT_FILE({MAP_DIR, "map_out.mem"}), .MAP_LATENCY(MAP_LATENCY),
         .BRAM_LATENCY(BRAM_LATENCY), .FANOUT_LATENCY(FANOUT), .BRAM_MAP(BRAM_MAP),
         .PLATFORM(PLATFORM)
@@ -211,7 +278,7 @@ module bi_real_unscr_4x #(
                      .dout(reo_out));
 
     for (genvar i = 0; i < 4; i++) begin : GEN_CH
-        pipeline #(.BITWIDTH(W), .LATENCY(1)) u_d (.clk(clk), .din(reo_out[i]), .dout(reo_out_d[i]));
+        pipeline #(.BITWIDTH(W), .CSP_LATENCY(1)) u_d (.clk(clk), .din(reo_out[i]), .dout(reo_out_d[i]));
         for (genvar n = 0; n < N_INPUTS; n++) begin : GEN_LANE
             assign c_re[i][n] = ch_w[i][2*n*B +: B];
             assign c_im[i][n] = ch_w[i][(2*n+1)*B +: B];
@@ -221,7 +288,7 @@ module bi_real_unscr_4x #(
     end
 
     mirror_spectrum #(
-        .N_INPUTS(N_INPUTS), .FFT_SIZE(FFT_SIZE), .INPUT_BIT_WIDTH(B), .BIN_PT_IN(BIN_PT),
+        .N_INPUTS(N_INPUTS), .FFT_SIZE(FFT_SIZE), .INPUT_BITWIDTH(B), .BIN_PT_IN(BIN_PT),
         .BRAM_LATENCY(MS_BRAM), .NEGATE_LATENCY(0), .NEGATE_MODE(0), .ASYNC(0)
     ) u_mirror_spectrum (
         .clk(clk), .sync(ms_sync),

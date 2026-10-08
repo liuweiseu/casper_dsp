@@ -15,10 +15,10 @@ testdatadir = (_here / "../../../test_data" / _here.parent.name / _here.name).re
 async def module_test(dut):
     """test bus_create """
     nbits = int(dut.NBITS.value)
-    ninputs = int(dut.NINPUTS.value)
-    cocotb.log.info(f"Testing with NBITS={nbits}, NINPUTS={ninputs}")
+    ninputs = int(dut.INPUT_NUM.value)
+    cocotb.log.info(f"Testing with NBITS={nbits}, INPUT_NUM={ninputs}")
     if nbits == 8 and ninputs == 2:
-        # test NBITS = 8 and NINPUTS = 2
+        # test NBITS = 8 and INPUT_NUM = 2
         # load the input and expected output data 
         # sim_din<j>.csv = din[j]; row i = [din[0], din[1]]
         sim_din = load_rows(testdatadir/'simdata0', 'din')
@@ -31,7 +31,7 @@ async def module_test(dut):
             actual_output = dut.bus_out.value
             assert actual_output == expected_results[i], f"Output mismatch! Expected {hex(expected_results[i])}, got {hex(actual_output)}"
     elif nbits == 10 and ninputs == 4:
-        # test NBITS = 10 and NINPUTS = 4
+        # test NBITS = 10 and INPUT_NUM = 4
         # load the input and expected output data 
         # sim_din<j>.csv = din[j]; row i = [din[0], ..., din[3]]
         sim_din = load_rows(testdatadir/'simdata1', 'din')

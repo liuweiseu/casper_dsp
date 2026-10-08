@@ -14,13 +14,13 @@ testdatadir = (_here / "../../../test_data" / _here.parent.name / _here.name).re
 @cocotb.test()
 async def module_test(dut):
     """test bus_create """
-    nout = int(dut.NOUT.value)
-    width = int(dut.WIDTH.value)
-    cocotb.log.info(f"Testing with NOUT={nout}, WIDTH={width}")
+    nout = int(dut.OUTPUT_NUM.value)
+    width = int(dut.OUTPUT_WIDTH.value)
+    cocotb.log.info(f"Testing with OUTPUT_NUM={nout}, OUTPUT_WIDTH={width}")
     if nout == 4 and width == 8:
         # load the input and expected output data 
         sim_in = np.loadtxt(testdatadir/'simdata0/sim_bus_in.csv', dtype=int).tolist()
-        # sim_bus_out<j>.csv = bus_out[j]; row i = [bus_out[0], ..., bus_out[NOUT-1]]
+        # sim_bus_out<j>.csv = bus_out[j]; row i = [bus_out[0], ..., bus_out[OUTPUT_NUM-1]]
         sim_bus_out = np.array(load_rows(testdatadir/'simdata0', 'bus_out'))
         expected_results = [sim_bus_out[:, j].tolist() for j in range(nout)]
         for i in range(len(sim_in)):

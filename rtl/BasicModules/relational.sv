@@ -1,3 +1,51 @@
+// ── HDL-Simulink Mapping ─────────────────────────────────────────────────────
+// Differences between this HDL and its Simulink block (casper_library
+// or Xilinx blockset). Machine-readable: the lines between the
+// @simulink-mapping markers are TOML after removing the leading "// "
+// (checked by tools/check_simulink_mapping.py). Fields: block,
+// deviations, params (numeric HDL value -> mask option text, verbatim),
+// hdl_only, mask_missing, ports (renamed HDL -> Simulink, missing,
+// extra).
+// @simulink-mapping begin
+// block = 'xbsIndex_r4.slx/Relational'
+// deviations = [
+//   'Simulink compares the real values of a and b of any two fixed-point types (different widths, binary points or mixed signed/unsigned are aligned first); the HDL requires one NBITS, an implicit common binary point and one SIGNED flag for both inputs.',
+// ]
+//
+// [params.COMP]
+// mask = 'mode'
+// type = 'popup'
+// [params.COMP.values]
+// 0 = 'a=b'
+// 1 = 'a!=b'
+// 2 = 'a<b'
+// 3 = 'a>b'
+// 4 = 'a<=b'
+// 5 = 'a>=b'
+//
+// [params.USE_ENABLE]
+// mask = 'en'
+// type = 'checkbox'
+// [params.USE_ENABLE.values]
+// 0 = 'off'
+// 1 = 'on'
+//
+// [hdl_only]
+// NBITS = 'inherited width: Simulink takes it from the input signals'
+// SIGNED = 'inherited signedness: Simulink takes it from the input types'
+//
+// [mask_missing]
+// op_type = 'Bool vs Ufix_1_0 only changes the output type; the HDL bit is identical'
+//
+// [ports]
+// order = 'Simulink: a, b, [en]; HDL: en, a, b'
+// note = 'input labels a/b from the icon port_label; output name op from xlRelational.sgm (icon shows the comparison text)'
+// [ports.renamed]
+// out = 'op'
+// [ports.missing]
+// [ports.extra]
+// @simulink-mapping end
+
 module relational #(
     parameter int NBITS   = 8,
     /* COMP: 0=eq, 1=ne, 2=lt, 3=gt, 4=le, 5=ge */

@@ -15,6 +15,44 @@
 //
 // INPUT_BIT_WIDTH is added for the HDL port widths. ASYNC is declared for
 // traceability; must be 0.
+//
+// ── HDL-Simulink Mapping ─────────────────────────────────────────────────────
+// Differences between this HDL and its Simulink block (casper_library
+// or Xilinx blockset). Machine-readable: the lines between the
+// @simulink-mapping markers are TOML after removing the leading "// "
+// (checked by tools/check_simulink_mapping.py). Fields: block,
+// deviations, params (numeric HDL value -> mask option text, verbatim),
+// hdl_only, mask_missing, ports (renamed HDL -> Simulink, missing,
+// extra).
+// @simulink-mapping begin
+// block = 'casper_library_ffts_twiddle.slx/twiddle_coeff_0'
+// deviations = [
+//   "latency is 1+MULT_LATENCY+ADD_LATENCY+CONV_LATENCY on every leg in both models (twiddle_coeff_0_init.m latency_s); BRAM_LATENCY is accepted but unused in both. Its init comment says this 'must match twiddle_general with single coefficient', but per coeff_gen_init.m (constant coefficient, no delay) + bus_mult (mult+add, fan_latency 0) + bus_convert (conv) a single-coefficient Simulink twiddle_general appears to have mult+add+conv, one cycle less (unverified)",
+//   'test vectors in casper_dsp/test_data/FFTs/Twiddle/twiddle_coeff_0/test_data.md come from a Python reference model (not exported from MATLAB), so cycle/bit equivalence with the Simulink block is unverified',
+// ]
+//
+// [params.ASYNC]
+// mask = 'async'
+// type = 'checkbox'
+// hdl_unsupported = [1]
+// note = 'async=on (en/dvalid ports) is not implemented: elaboration stops with $fatal'
+// [params.ASYNC.values]
+// 0 = 'off'
+// 1 = 'on'
+//
+// [hdl_only]
+// INPUT_BIT_WIDTH = 'inherited width: Simulink takes it from the input signal'
+//
+// [mask_missing]
+//
+// [ports]
+// note = 'each Simulink complex port x is split into x_re / x_im'
+// [ports.renamed]
+// [ports.missing]
+// en = 'async=on only (not implemented)'
+// dvalid = 'async=on only (not implemented)'
+// [ports.extra]
+// @simulink-mapping end
 
 module twiddle_coeff_0 #(
     parameter int N_INPUTS        = 1,
@@ -43,17 +81,17 @@ module twiddle_coeff_0 #(
     if (ASYNC != 0) $fatal(1, "twiddle_coeff_0: ASYNC is not implemented");
 
     for (genvar n = 0; n < N_INPUTS; n++) begin : GEN_LANE
-        pipeline #(.BITWIDTH(INPUT_BIT_WIDTH), .LATENCY(LATENCY)) u_a_re (
+        pipeline #(.BITWIDTH(INPUT_BIT_WIDTH), .CSP_LATENCY(LATENCY)) u_a_re (
             .clk(clk), .din(ai_re[n]), .dout(ao_re[n]));
-        pipeline #(.BITWIDTH(INPUT_BIT_WIDTH), .LATENCY(LATENCY)) u_a_im (
+        pipeline #(.BITWIDTH(INPUT_BIT_WIDTH), .CSP_LATENCY(LATENCY)) u_a_im (
             .clk(clk), .din(ai_im[n]), .dout(ao_im[n]));
-        pipeline #(.BITWIDTH(INPUT_BIT_WIDTH), .LATENCY(LATENCY)) u_b_re (
+        pipeline #(.BITWIDTH(INPUT_BIT_WIDTH), .CSP_LATENCY(LATENCY)) u_b_re (
             .clk(clk), .din(bi_re[n]), .dout(bwo_re[n]));
-        pipeline #(.BITWIDTH(INPUT_BIT_WIDTH), .LATENCY(LATENCY)) u_b_im (
+        pipeline #(.BITWIDTH(INPUT_BIT_WIDTH), .CSP_LATENCY(LATENCY)) u_b_im (
             .clk(clk), .din(bi_im[n]), .dout(bwo_im[n]));
     end
 
-    pipeline #(.BITWIDTH(1), .LATENCY(LATENCY)) u_sync (
+    pipeline #(.BITWIDTH(1), .CSP_LATENCY(LATENCY)) u_sync (
         .clk(clk), .din(sync_in), .dout(sync_out));
 
 endmodule

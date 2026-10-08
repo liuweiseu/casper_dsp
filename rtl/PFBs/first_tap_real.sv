@@ -18,6 +18,52 @@
 // newest one of the windowed presum (see tap_real).
 //
 // Declared for traceability only: USE_HDL and USE_EMBEDDED are ignored.
+//
+// ── HDL-Simulink Mapping ─────────────────────────────────────────────────────
+// Differences between this HDL and its Simulink block (casper_library
+// or Xilinx blockset). Machine-readable: the lines between the
+// @simulink-mapping markers are TOML after removing the leading "// "
+// (checked by tools/check_simulink_mapping.py). Fields: block,
+// deviations, params (numeric HDL value -> mask option text, verbatim),
+// hdl_only, mask_missing, ports (renamed HDL -> Simulink, missing,
+// extra).
+// @simulink-mapping begin
+// block = 'casper_library_pfbs.slx/first_tap_real'
+// deviations = [
+//   "BRAM_LATENCY is passed to tap_real but never reaches delay_bram (rtl/PFBs/tap_real.sv instantiates delay_bram without it), so the data delay is always exactly 2^(PFB_SIZE-N_INPUTS)*N_POL_BLOCKS cycles; Simulink's delay_bram also totals DelayLen cycles but errors when DelayLen <= bram_latency+1 (delay_bram_init.m:40-43), a configuration the HDL silently accepts.",
+//   'USE_HDL and USE_EMBEDDED are declared only (first_tap_real.sv header); in Simulink they only switch the Mult implementation (first_tap_real_init.m set_param Mult use_behavioral_HDL/use_embedded), so values are unaffected.',
+//   'TOTAL_TAPS < 2 is a $fatal in the HDL (first_tap_real.sv:71); in Simulink Slice1 would get width CoeffBitWidth*(TotalTaps-1) = 0 and fail to compile, so no valid Simulink configuration is lost.',
+// ]
+//
+// [params.USE_HDL]
+// mask = 'use_hdl'
+// type = 'checkbox'
+// note = "declared only: selects the Xilinx Mult's behavioural-HDL implementation; no numeric effect (Full precision)"
+// [params.USE_HDL.values]
+// 0 = 'off'
+// 1 = 'on'
+//
+// [params.USE_EMBEDDED]
+// mask = 'use_embedded'
+// type = 'checkbox'
+// note = 'declared only: selects DSP48 vs fabric for the Xilinx Mult; the mask forces it off when use_hdl is on'
+// [params.USE_EMBEDDED.values]
+// 0 = 'off'
+// 1 = 'on'
+//
+// [hdl_only]
+// PLATFORM = 'implementation: memory / primitive vendor (GENERIC, XILINX, ALTERA)'
+//
+// [mask_missing]
+// WindowType = 'unused by the Simulink block as well: neither first_tap_real_init.m nor the diagram (system_82.xml) reads it'
+// fwidth = 'unused by the Simulink block as well: neither first_tap_real_init.m nor the diagram (system_82.xml) reads it'
+//
+// [ports]
+// [ports.renamed]
+// coeff = 'coeffs'
+// [ports.missing]
+// [ports.extra]
+// @simulink-mapping end
 
 module first_tap_real #(
     parameter int    PFB_SIZE        = 6,

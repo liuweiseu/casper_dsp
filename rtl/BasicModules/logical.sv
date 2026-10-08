@@ -1,3 +1,58 @@
+// ── HDL-Simulink Mapping ─────────────────────────────────────────────────────
+// Differences between this HDL and its Simulink block (casper_library
+// or Xilinx blockset). Machine-readable: the lines between the
+// @simulink-mapping markers are TOML after removing the leading "// "
+// (checked by tools/check_simulink_mapping.py). Fields: block,
+// deviations, params (numeric HDL value -> mask option text, verbatim),
+// hdl_only, mask_missing, ports (renamed HDL -> Simulink, missing,
+// extra).
+// @simulink-mapping begin
+// block = 'xbsIndex_r4.slx/Logical'
+// deviations = [
+//   'All inputs must have the same NBITS and format: Simulink Full precision aligns binary points (align_bp) and extends inputs of different widths/signedness before the bitwise operation; the HDL has no width/type parameters per input.',
+//   'User Defined precision (precision/arith_type/n_bits/bin_pt) is not implemented; the HDL output is always the input-width bitwise result.',
+//   'No Sysgen .sgm model exists for Logical (data/sysgen/block_models has none); behaviour is taken from the mask description, so latency/en/power-on (0) equivalence is assumed from the sibling Inverter model.',
+// ]
+//
+// [params.FUNC]
+// mask = 'logical_function'
+// type = 'popup'
+// [params.FUNC.values]
+// 0 = 'AND'
+// 1 = 'NAND'
+// 2 = 'OR'
+// 3 = 'NOR'
+// 4 = 'XOR'
+// 5 = 'XNOR'
+//
+// [params.NINPUTS]
+// mask = 'inputs'
+// type = 'edit'
+//
+// [params.USE_ENABLE]
+// mask = 'en'
+// type = 'checkbox'
+// [params.USE_ENABLE.values]
+// 0 = 'off'
+// 1 = 'on'
+//
+// [hdl_only]
+// NBITS = 'inherited width: Simulink takes it from the input signals'
+//
+// [mask_missing]
+// precision = 'only Full precision is implemented'
+// arith_type = 'User Defined output type not implemented (Full precision only)'
+// n_bits = 'User Defined output type not implemented (Full precision only)'
+// bin_pt = 'User Defined output type not implemented (Full precision only)'
+// align_bp = 'HDL assumes all inputs share one format (binary points already aligned)'
+//
+// [ports]
+// note = 'din[i] folds Simulink inputs 1..NINPUTS (d0..d{N-1}); output and inputs are unlabelled in the Sysgen icon. en is the last Simulink input when enabled'
+// [ports.renamed]
+// [ports.missing]
+// [ports.extra]
+// @simulink-mapping end
+
 module logical #(
     parameter int NBITS   = 8,
     parameter int NINPUTS = 2,

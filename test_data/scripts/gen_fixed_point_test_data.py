@@ -209,14 +209,17 @@ def P(names, values):
     return dict(zip(names, values))
 
 
+# Parameter names follow the casper_library masks (upper case): the Bus
+# blocks' latency is csp_latency (bus_mult: mult_latency); scale keeps the
+# Xilinx Convert-style LATENCY of its HDL-only requantizer.
 CONV = ["N_BITS_IN", "BIN_PT_IN", "TYPE_IN", "N_BITS_OUT", "BIN_PT_OUT",
-        "TYPE_OUT", "QUANTIZATION", "OVERFLOW", "LATENCY"]
+        "TYPE_OUT", "QUANTIZATION", "OVERFLOW", "CSP_LATENCY"]
 ADDSUB = ["N_BITS_A", "BIN_PT_A", "TYPE_A", "N_BITS_B", "BIN_PT_B", "TYPE_B",
           "N_BITS_OUT", "BIN_PT_OUT", "TYPE_OUT", "OPMODE", "QUANTIZATION",
-          "OVERFLOW", "LATENCY"]
+          "OVERFLOW", "CSP_LATENCY"]
 MULT = ["N_BITS_A", "BIN_PT_A", "TYPE_A", "N_BITS_B", "BIN_PT_B", "TYPE_B",
         "N_BITS_OUT", "BIN_PT_OUT", "TYPE_OUT", "QUANTIZATION", "OVERFLOW",
-        "LATENCY"]
+        "MULT_LATENCY"]
 CMULT = ["N_BITS_A", "BIN_PT_A", "TYPE_A", "N_BITS_B", "BIN_PT_B", "TYPE_B",
          "N_BITS_OUT", "BIN_PT_OUT", "TYPE_OUT", "QUANTIZATION", "OVERFLOW",
          "MULT_SPEC", "MULT_LATENCY", "ADD_LATENCY"]
@@ -234,7 +237,7 @@ MODULES = {
         category="Bus",
         model=m_convert, inputs=["din"], outputs=["dout"],
         widths=lambda p: [p["N_BITS_IN"]],
-        latency=lambda p: p["LATENCY"],
+        latency=lambda p: p["CSP_LATENCY"], latency_name="CSP_LATENCY",
         prose="`convert` requantizes `din` from the input fixed-point format "
               "to the output format.",
         tests=[
@@ -257,7 +260,7 @@ MODULES = {
         category="Bus",
         model=m_adder_subtractor, inputs=["a", "b"], outputs=["dout"],
         widths=lambda p: [p["N_BITS_A"], p["N_BITS_B"]],
-        latency=lambda p: p["LATENCY"],
+        latency=lambda p: p["CSP_LATENCY"], latency_name="CSP_LATENCY",
         prose="`adder_subtractor` computes `a + b` (`OPMODE`=0) or `a - b` "
               "(`OPMODE`=1) and requantizes to the output format.",
         tests=[
@@ -278,7 +281,7 @@ MODULES = {
         category="Bus",
         model=m_multiplier, inputs=["a", "b"], outputs=["dout"],
         widths=lambda p: [p["N_BITS_A"], p["N_BITS_B"]],
-        latency=lambda p: p["LATENCY"],
+        latency=lambda p: p["MULT_LATENCY"], latency_name="MULT_LATENCY",
         prose="`multiplier` computes `a * b` and requantizes to the output format.",
         tests=[
             (P(MULT, [8, 7, 1, 8, 7, 1, 16, 14, 1, 0, 0, 0]),
@@ -384,7 +387,7 @@ MODULES = {
         category="Bus",
         model=m_negate, inputs=["din"], outputs=["dout"],
         widths=lambda p: [p["N_BITS_IN"]],
-        latency=lambda p: p["LATENCY"],
+        latency=lambda p: p["CSP_LATENCY"], latency_name="CSP_LATENCY",
         prose="`negate` computes `-din` and requantizes to the output format.",
         tests=[
             (P(CONV, [8, 4, 1, 8, 4, 1, 0, 0, 0]),
@@ -442,7 +445,7 @@ def test_data_md(name, spec):
         "testbench uses it to select the data set), input words "
         f"{ins} and expected output words {outs}. All words are raw unsigned "
         "bit patterns, one per clock cycle. Expected outputs already include "
-        "the pipeline latency (the first `LATENCY` values are the zero "
+        f"the pipeline latency (the first `{spec.get('latency_name', 'LATENCY')}` values are the zero "
         "power-on state).",
         "",
         spec.get("stimulus_note",

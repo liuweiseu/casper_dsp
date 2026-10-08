@@ -14,8 +14,8 @@ _tb_root = next(p for p in _here.parents if p.name == "testbench")
 testdatadir = _tb_root.parent / "test_data" / _here.relative_to(_tb_root)
 
 # Integer parameters used to match the DUT against simdataN/params.json
-PARAMS = ['N_STREAMS', 'FFT_SIZE', 'LOG2_N_GROUPS', 'N_BITS_IN', 'BRAM_LATENCY', 'COEFFS_BIT_LIMIT']
-# sim_<name>.csv -> DUT port; LANE ports are arrays of N_STREAMS·2^LOG2_N_GROUPS words
+PARAMS = ['N_STREAMS', 'FFT_SIZE', 'N_INPUTS', 'N_BITS_IN', 'BRAM_LATENCY', 'COEFFS_BIT_LIMIT']
+# sim_<name>.csv -> DUT port; LANE ports are arrays of N_STREAMS·2^N_INPUTS words
 LANE_IN = ['din_re', 'din_im']
 SCALAR_IN = ['sync']
 LANE_OUT = {'dout_re': 'dout_re', 'dout_im': 'dout_im'}
@@ -54,7 +54,7 @@ async def module_test(dut):
         cocotb.log.warning(f"No test data for {dut_params}. Skipping.")
         return
 
-    lanes = int(dut.N_STREAMS.value) << int(dut.LOG2_N_GROUPS.value)
+    lanes = int(dut.N_STREAMS.value) << int(dut.N_INPUTS.value)
     stim = {k: load(datadir, k) for k in LANE_IN + SCALAR_IN}
     expected = {k: load(datadir, k) for k in list(LANE_OUT) + list(SCALAR_OUT)}
     cycles = len(next(iter(expected.values())))

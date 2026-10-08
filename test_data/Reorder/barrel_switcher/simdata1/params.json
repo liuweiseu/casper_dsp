@@ -1,4 +1,4 @@
 {
-  "LOG2_N_LANES": 2,
+  "N_INPUTS": 2,
   "DATA_WIDTH": 16
 }
