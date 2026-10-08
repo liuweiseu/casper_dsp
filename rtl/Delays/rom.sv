@@ -34,6 +34,7 @@
 // [params.ADDR_WIDTH]
 // mask = 'depth'
 // type = 'edit'
+// expr = '2**ADDR_WIDTH'
 // note = 'depth = 2^ADDR_WIDTH; non-power-of-two depths are not supported'
 //
 // [params.DATA_WIDTH]

@@ -143,12 +143,13 @@ Each module that has a Simulink counterpart (a casper_library block, or a Xilinx
 // ...
 // @simulink-mapping end
 ```
-Fields: `block` (library file / block), `deviations` (behavioural differences), `params` (numeric HDL value → mask option text, verbatim), `hdl_only` / `mask_missing` (parameters on one side only, with the reason), `ports` (`renamed` HDL → Simulink, `missing`, `extra`, `order`).
+Fields: `block` (library file / block), `deviations` (behavioural differences), `params` (numeric HDL value → mask option text, verbatim; for a free-text mask field, an optional `expr` such as `'2**ADDR_WIDTH'`, a Verilog-syntax expression over the module's parameters that gives the mask value), `hdl_only` / `mask_missing` (parameters on one side only, with the reason), `ports` (`renamed` HDL → Simulink, `missing`, `extra`, `order`).
 
 [tools/check_simulink_mapping.py](tools/check_simulink_mapping.py) validates every block and can export them:
 ```bash
 python3 tools/check_simulink_mapping.py                            # check; exit code 1 on errors
 python3 tools/check_simulink_mapping.py --dump                     # print all blocks as JSON {rtl path: block}
+                                                                   # (each also gets hdl_defaults: the RTL parameter defaults)
 python3 tools/check_simulink_mapping.py --dump -o out/mapping.json # save the JSON to a file
 python3 tools/check_simulink_mapping.py -o out/check.txt           # save the check report
 ```

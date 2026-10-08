@@ -53,7 +53,8 @@
 // [params.COUNT_TO_VAL]
 // mask = 'cnt_to'
 // type = 'edit'
-// note = 'raw bit pattern in the HDL; real value in Simulink'
+// expr = 'COUNT_TO_VAL / 2.0**BIN_P'
+// note = "raw bit pattern in the HDL; real value in Simulink. expr gives the real value for the mask default arith_type = 'Unsigned' (the HDL has no signedness parameter)"
 //
 // [params.COUNT_DIR]
 // mask = 'operation'
@@ -66,12 +67,14 @@
 // [params.INIT_VAL]
 // mask = 'start_count'
 // type = 'edit'
-// note = 'raw bit pattern in the HDL; real value in Simulink'
+// expr = 'INIT_VAL / 2.0**BIN_P'
+// note = "raw bit pattern in the HDL; real value in Simulink. expr gives the real value for the mask default arith_type = 'Unsigned' (the HDL has no signedness parameter)"
 //
 // [params.STEP]
 // mask = 'cnt_by_val'
 // type = 'edit'
-// note = 'raw bit pattern in the HDL; real value in Simulink'
+// expr = 'STEP / 2.0**BIN_P'
+// note = "raw bit pattern in the HDL; real value in Simulink. expr gives the real value for the mask default arith_type = 'Unsigned' (the HDL has no signedness parameter)"
 //
 // [params.BIN_P]
 // mask = 'bin_pt'

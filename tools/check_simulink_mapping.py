@@ -23,6 +23,20 @@ The lines in between are TOML once the leading "// " (or "//") is removed:
 
     An 'edit' (free-text mask field) entry has no values table; it records
     the mask name of an HDL parameter whose type or meaning differs (note).
+    It may carry an expr giving the mask value from the HDL parameters:
+
+    [params.ADDR_WIDTH]
+    mask = 'depth'
+    type = 'edit'
+    expr = '2**ADDR_WIDTH'         # mask value = this expression
+
+    expr is a constant expression in Verilog syntax over the parameters of
+    the same module (an unset parameter takes its HDL default). Operators:
+    + - * / % ** << >>, < <= > >= == !=, && || !, unary + - ~, ?:,
+    parentheses, $clog2(x); integer and real literals. Evaluation follows
+    Verilog: integer arithmetic (/ and % truncate toward zero) unless an
+    operand is real, e.g. INIT_VAL / 2.0**BIN_P is real. values and expr
+    are mutually exclusive. parse_expr() / eval_expr() below implement it.
 
     [hdl_only]                     # HDL parameter -> why the mask lacks it
     [mask_missing]                 # mask parameter -> why the HDL lacks it
@@ -30,6 +44,11 @@ The lines in between are TOML once the leading "// " (or "//") is removed:
     [ports.renamed]                # HDL port -> Simulink port name(s)
     [ports.missing]                # Simulink port -> why the HDL lacks it
     [ports.extra]                  # HDL port -> why Simulink lacks it
+
+--dump also adds, per module, "hdl_defaults": {PARAM: value}, the default
+of every HDL parameter evaluated from the RTL (numbers, strings; defaults
+that reference earlier parameters are evaluated in order). A default that
+cannot be evaluated statically is omitted. It is not part of the comment.
 
 Usage:
     python3 tools/check_simulink_mapping.py          # validate, exit 1 on errors
@@ -52,8 +71,226 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 BEGIN, END = "@simulink-mapping begin", "@simulink-mapping end"
 TOP_KEYS = {"block", "deviations", "params", "hdl_only", "mask_missing", "ports"}
-PARAM_KEYS = {"mask", "type", "values", "hdl_unsupported", "note"}
+PARAM_KEYS = {"mask", "type", "values", "hdl_unsupported", "note", "expr"}
 PORT_KEYS = {"order", "note", "renamed", "missing", "extra"}
+
+
+# ── expr: Verilog-style constant expressions ────────────────────────────────
+
+_TOKEN = re.compile(r"""\s*(?:
+    (?P<real>\d+\.\d*(?:[eE][+-]?\d+)?|\d+[eE][+-]?\d+)
+  | (?P<int>\d+)
+  | (?P<func>\$clog2)
+  | (?P<name>[A-Za-z_]\w*)
+  | (?P<op>\*\*|<<|>>|<=|>=|==|!=|&&|\|\||[-+*/%<>!~?:()])
+)""", re.X)
+
+# binary operators by precedence, lowest first (Verilog order)
+_BINARY = [["||"], ["&&"], ["==", "!="], ["<", "<=", ">", ">="], ["<<", ">>"],
+           ["+", "-"], ["*", "/", "%"]]
+
+
+def _tokens(text):
+    pos, out = 0, []
+    text = text.rstrip()
+    while pos < len(text):
+        m = _TOKEN.match(text, pos)
+        if not m or m.end() == pos:
+            raise ValueError(f"bad character at {text[pos:]!r}")
+        kind = m.lastgroup
+        out.append((kind, m.group(kind)))
+        pos = m.end()
+    return out
+
+
+def parse_expr(text):
+    """Parse expr into a nested-tuple AST; raises ValueError on a syntax error.
+
+    Nodes: ('num', value), ('name', id), ('un', op, x), ('bin', op, a, b),
+    ('cond', c, a, b), ('clog2', x).
+    """
+    toks = _tokens(text)
+    pos = 0
+
+    def peek():
+        return toks[pos][1] if pos < len(toks) else None
+
+    def take(expected=None):
+        nonlocal pos
+        if pos >= len(toks):
+            raise ValueError("unexpected end of expression")
+        tok = toks[pos]
+        if expected is not None and tok[1] != expected:
+            raise ValueError(f"expected {expected!r}, got {tok[1]!r}")
+        pos += 1
+        return tok
+
+    def cond():
+        c = binary(0)
+        if peek() == "?":
+            take("?")
+            a = cond()
+            take(":")
+            return ("cond", c, a, cond())
+        return c
+
+    def binary(level):
+        if level == len(_BINARY):
+            return power()
+        node = binary(level + 1)
+        while peek() in _BINARY[level]:
+            op = take()[1]
+            node = ("bin", op, node, binary(level + 1))
+        return node
+
+    def power():                                   # ** binds tighter than * / %
+        base = unary()
+        if peek() == "**":
+            take()
+            return ("bin", "**", base, power())   # right-associative
+        return base
+
+    def unary():
+        if peek() in ("+", "-", "!", "~"):
+            return ("un", take()[1], unary())
+        return atom()
+
+    def atom():
+        kind, val = take()
+        if kind == "int":
+            return ("num", int(val))
+        if kind == "real":
+            return ("num", float(val))
+        if kind == "name":
+            return ("name", val)
+        if kind == "func":
+            take("(")
+            x = cond()
+            take(")")
+            return ("clog2", x)
+        if val == "(":
+            x = cond()
+            take(")")
+            return x
+        raise ValueError(f"unexpected {val!r}")
+
+    node = cond()
+    if pos != len(toks):
+        raise ValueError(f"unexpected {toks[pos][1]!r}")
+    return node
+
+
+def expr_names(node):
+    """Parameter names an AST references."""
+    if node[0] == "name":
+        return {node[1]}
+    return set().union(*(expr_names(x) for x in node[1:] if isinstance(x, tuple)))
+
+
+def eval_expr(text_or_node, params):
+    """Evaluate expr with {parameter: value}; Verilog int/real semantics."""
+    node = parse_expr(text_or_node) if isinstance(text_or_node, str) else text_or_node
+
+    def ev(n):
+        t = n[0]
+        if t == "num":
+            return n[1]
+        if t == "name":
+            if n[1] not in params:
+                raise KeyError(f"no value for parameter {n[1]}")
+            return params[n[1]]
+        if t == "clog2":
+            x = int(ev(n[1]))
+            return 0 if x <= 1 else (x - 1).bit_length()
+        if t == "cond":
+            return ev(n[2]) if ev(n[1]) else ev(n[3])
+        if t == "un":
+            x = ev(n[2])
+            return {"+": x, "-": -x, "!": int(not x), "~": ~int(x)}[n[1]]
+        op, a, b = n[1], ev(n[2]), ev(n[3])
+        real = isinstance(a, float) or isinstance(b, float)
+        if op == "/":
+            return a / b if real else int(a / b) if b else 0
+        if op == "%":
+            return (a - b * int(a / b)) if b else 0
+        if op == "**":
+            return float(a) ** b if real else (a ** b if b >= 0 else 0)
+        return {"+": lambda: a + b, "-": lambda: a - b, "*": lambda: a * b,
+                "<<": lambda: int(a) << int(b), ">>": lambda: int(a) >> int(b),
+                "<": lambda: int(a < b), "<=": lambda: int(a <= b),
+                ">": lambda: int(a > b), ">=": lambda: int(a >= b),
+                "==": lambda: int(a == b), "!=": lambda: int(a != b),
+                "&&": lambda: int(bool(a) and bool(b)),
+                "||": lambda: int(bool(a) or bool(b))}[op]()
+
+    return ev(node)
+
+
+_SIZED = re.compile(r"(\d+)?\s*'[sS]?([bBoOdDhH])\s*([0-9a-fA-F_]+)")
+_UNSIZED_FILL = re.compile(r"'([01])\b")
+
+
+def _verilog_literals(text):
+    """Rewrite Verilog based literals (16'h1A4E, 'd5, '1) as plain integers."""
+    def based(m):
+        size, base, digits = m.group(1), m.group(2).lower(), m.group(3).replace("_", "")
+        value = int(digits, {"b": 2, "o": 8, "d": 10, "h": 16}[base])
+        return str(value & ((1 << int(size)) - 1) if size else value)
+    return _UNSIZED_FILL.sub(r"\1", _SIZED.sub(based, text))
+
+
+def _split_top(text):
+    """Split on commas outside (), [] and {}."""
+    out, depth, cur = [], 0, ""
+    for ch in text:
+        if ch in "([{":
+            depth += 1
+        elif ch in ")]}":
+            depth -= 1
+        if ch == "," and depth == 0:
+            out.append(cur)
+            cur = ""
+        else:
+            cur += ch
+    return out + [cur]
+
+
+def hdl_defaults(text):
+    """{parameter: default} of the module header, evaluated statically.
+
+    Integer / real / string defaults and expressions over earlier parameters
+    (operators as in expr, plus Verilog based literals) are evaluated; any
+    other default (a function call, an unknown name, ...) is omitted.
+    """
+    t = re.sub(r"/\*.*?\*/", "", text, flags=re.S)
+    t = re.sub(r"//[^\n]*", "", t)
+    m = re.search(r"^\s*module\s+\w+\s*#\s*\(", t, re.M)
+    if not m:
+        return {}
+    depth, i = 1, m.end()
+    while depth and i < len(t):
+        depth += {"(": 1, ")": -1}.get(t[i], 0)
+        i += 1
+    out = {}
+    for item in _split_top(t[m.end():i - 1]):
+        d = re.match(r"\s*parameter\s+(?:(int|integer|real|string|bit|logic)\s+)?"
+                     r"(?:\[[^\]]*\]\s*)?(\w+)\s*=\s*(.*?)\s*$", item, re.S)
+        if not d:
+            continue
+        typ, name, expr = d.groups()
+        try:
+            if re.fullmatch(r'"[^"]*"', expr):
+                out[name] = expr[1:-1]
+                continue
+            value = eval_expr(_verilog_literals(expr), out)
+            if typ == "real":
+                value = float(value)
+            elif typ in ("int", "integer") and isinstance(value, float):
+                value = int(value)
+            out[name] = value
+        except (ValueError, KeyError, TypeError, ZeroDivisionError, OverflowError):
+            pass
+    return out
 
 
 def rtl_files():
@@ -114,6 +351,16 @@ def check(path, data, text):
         if not isinstance(p.get("mask"), str):
             errs.append(f"params.{name}: mask (mask variable name) missing")
         vals = p.get("values", {})
+        if "expr" in p:
+            if vals:
+                errs.append(f"params.{name}: values and expr are mutually exclusive")
+            try:
+                unknown = expr_names(parse_expr(p["expr"])) - params
+                if unknown:
+                    errs.append(f"params.{name}: expr references {sorted(unknown)}, "
+                                "not parameters of the module")
+            except (ValueError, TypeError) as e:
+                errs.append(f"params.{name}: expr does not parse: {e}")
         if p.get("type") == "edit":
             if vals:
                 errs.append(f"params.{name}: an edit field has no values table")
@@ -172,7 +419,7 @@ def main(argv=None):
         except (ValueError, tomllib.TOMLDecodeError) as e:
             errors.append(f"{f.relative_to(ROOT)}: {e}")
             continue
-        blocks[str(f.relative_to(ROOT))] = data
+        blocks[str(f.relative_to(ROOT))] = dict(data, hdl_defaults=hdl_defaults(text))
         errors += check(f, data, text)
     summary = f"{len(blocks)} mapping blocks, {len(errors)} errors"
     if args.dump:
