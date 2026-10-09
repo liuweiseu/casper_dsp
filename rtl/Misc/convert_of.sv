@@ -45,11 +45,11 @@
 // [params.OVERFLOW]
 // mask = 'overflow'
 // type = 'popup'
-// note = "the HDL treats 2 as wrap; in Simulink 'Error' is not an xbsIndex_r4/Convert overflow option (Wrap/Saturate/Flag as error), so it does not elaborate"
+// note = "HDL OVERFLOW = 2 wraps (rtl/Bus/convert.sv:137 saturates only for 1), so it is exported as 'Wrap'; the mask's 'Error'/'Flag as error' option does not build or would flag instead of wrapping"
 // [params.OVERFLOW.values]
 // 0 = 'Wrap'
 // 1 = 'Saturate'
-// 2 = 'Error'
+// 2 = 'Wrap'
 //
 // [hdl_only]
 //

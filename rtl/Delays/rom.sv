@@ -41,8 +41,19 @@
 // mask = 'n_bits'
 // type = 'edit'
 //
+// [mask_set.arith_type]
+// value = 'Unsigned'
+//
+// [mask_set.bin_pt]
+// value = 0
+//
+// [mask_set.initVector]
+// from_mem = 'INIT_FILE'
+// [mask_set.initVector.else]
+// template = 'zeros(1,{2**ADDR_WIDTH})'
+//
 // [hdl_only]
-// INIT_FILE = 'replaces initVector: $readmemh file of raw hex words'
+// INIT_FILE = 'replaces initVector: $readmemh file of raw hex words (mask_set initVector reads it)'
 // PLATFORM = 'implementation: memory / primitive vendor (GENERIC, XILINX, ALTERA)'
 //
 // [mask_missing]

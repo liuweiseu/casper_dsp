@@ -21,7 +21,14 @@
 // [params.VAL]
 // mask = 'const'
 // type = 'edit'
-// note = 'Simulink takes a real value quantized to the output type; HDL takes the raw bit pattern'
+// expr = 'VAL < 0 ? VAL + (1 << NBITS) : VAL'
+// note = "raw bit pattern; a negative VAL is its two's-complement low NBITS bits (constant.sv:58)"
+//
+// [mask_set.arith_type]
+// value = 'Unsigned'
+//
+// [mask_set.bin_pt]
+// value = 0
 //
 // [hdl_only]
 //

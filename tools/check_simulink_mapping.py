@@ -38,6 +38,15 @@ The lines in between are TOML once the leading "// " (or "//") is removed:
     operand is real, e.g. INIT_VAL / 2.0**BIN_P is real. values and expr
     are mutually exclusive. parse_expr() / eval_expr() below implement it.
 
+    [mask_set.<mask param>]        # sets a mask parameter no HDL param maps to;
+    value = 'Unsigned'             # exactly one of: value = <TOML scalar>,
+                                   # expr = '<expr>', template = 'text {expr}'
+                                   # (each {...} is an expr) or
+                                   # from_mem = '<HDL param>' ($readmemh file
+                                   # named by that parameter -> "[w0 w1 ...]")
+    [mask_set.<mask param>.else]   # from_mem only, optional: one value / expr /
+    template = 'zeros(1,{2**N})'   # template entry used when the file name is ""
+
     [hdl_only]                     # HDL parameter -> why the mask lacks it
     [mask_missing]                 # mask parameter -> why the HDL lacks it
     [ports]                        # optional order / note strings
@@ -70,7 +79,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 BEGIN, END = "@simulink-mapping begin", "@simulink-mapping end"
-TOP_KEYS = {"block", "deviations", "params", "hdl_only", "mask_missing", "ports"}
+TOP_KEYS = {"block", "deviations", "params", "mask_set", "hdl_only", "mask_missing", "ports"}
+MASK_SET_KINDS = ("value", "expr", "template", "from_mem")
 PARAM_KEYS = {"mask", "type", "values", "hdl_unsupported", "note", "expr"}
 PORT_KEYS = {"order", "note", "renamed", "missing", "extra"}
 
@@ -332,6 +342,53 @@ def declared(text):
     return params, ports, strings
 
 
+def _check_expr(where, text, params):
+    """Errors of one expr string (parse + only module parameters)."""
+    try:
+        unknown = expr_names(parse_expr(text)) - params
+        return [f"{where}: expr references {sorted(unknown)}, not parameters "
+                "of the module"] if unknown else []
+    except (ValueError, TypeError) as e:
+        return [f"{where}: expr does not parse: {e}"]
+
+
+def _check_mask_set_entry(where, e, params, allow_from_mem):
+    errs = []
+    if not isinstance(e, dict):
+        return [f"{where}: must be a table"]
+    kinds = [k for k in MASK_SET_KINDS if k in e]
+    extra = set(e) - set(MASK_SET_KINDS) - ({"else"} if allow_from_mem else set())
+    if extra:
+        errs.append(f"{where}: unknown key(s) {sorted(extra)}")
+    if len(kinds) != 1:
+        return errs + [f"{where}: needs exactly one of {', '.join(MASK_SET_KINDS)}"]
+    kind = kinds[0]
+    if kind == "from_mem" and not allow_from_mem:
+        errs.append(f"{where}: an else entry cannot be from_mem")
+    elif kind == "value" and isinstance(e["value"], (dict, list)):
+        errs.append(f"{where}: value must be a scalar")
+    elif kind == "expr":
+        errs += _check_expr(where, e["expr"], params)
+    elif kind == "template":
+        if not isinstance(e["template"], str):
+            errs.append(f"{where}: template must be a string")
+        else:
+            for part in re.findall(r"\{([^{}]*)\}", e["template"]):
+                errs += _check_expr(where, part, params)
+            if re.sub(r"\{[^{}]*\}", "", e["template"]).count("{") or \
+               re.sub(r"\{[^{}]*\}", "", e["template"]).count("}"):
+                errs.append(f"{where}: unbalanced braces in template")
+    elif kind == "from_mem":
+        if e["from_mem"] not in params:
+            errs.append(f"{where}: from_mem names '{e['from_mem']}', not a parameter of the module")
+    if "else" in e:
+        if kind != "from_mem":
+            errs.append(f"{where}: else is only allowed with from_mem")
+        else:
+            errs += _check_mask_set_entry(f"{where}.else", e["else"], params, False)
+    return errs
+
+
 def check(path, data, text):
     errs = []
     params, ports, strings = declared(text)
@@ -368,6 +425,11 @@ def check(path, data, text):
                                  for k, v in vals.items()):
             errs.append(f"params.{name}: values must map integers (or, for a string "
                         "parameter, its string values) to option strings")
+    masks_of_params = {p.get("mask") for p in data.get("params", {}).values()}
+    for m, e in data.get("mask_set", {}).items():
+        if m in masks_of_params:
+            errs.append(f"mask_set.{m}: already set through a params entry")
+        errs += _check_mask_set_entry(f"mask_set.{m}", e, params, True)
     for name in data.get("hdl_only", {}):
         if name not in params:
             errs.append(f"hdl_only.{name}: not a parameter of the module")

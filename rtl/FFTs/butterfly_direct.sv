@@ -111,11 +111,11 @@
 // [params.OVERFLOW]
 // mask = 'overflow'
 // type = 'popup'
-// note = "the HDL treats 2 as wrap (rtl/Bus/convert.sv saturates only for 1); in Simulink 'Error' does not build (butterfly_direct_init.m:512-514 tests for 'Flag as error')"
+// note = "HDL OVERFLOW = 2 wraps (rtl/Bus/convert.sv:137 saturates only for 1), so it is exported as 'Wrap'; the mask's 'Error'/'Flag as error' option does not build or would flag instead of wrapping"
 // [params.OVERFLOW.values]
 // 0 = 'Wrap'
 // 1 = 'Saturate'
-// 2 = 'Error'
+// 2 = 'Wrap'
 //
 // [params.ASYNC]
 // mask = 'async'

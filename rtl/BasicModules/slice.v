@@ -20,7 +20,12 @@
 // [params.START_BIT]
 // mask = 'bit0'
 // type = 'edit'
-// note = "valid only for mode = 'Lower Bit Location + Width' with base0 = 'LSB of Input'"
+//
+// [mask_set.mode]
+// value = 'Lower Bit Location + Width'
+//
+// [mask_set.base0]
+// value = 'LSB of Input'
 //
 // [hdl_only]
 // NBITS = 'inherited width: Simulink takes it from the input signal'

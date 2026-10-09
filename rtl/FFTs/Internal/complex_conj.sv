@@ -28,12 +28,11 @@
 // [params.OVERFLOW]
 // mask = 'overflow'
 // type = 'popup'
-// hdl_unsupported = [2]
-// note = "value 2 ('Flag as error') is implemented as wrap: the HDL never flags; Bus/negate treats 2 as wrap"
+// note = "HDL OVERFLOW = 2 wraps (rtl/Bus/convert.sv:137 saturates only for 1), so it is exported as 'Wrap'; the mask's 'Error'/'Flag as error' option does not build or would flag instead of wrapping"
 // [params.OVERFLOW.values]
 // 0 = 'Wrap'
 // 1 = 'Saturate'
-// 2 = 'Flag as error'
+// 2 = 'Wrap'
 //
 // [hdl_only]
 //

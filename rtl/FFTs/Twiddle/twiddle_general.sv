@@ -75,12 +75,11 @@
 // [params.OVERFLOW]
 // mask = 'overflow'
 // type = 'popup'
-// hdl_unsupported = [2]
-// note = "the mask option is 'Error' but twiddle_general_init.m:117/324 only recognise 'Flag as error', so selecting it leaves 'of' undefined and the Simulink mask init fails; the HDL treats 2 as wrap"
+// note = "HDL OVERFLOW = 2 wraps (rtl/Bus/convert.sv:137 saturates only for 1), so it is exported as 'Wrap'; the mask's 'Error'/'Flag as error' option does not build or would flag instead of wrapping"
 // [params.OVERFLOW.values]
 // 0 = 'Wrap'
 // 1 = 'Saturate'
-// 2 = 'Error'
+// 2 = 'Wrap'
 //
 // [params.ASYNC]
 // mask = 'async'

@@ -15,7 +15,7 @@
 // [params.INIT_VAL]
 // mask = 'init'
 // type = 'edit'
-// note = 'raw bit pattern in the HDL; real value in Simulink'
+// note = 'raw bit pattern in the HDL; Simulink quantizes init to the INPUT type (xlRegister.sgm:5), so it is exact only when the input is Unsigned with bin_pt 0 (set by the Gateway In)'
 //
 // [params.USE_RST]
 // mask = 'rst'
