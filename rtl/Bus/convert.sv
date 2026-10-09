@@ -43,14 +43,18 @@
 //   "OVERFLOW=2 means 'Flag as error' (bus_convert_init.m:211): with of=off, Simulink stops with an overflow error; with of=on, convert_of's popup has 'Error', not 'Flag as error', so set_param fails. The HDL wraps.",
 // ]
 //
+// [mask_set.of]
+// value = 'off'
+//
+// [mask_set.misc]
+// value = 'off'
+//
 // [hdl_only]
 // TYPE_IN = 'bus_convert_init.m default type_in=1, not a mask parameter: Simulink always reinterprets each input lane as signed (bus_convert_init.m:13,167)'
 // TYPE_OUT = "bus_convert_init.m default type_out=1, not a mask parameter: the Convert / convert_of output is always 'Signed  (2''s comp)' (bus_convert_init.m:247, convert_of_init.m:120)"
 //
 // [mask_missing]
 // cmplx = 'single real lane: complex lanes are not modelled'
-// of = 'the overflow output is not implemented; of=on (mask default) also makes Simulink use casper_library_misc/convert_of instead of xbsIndex_r4/Convert (bus_convert_init.m:227-242)'
-// misc = 'misc pass-through (misci/misco ports) is not implemented'
 //
 // [ports]
 // [ports.renamed]

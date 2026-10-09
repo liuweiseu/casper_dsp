@@ -41,6 +41,9 @@
 // expr = '2**ADDR_WIDTH'
 // note = 'depth = 2^ADDR_WIDTH; non-power-of-two depths are not supported'
 //
+// [mask_set.write_mode]
+// value = 'Read Before Write'
+//
 // [hdl_only]
 // DATA_WIDTH = 'inherited width: Simulink takes it from the data input'
 // PLATFORM = 'implementation: memory / primitive vendor (GENERIC, XILINX, ALTERA)'
@@ -48,7 +51,6 @@
 // [mask_missing]
 // initVector = 'memory always powers up to 0'
 // distributed_mem = 'memory type is chosen by PLATFORM / synthesis'
-// write_mode = "fixed to 'Read Before Write' (mask default 'Read After Write')"
 // rst = 'output-register reset port not implemented'
 // init_reg = 'output register powers up to 0; no reset value'
 // en = 'enable port not implemented'

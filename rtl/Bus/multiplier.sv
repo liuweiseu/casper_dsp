@@ -35,12 +35,18 @@
 //   "OVERFLOW=2 is mapped to the Mult 'Flag as error' mode (bus_mult_init.m:647), where Simulink stops with an overflow error; the HDL wraps instead.",
 // ]
 //
+// [mask_set.cmplx_a]
+// value = 'off'
+//
+// [mask_set.cmplx_b]
+// value = 'off'
+//
+// [mask_set.misc]
+// value = 'off'
+//
 // [hdl_only]
 //
 // [mask_missing]
-// cmplx_a = 'single real lane: complex lanes are not modelled'
-// cmplx_b = 'single real lane: complex lanes are not modelled'
-// misc = 'misc pass-through (misci/misco ports) is not implemented'
 // floating_point = 'floating point is not implemented'
 // float_type = 'floating point is not implemented'
 // input_vec_a = 'single lane: the lane count is not modelled'

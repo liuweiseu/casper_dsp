@@ -33,6 +33,9 @@
 //   'misc: bus_scale passes misci straight to misco with no delay (bus_scale_init.m:160-165); not implemented in the HDL.',
 // ]
 //
+// [mask_set.misc]
+// value = 'off'
+//
 // [hdl_only]
 // N_BITS_OUT = 'the HDL adds a requantizing convert after the scale'
 // BIN_PT_OUT = 'the HDL adds a requantizing convert after the scale'
@@ -43,7 +46,6 @@
 //
 // [mask_missing]
 // cmplx = 'single real lane: complex lanes are not modelled'
-// misc = 'misc pass-through (misci/misco ports) is not implemented'
 //
 // [ports]
 // [ports.renamed]

@@ -32,6 +32,9 @@
 //   'The mask default overflow is 1 (Saturate), but the HDL default OVERFLOW is 0 (Wrap). Set OVERFLOW explicitly to reproduce a default bus_negate.',
 // ]
 //
+// [mask_set.floating_point]
+// value = 'off'
+//
 // [hdl_only]
 // TYPE_IN = 'bus_negate always reinterprets the input as signed (bus_expand outputArithmeticType=ones, bus_negate_init.m:155)'
 // N_BITS_OUT = "bus_negate's output width is always n_bits_in (bus_negate_init.m:201,212)"
@@ -42,7 +45,6 @@
 // [mask_missing]
 // cmplx = 'single real lane: complex lanes are not modelled'
 // misc = 'misc pass-through (misci/misco ports) is not implemented'
-// floating_point = 'floating point is not implemented'
 // float_type = 'floating point is not implemented'
 // exp_width = 'floating point is not implemented'
 // frac_width = 'floating point is not implemented'

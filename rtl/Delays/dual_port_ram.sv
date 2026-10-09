@@ -45,6 +45,12 @@
 // expr = '2**ADDR_WIDTH'
 // note = 'depth = 2^ADDR_WIDTH; non-power-of-two depths are not supported'
 //
+// [mask_set.write_mode_A]
+// value = 'Read Before Write'
+//
+// [mask_set.write_mode_B]
+// value = 'Read Before Write'
+//
 // [hdl_only]
 // DATA_WIDTH = 'inherited width: Simulink takes it from dina (and dinb)'
 // PLATFORM = 'implementation: memory / primitive vendor (GENERIC, XILINX, ALTERA)'
@@ -59,8 +65,6 @@
 // en_a = 'port enable not implemented'
 // en_b = 'port enable not implemented'
 // latency = 'read latency fixed at 1'
-// write_mode_A = "fixed to 'Read Before Write' (mask default 'Read After Write')"
-// write_mode_B = "fixed to 'Read Before Write' (mask default 'Read After Write')"
 // optimize = 'implementation only'
 //
 // [ports]

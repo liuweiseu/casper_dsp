@@ -37,11 +37,15 @@
 //   "OVERFLOW=2 is mapped by bus_addsub_init.m:344-345 to the AddSub 'Flag as error' mode, where Simulink stops with an overflow error; the HDL wraps instead.",
 // ]
 //
+// [mask_set.cmplx]
+// value = 'off'
+//
+// [mask_set.misc]
+// value = 'off'
+//
 // [hdl_only]
 //
 // [mask_missing]
-// cmplx = 'single real lane: complex lanes are not modelled'
-// misc = 'misc pass-through (misci/misco ports) is not implemented'
 // async = 'async mode (en/dvalid ports) is not implemented'
 // floating_point = 'floating point is not implemented'
 // float_type = 'floating point is not implemented'
