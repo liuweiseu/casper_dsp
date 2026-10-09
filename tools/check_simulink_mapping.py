@@ -44,6 +44,9 @@ The lines in between are TOML once the leading "// " (or "//") is removed:
                                    # (each {...} is an expr) or
                                    # from_mem = '<HDL param>' ($readmemh file
                                    # named by that parameter -> "[w0 w1 ...]")
+                                   # or manual = '<how to obtain the value>'
+                                   # (per-config data, e.g. a permutation
+                                   # vector, filled in by hand at export)
     [mask_set.<mask param>.else]   # from_mem only, optional: one value / expr /
     template = 'zeros(1,{2**N})'   # template entry used when the file name is ""
 
@@ -80,7 +83,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 BEGIN, END = "@simulink-mapping begin", "@simulink-mapping end"
 TOP_KEYS = {"block", "deviations", "params", "mask_set", "hdl_only", "mask_missing", "ports"}
-MASK_SET_KINDS = ("value", "expr", "template", "from_mem")
+MASK_SET_KINDS = ("value", "expr", "template", "from_mem", "manual")
 PARAM_KEYS = {"mask", "type", "values", "hdl_unsupported", "note", "expr"}
 PORT_KEYS = {"order", "note", "renamed", "missing", "extra"}
 
@@ -378,6 +381,9 @@ def _check_mask_set_entry(where, e, params, allow_from_mem):
             if re.sub(r"\{[^{}]*\}", "", e["template"]).count("{") or \
                re.sub(r"\{[^{}]*\}", "", e["template"]).count("}"):
                 errs.append(f"{where}: unbalanced braces in template")
+    elif kind == "manual":
+        if not isinstance(e["manual"], str) or not e["manual"].strip():
+            errs.append(f"{where}: manual must be a non-empty string (how to obtain the value)")
     elif kind == "from_mem":
         if e["from_mem"] not in params:
             errs.append(f"{where}: from_mem names '{e['from_mem']}', not a parameter of the module")

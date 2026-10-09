@@ -209,8 +209,10 @@
 // PLATFORM = 'implementation: memory / primitive vendor (GENERIC, XILINX, ALTERA)'
 // N_BITS_OUT = 'derived from other parameters (do not override)'
 //
+// [mask_set.Coeffs]
+// manual = 'twiddle indices k (w = exp(-2*pi*j*bit_rev(k, FFT_SIZE-1)/2^FFT_SIZE)), length N_COEFFS; [COEFF_0] or [COEFF_0 COEFF_1] when N_COEFFS <= 2, else COEFFS in test_data/FFTs/butterfly_direct/simdataN/params.json'
+//
 // [mask_missing]
-// Coeffs = 'vector parameter: replaced by N_COEFFS and the coefficient file'
 //
 // [ports]
 // note = 'each Simulink complex port x is split into x_re / x_im; the Simulink names are not legal HDL identifiers; the Simulink a, b, a+bw, a-bw buses carry N_INPUTS complex lanes, lane 0 in the MSBs, which become array element 0'

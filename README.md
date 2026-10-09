@@ -143,7 +143,7 @@ Each module that has a Simulink counterpart (a casper_library block, or a Xilinx
 // ...
 // @simulink-mapping end
 ```
-Fields: `block` (library file / block), `deviations` (behavioural differences), `params` (numeric HDL value → mask option text, verbatim; for a free-text mask field, an optional `expr` such as `'2**ADDR_WIDTH'`, a Verilog-syntax expression over the module's parameters that gives the mask value), `mask_set` (mask parameters that no HDL parameter maps to, set from a fixed `value`, an `expr`, a `template` string with `{expr}` fields, or `from_mem` = the HDL parameter naming a `$readmemh` file), `hdl_only` / `mask_missing` (parameters on one side only, with the reason), `ports` (`renamed` HDL → Simulink, `missing`, `extra`, `order`).
+Fields: `block` (library file / block), `deviations` (behavioural differences), `params` (numeric HDL value → mask option text, verbatim; for a free-text mask field, an optional `expr` such as `'2**ADDR_WIDTH'`, a Verilog-syntax expression over the module's parameters that gives the mask value), `mask_set` (mask parameters that no HDL parameter maps to, set from a fixed `value`, an `expr`, a `template` string with `{expr}` fields, `from_mem` = the HDL parameter naming a `$readmemh` file, or `manual` = how to obtain a per-configuration value that is filled in by hand), `hdl_only` / `mask_missing` (parameters on one side only, with the reason), `ports` (`renamed` HDL → Simulink, `missing`, `extra`, `order`).
 
 [tools/check_simulink_mapping.py](tools/check_simulink_mapping.py) validates every block and can export them:
 ```bash

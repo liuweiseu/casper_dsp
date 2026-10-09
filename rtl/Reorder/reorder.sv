@@ -82,8 +82,10 @@
 // MAP_INIT_FILE = 'implementation: memory initialization file holding map'
 // PLATFORM = 'implementation: memory / primitive vendor (GENERIC, XILINX, ALTERA)'
 //
+// [mask_set.map]
+// manual = '0-based permutation vector, length MAP_LEN (out[k] = previous frame[map[k]]); it is MAP in test_data/Reorder/reorder/simdataN/params.json, also the rows of MAP_INIT_FILE'
+//
 // [mask_missing]
-// map = 'vector parameter: replaced by MAP_LEN, ORDER and MAP_INIT_FILE'
 //
 // [ports]
 // order = 'Simulink inputs sync (1), en (2), din0.. (3..); outputs sync_out (1), valid (2), dout0.. (3..); the HDL has the same order without en'
