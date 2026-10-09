@@ -16,6 +16,9 @@ cycle `t`.
 The test data generator checks this end to end against numpy: every output
 frame is the scaled FFT of an input frame, to within 3 output LSB.
 
+[`fft_wideband_real_architecture`](fft_wideband_real_architecture.md) explains
+how the FFT is split between the submodules and why.
+
 ### Structure (F = `FFT_SIZE`, NI = `N_INPUTS`, NS = `N_STREAMS`)
 
 ```
