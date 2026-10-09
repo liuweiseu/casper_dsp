@@ -57,6 +57,11 @@ The lines in between are TOML once the leading "// " (or "//") is removed:
     [ports.missing]                # Simulink port -> why the HDL lacks it
     [ports.extra]                  # HDL port -> why Simulink lacks it
 
+    [[unsupported]]                # parameter combinations Simulink cannot
+    when = 'N_COEFFS == 1'         # build (exporters skip a set where `when`
+    reason = 'library bug: ...'    # is true); when is an expr, reason a
+                                   # non-empty string; zero or more entries
+
 --dump also adds, per module, "hdl_defaults": {PARAM: value}, the default
 of every HDL parameter evaluated from the RTL (numbers, strings; defaults
 that reference earlier parameters are evaluated in order). A default that
@@ -82,7 +87,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 BEGIN, END = "@simulink-mapping begin", "@simulink-mapping end"
-TOP_KEYS = {"block", "deviations", "params", "mask_set", "hdl_only", "mask_missing", "ports"}
+TOP_KEYS = {"block", "deviations", "params", "mask_set", "hdl_only", "mask_missing", "ports",
+            "unsupported"}
 MASK_SET_KINDS = ("value", "expr", "template", "from_mem", "manual")
 PARAM_KEYS = {"mask", "type", "values", "hdl_unsupported", "note", "expr"}
 PORT_KEYS = {"order", "note", "renamed", "missing", "extra"}
@@ -442,6 +448,23 @@ def check(path, data, text):
     for tbl in ("hdl_only", "mask_missing"):
         if not all(isinstance(v, str) for v in data.get(tbl, {}).values()):
             errs.append(f"{tbl}: values must be strings (the reason)")
+    uns = data.get("unsupported", [])
+    if not isinstance(uns, list):
+        errs.append("unsupported must be an array of tables ([[unsupported]])")
+        uns = []
+    for i, u in enumerate(uns):
+        where = f"unsupported[{i}]"
+        if not isinstance(u, dict):
+            errs.append(f"{where}: must be a table")
+            continue
+        for k in set(u) - {"when", "reason"}:
+            errs.append(f"{where}: unknown key '{k}'")
+        if not isinstance(u.get("when"), str):
+            errs.append(f"{where}: needs when = '<expr>'")
+        else:
+            errs += _check_expr(f"{where}.when", u["when"], params)
+        if not isinstance(u.get("reason"), str) or not u["reason"].strip():
+            errs.append(f"{where}: needs a non-empty reason string")
     pt = data.get("ports", {})
     for k in set(pt) - PORT_KEYS:
         errs.append(f"ports: unknown key '{k}'")

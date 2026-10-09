@@ -202,6 +202,10 @@
 // type = 'edit'
 // note = 'same parameter; the mask name is camelCase'
 //
+// [[unsupported]]
+// when = 'N_COEFFS == 1 && COEFF_0 == 1'
+// reason = 'mlib_devel bug: butterfly_direct_init.m:297-304 passes floating_point/float_type/exp_width/frac_width to twiddle_coeff_1 (Coeffs = [1]), whose mask lacks them, so the mask init fails (Simulink:Commands:ParamUnknown, seen in MATLAB R2021a)'
+//
 // [hdl_only]
 // N_COEFFS = "length(Coeffs): replaces the mask's vector Coeffs"
 // COEFF_0 = "Coeffs(1): replaces the mask's vector Coeffs"
