@@ -157,6 +157,10 @@
 // type = 'edit'
 // note = 'same parameter; the mask name is camelCase'
 //
+// [[unsupported]]
+// when = 'N_COEFFS > 1 && FFT_SIZE - STEP_PERIOD < 3'
+// reason = 'mlib_devel bug 6 (docs/bugs.md): for in-order Coeffs 0, 1, ..., N_COEFFS-1, coeff_gen gives cosin full_cycle_bits = FFT_SIZE - STEP_PERIOD; below 3, draw_basic_partial_cycle (cosin_init.m:660-663) draws no add_convert1 but cosin_init.m:226 connects to it: Invalid Simulink object name: add_convert1/2 (confirmed in MATLAB R2021a, set 1). The rule depends on the Coeffs list, which the HDL only has in INIT_FILE; this when assumes in-order coefficients'
+//
 // [hdl_only]
 // N_COEFFS = "length(Coeffs): replaces the mask's vector Coeffs"
 // INIT_FILE = 'implementation: memory initialization file'

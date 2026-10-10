@@ -14,6 +14,16 @@ MATLAB R2021a Update 8; Vivado / Model Composer 2021.1.
 | 2 | `twiddle_coeff_1_init` sets `latency` on `bus_negate`, renamed `csp_latency` | `twiddle_coeff_1` (any use) | Confirmed in MATLAB R2021a |
 | 3 | `twiddle_coeff_1_init` leaves `bus_negate` in floating-point mode | `twiddle_coeff_1` (any use) | From source only (masked by bug 2) |
 | 4 | `fft_direct_init` sizes the output `bus_expand` with `*` instead of `+` | `fft_direct` with `bitgrowth` on | From source only |
+| 5 | Stored copies of `bus_expand` still call the deleted `bus_expand_callback` | `cmult` (in `cmac`, `dual_pol_cmac`, `auto_tap`, `baseline_tap`, `xeng`) and other blocks with a stored `bus_expand` copy | Confirmed in MATLAB R2021a |
+| 6 | `cosin_init` connects to `add_convert1`, which it does not draw for small tables | `twiddle_general` (via `coeff_gen` → `cosin`) with few coefficient phase steps | Confirmed in MATLAB R2021a |
+
+**Environment note:** `pfb_coeff_gen_calc.m:57, 72` computes the PFB
+window through MATLAB's Python interface (`casper_library/python/window.py`).
+MATLAB R2021a supports CPython up to 3.8; with Python 3.14 as `python` on
+`PATH` it reports `Python commands require a supported version of CPython`
+and `pfb_fir_real` fails. Putting `python3.8` first on `PATH` for the build
+fixes it (verified: `pfb_fir_real_0` builds, 15 blocks). This is not an
+mlib_devel bug.
 
 Bugs 1–3 all concern `twiddle_coeff_1`, the twiddle for `w = −j`. They
 stack: bug 1 stops `butterfly_direct` before `twiddle_coeff_1_init` runs,
@@ -186,6 +196,145 @@ MATLAB.
 **Suggested fix:** in `fft_direct_init.m:228`, use
 `min(max_bits, input_bit_width+FFTSize)`.
 
+## 5. Stored bus_expand copies call the deleted bus_expand_callback
+
+**Affected code:** non-linked copies of `bus_expand` stored inside other
+libraries, e.g. `cmac/cmult*/a_expand` in `casper_library_correlator.slx`
+(`system_855_917.xml` and its siblings). The failing call is
+`cmult_init.m:236` (`reuse_block` of `a_expand`), which reaches
+`set_param` at `reuse_block.m:138`.
+
+**Symptom:**
+
+```
+Simulink:Engine:CallbackEvalErr: Error evaluating 'MaskDialog' callback of bus_expand block (mask) 'cmac_2/cmac/cmult*/a_expand'. Callback string is 'bus_expand_callback();'
+```
+
+raised from `reuse_block.m:138`. The parent mask initialization then
+fails ("Failed to evaluate mask initialization commands").
+
+**Trigger:** `reuse_block` finds the stored copy and only calls
+`set_param` on it. When a dialog parameter changes value, the copy's
+`MaskDialog` callback runs and calls the deleted function. It therefore
+fails exactly when the requested values differ from the stored ones. For
+`cmult` inside `cmac` the stored copy has `outputWidth [4 4 4 4]` and
+`outputBinaryPt [3 3 3 3]`, so any data width other than 4 (binary point
+other than 3) fails.
+
+**Root cause:** `f994adffb` (amartens, 2022-08-31, "removed
+bus_expand_callback") deleted `casper_library/bus_expand_callback.m` and
+commented the callback out in `casper_library_flow_control.slx`
+(`%bus_expand_callback();`, 3 places). Copies of `bus_expand` stored in
+other libraries still carry the old, uncommented callback:
+
+| Library | Uncommented `bus_expand_callback();` |
+|---------|--------------------------------------|
+| `casper_library_correlator.slx` | 30 |
+| `casper_library_pfbs.slx` | 6 |
+| `casper_library_scopes.slx` | 6 |
+| `casper_library_misc.slx` | 3 |
+
+(Counted from the `<Callback>` entries in the `.slx` XML.)
+
+**Origin:** `f994adffb`. It removed the function but re-saved only
+`casper_library_flow_control.slx`.
+
+**Impact on casper designs:** any design that changes the widths of these
+stored copies hits the error with this mlib_devel, also when the blocks
+are used interactively. The removed function
+(`f994adffb^:casper_library/bus_expand_callback.m`) only updated the mask
+UI (`MaskEnables` / `MaskPrompts`, `LinkStatus` inactive) and, in
+'divisions of arbitrary size' mode, synced `outputNum`. `cmult` uses
+'divisions of equal size', so the callback has no effect on the built
+model.
+
+**Confirmed in MATLAB R2021a:**
+- Failed: `cmac` sets 2 (8 bit) and 3 (6/8 bit); `dual_pol_cmac` set 2
+  (8 bit); `auto_tap` set 3 (8 bit), `baseline_tap` set 3 (8 bit) and
+  `xeng` set 3 (3 bit). All of these contain `dual_pol_cmac` → `cmac` →
+  `cmult`.
+- Built: the 4-bit sets (`cmac` 0/1/4, `dual_pol_cmac` 0/1 and the 4-bit
+  sets of the other modules).
+- The `pfb_fir_real` failures are **not** this bug: `pfb_fir_real_0` still
+  fails with the workaround below on the path ("Failed to evaluate mask
+  initialization commands", no `CallbackEvalErr`). Their cause is still
+  unknown.
+
+**Suggested fix:** re-save the four libraries with the callbacks commented
+out, as `f994adffb` did for `casper_library_flow_control.slx`, or replace
+the stored copies with links to `casper_library_flow_control/bus_expand`.
+Not applied here: mlib_devel is left unchanged.
+
+**Workaround (verified in MATLAB R2021a):** a no-op
+`function bus_expand_callback() end` in a directory outside mlib_devel,
+put on the path for the build with the `MATLABPATH` environment variable
+(`MATLABPATH=<dir> create_simulink.sh ...`). With it, `cmac` set 2
+(8 bit, previously `CallbackEvalErr`) builds: 17 blocks, 14 lines, no
+`CallbackEvalErr` in the log. The no-op does not change the built model,
+because the removed function only touched the mask UI and the
+'divisions of arbitrary size' mode, which `cmult` does not use.
+
+With the workaround applied to all failing correlator sets:
+- Now build: `cmac` sets 2 and 3 (17 blocks), `dual_pol_cmac` set 2 (17),
+  `baseline_tap` set 3 (31) and `xeng` set 3 (19).
+- Still fails: `auto_tap` set 3 (`N_ANTS = 2`, `N_SIMULTAN = 2`,
+  `N_BITS = 8`, `ACC_LEN = 4`, ADD / MULT / BRAM latency 1 / 1 / 1,
+  `MULT_TYPE = 0`, `USE_BRAM_DELAY = 1`). The `CallbackEvalErr` is gone, but
+  the build now stops with a bare "Failed to evaluate mask initialization
+  commands" and no further detail in the log. This is a different cause,
+  still unknown.
+
+## 6. cosin connects to an add_convert1 it does not draw
+
+**Affected code:** `casper_library/cosin_init.m:184-190` (small-table
+fallback), `cosin_init.m:224-226`, and `draw_basic_partial_cycle` at
+`cosin_init.m:656-663`.
+
+**Symptom:**
+
+```
+Invalid Simulink object name: add_convert1/2
+```
+
+raised in `.../twiddle_general/coeff_gen/cosin`, after the warning
+`forcing all value storage for small number of points`
+(`cosin_init.m:187`).
+
+**Trigger:** `coeff_gen` (inside `twiddle_general`) uses a `cosin` lookup
+table for in-order coefficients, or when coefficient generation is off or
+forced off (`coeff_gen_init.m:260-263, 308-330`). It passes
+`table_bits = log2(length(Coeffs))` and `fraction = multiple_bits`, and
+`cosin` computes `full_cycle_bits = table_bits + fraction`. The bug fires
+when `full_cycle_bits < 3`. For in-order coefficients `0 … N−1` this is
+`FFTSize − StepPeriod < 3`. Example: `twiddle_general` with
+`Coeffs = [0 1 2 3]`, `FFTSize = 4`, `StepPeriod = 2`.
+
+**Root cause:** for `full_cycle_bits < 3`, `cosin_init.m:184-190` switches
+to full storage, and `draw_basic_partial_cycle` returns early
+(`cosin_init.m:660-663`, "parameters not sensible so returning") without
+drawing `add_convert0` / `add_convert1`. `cosin_init.m:226`
+(`add_line(blk,'misci/1','add_convert1/2')`) and the following lines still
+connect to `add_convert1`, so `add_line` fails.
+
+**Impact on casper designs:** `fft_stage_n` (biplex) never reaches it: its
+stage `s` twiddle has `full_cycle_bits = s ≥ 3`. `fft_direct` with
+`map_tail` on reaches it only with 2-entry lists (`LargerFFTSize = FFTSize + 1`),
+which `fft_wideband_real` never uses (`FFTSize − n_inputs ≥ 2`). It mainly
+affects a standalone `twiddle_general` (or `butterfly_direct`) with a short
+coefficient period.
+
+**Confirmed in MATLAB R2021a:** the `twiddle_general` set 1 model
+(`N_INPUTS = 2`, `FFT_SIZE = 4`, `STEP_PERIOD = 2`) failed with the error
+above. That model kept the library default `Coeffs = [0 1]` (the Coeffs
+mask parameter is not exported yet), not the set's `[0 1 2 3]`; both give
+`full_cycle_bits = FFTSize − StepPeriod = 2`. The root cause is from
+source.
+
+**Suggested fix:** in `cosin_init.m`, skip the `add_convert1` connections
+(`:226-231` and the later `add_convert1` lines) when `full_cycle_bits < 3`,
+or have `draw_basic_partial_cycle` draw a pass-through `add_convert1` in
+that case.
+
 ## How casper_dsp handles these bugs
 
 - **Mapping:** the HDL-Simulink Mapping blocks record the bugs, so that
@@ -208,6 +357,32 @@ MATLAB.
     does not change its widths.
   - `twiddle_coeff_1` is no longer listed. Its testbench and
     `test_data/FFTs/Twiddle/twiddle_coeff_1/` are kept.
+- **Bug 5:** no change to casper_dsp; it is not an HDL issue. The
+  Simulink builds use the no-op `bus_expand_callback.m` workaround above
+  (`/data/casper/tools/plugins-demo2/matlab_compat/bus_expand_callback.m`,
+  outside mlib_devel, on `MATLABPATH`). All correlator sets that bug 5
+  broke now build, except `auto_tap` set 3, which fails for another,
+  still unknown reason.
+- **Bug 6:** `unsupported` entries on `rtl/FFTs/Twiddle/twiddle_general.sv`
+  (`N_COEFFS > 1 && FFT_SIZE - STEP_PERIOD < 3`, assuming in-order
+  coefficients; the HDL holds the list only in `INIT_FILE`) and on
+  `rtl/FFTs/fft_direct.sv`
+  (`MAP_TAIL != 0 && LARGER_FFT_SIZE == FFT_SIZE + 1 && FFT_SIZE >= 2`).
+- **Simulink parameter limits:** other configurations that the init scripts
+  reject are also `unsupported` entries (each with the init-script
+  reference in its `reason`):
+  - `twiddle_stage_2` with `MULT + ADD + CONV` latency 0 (a delay of −1),
+    and the modules that reach it: `butterfly_direct`, `fft_stage_n`,
+    `biplex_core`, `fft_biplex_real_4x` and `fft_wideband_real`;
+  - `auto_tap` and `xeng` when the `delay_bram` delay is not larger than
+    `max(BRAM_LATENCY, 2) + 1`;
+  - `adder_subtractor` with `QUANTIZATION == 2`;
+  - `fft_wideband_real` and `fft_direct` when `coeff_gen` draws a
+    `feedback_osc` with too few phase steps.
+
+  They skip `twiddle_stage_2` set 2, `auto_tap` set 3, `adder_subtractor`
+  set 4, `fft_wideband_real` set 2 and `twiddle_general` set 1; the HDL
+  tests of these sets still run.
 - **Coverage lost:** the HDL `twiddle_coeff_1` (and the
   `N_COEFFS = 1, COEFF_0 = 1` branch of `butterfly_direct`) and
   `fft_direct` with `MAP_TAIL = 0` and `FFT_SIZE ≥ 2` are no longer in the

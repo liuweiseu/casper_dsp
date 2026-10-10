@@ -206,6 +206,10 @@
 // when = 'N_COEFFS == 1 && COEFF_0 == 1'
 // reason = 'mlib_devel bug: butterfly_direct_init.m:297-304 passes floating_point/float_type/exp_width/frac_width to twiddle_coeff_1 (Coeffs = [1]), whose mask lacks them, so the mask init fails (Simulink:Commands:ParamUnknown, seen in MATLAB R2021a)'
 //
+// [[unsupported]]
+// when = 'N_COEFFS == 2 && COEFF_0 == 0 && COEFF_1 == 1 && STEP_PERIOD == FFT_SIZE - 2 && MULT_LATENCY + (DSP48_ADDERS != 0 ? 2 : ADD_LATENCY) + CONV_LATENCY == 0'
+// reason = 'twiddle_stage_2 with zero latency: twiddle_stage_2_init.m:169-192 sets the delay2 / delay3 latency to mult_latency+conv_latency+add_latency-1, which is -1 when the three latencies are 0 (Simulink: Latency is set to a value of -1); dsp48_adders on forces add_latency 2 (butterfly_direct_init.m:194-197)'
+//
 // [hdl_only]
 // N_COEFFS = "length(Coeffs): replaces the mask's vector Coeffs"
 // COEFF_0 = "Coeffs(1): replaces the mask's vector Coeffs"

@@ -178,6 +178,14 @@
 // [mask_set.shift_schedule]
 // template = 'bitget({SHIFT_SCHEDULE}, 1:{FFT_SIZE})'
 //
+// [[unsupported]]
+// when = 'MULT_LATENCY + (DSP48_ADDERS != 0 ? 2 : ADD_LATENCY) + CONV_LATENCY == 0'
+// reason = 'biplex_core stage 2 (FFT_SIZE - N_INPUTS >= 2) uses twiddle_stage_2: twiddle_stage_2_init.m:169-192 sets the delay2 / delay3 latency to mult_latency+conv_latency+add_latency-1, which is -1 when the three latencies are 0 (Simulink: Latency is set to a value of -1)'
+//
+// [[unsupported]]
+// when = 'COEFF_GENERATION != 0 && FFT_SIZE - N_INPUTS > $clog2(MULT_LATENCY + (DSP48_ADDERS != 0 ? 2 : ADD_LATENCY) + CONV_LATENCY + 1) + CAL_BITS && FFT_SIZE - N_INPUTS <= $clog2(MULT_LATENCY + CONV_LATENCY + 5) + CAL_BITS'
+// reason = 'coeff_gen draws a feedback_osc for the bit-reversed 2^(FFT_SIZE-N_INPUTS)-entry twiddle lists of fft_direct when log2(length) > ceil(log2(mult+add+conv+1)) + cal_bits (coeff_gen_init.m:260, 496-544), and feedback_osc_init.m:63-73 then errors when ceil(log2(5+mult+conv)) + cal_bits >= log2(length): The number of calibration values requested is the same or larger than the number of output values requested (derived from the init scripts; matches all sets, set 2 confirmed in MATLAB R2021a)'
+//
 // [hdl_only]
 // SHIFT_SCHEDULE = 'bit mask, bit k = stage k+1; the low FFT_SIZE-N_INPUTS bits go to the biplex part, the rest to fft_direct; set on the mask as the per-stage 0/1 vector shift_schedule = bitget(SHIFT_SCHEDULE, 1:FFT_SIZE) (mask_set)'
 // MEM_DIR = 'implementation: memory initialization file'

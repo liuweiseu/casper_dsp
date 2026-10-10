@@ -178,6 +178,14 @@
 // [mask_set.shift_schedule]
 // template = 'bitget({SHIFT_SCHEDULE}, 1:{FFT_SIZE})'
 //
+// [[unsupported]]
+// when = 'MAP_TAIL != 0 && COEFF_GENERATION != 0 && LARGER_FFT_SIZE - FFT_SIZE > $clog2(MULT_LATENCY + (DSP48_ADDERS != 0 ? 2 : ADD_LATENCY) + CONV_LATENCY + 1) + CAL_BITS && LARGER_FFT_SIZE - FFT_SIZE <= $clog2(MULT_LATENCY + CONV_LATENCY + 5) + CAL_BITS'
+// reason = 'coeff_gen draws a feedback_osc for the bit-reversed 2^(LARGER_FFT_SIZE-FFT_SIZE)-entry twiddle lists of fft_direct when log2(length) > ceil(log2(mult+add+conv+1)) + cal_bits (coeff_gen_init.m:260, 496-544), and feedback_osc_init.m:63-73 then errors when ceil(log2(5+mult+conv)) + cal_bits >= log2(length): The number of calibration values requested is the same or larger than the number of output values requested (derived from the init scripts; matches all sets, fft_wideband_real set 2 confirmed in MATLAB R2021a); exact for START_STAGE = LARGER_FFT_SIZE - FFT_SIZE + 1 (as fft_wideband_real uses it)'
+//
+// [[unsupported]]
+// when = 'MAP_TAIL != 0 && LARGER_FFT_SIZE == FFT_SIZE + 1 && FFT_SIZE >= 2'
+// reason = "mlib_devel bug 6 (docs/bugs.md): with 2-entry twiddle lists, coeff_gen's cosin gets full_cycle_bits < 3, draw_basic_partial_cycle (cosin_init.m:660-663) draws no add_convert1 but cosin_init.m:226 still connects to it: Invalid Simulink object name: add_convert1/2 (some butterflies also hit coeff_gen_init.m:267-271, in-order coefficients not starting at 0); from source, exact for START_STAGE = LARGER_FFT_SIZE - FFT_SIZE + 1"
+//
 // [hdl_only]
 // SHIFT_SCHEDULE = 'bit mask, bit s = stage s+1 (s = 0 .. FFT_SIZE-1); set on the mask as the per-stage 0/1 vector shift_schedule = bitget(SHIFT_SCHEDULE, 1:FFT_SIZE) (mask_set)'
 // COEFF_DIR = 'implementation: memory initialization file'

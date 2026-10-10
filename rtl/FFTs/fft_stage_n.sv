@@ -174,6 +174,10 @@
 // type = 'edit'
 // note = 'same parameter; the mask name is camelCase'
 //
+// [[unsupported]]
+// when = 'FFT_STAGE == 2 && MULT_LATENCY + (DSP48_ADDERS != 0 ? 2 : ADD_LATENCY) + CONV_LATENCY == 0'
+// reason = 'stage 2 uses twiddle_stage_2: twiddle_stage_2_init.m:169-192 sets the delay2 / delay3 latency to mult_latency+conv_latency+add_latency-1, which is -1 when the three latencies are 0 (Simulink: Latency is set to a value of -1)'
+//
 // [hdl_only]
 // INIT_FILE = 'implementation: memory initialization file'
 // PLATFORM = 'implementation: memory / primitive vendor (GENERIC, XILINX, ALTERA)'

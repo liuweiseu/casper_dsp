@@ -43,6 +43,10 @@
 // [mask_set.misc]
 // value = 'off'
 //
+// [[unsupported]]
+// when = 'QUANTIZATION == 2'
+// reason = "bus_addsub_init.m:333-338 maps only quantization 0 and 1, so quant is undefined for 2: Unrecognized function or variable 'quant'"
+//
 // [hdl_only]
 //
 // [mask_missing]

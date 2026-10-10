@@ -131,6 +131,10 @@
 // [mask_set.shift_schedule]
 // template = 'bitget({SHIFT_SCHEDULE}, 1:{FFT_SIZE})'
 //
+// [[unsupported]]
+// when = 'FFT_SIZE >= 2 && MULT_LATENCY + (DSP48_ADDERS != 0 ? 2 : ADD_LATENCY) + CONV_LATENCY == 0'
+// reason = 'biplex_core stage 2 uses twiddle_stage_2: twiddle_stage_2_init.m:169-192 sets the delay2 / delay3 latency to mult_latency+conv_latency+add_latency-1, which is -1 when the three latencies are 0 (Simulink: Latency is set to a value of -1)'
+//
 // [hdl_only]
 // SHIFT_SCHEDULE = 'bit mask, bit s-1 = stage s (s = 1 .. FFT_SIZE), passed to biplex_core; set on the mask as the per-stage 0/1 vector shift_schedule = bitget(SHIFT_SCHEDULE, 1:FFT_SIZE) (mask_set)'
 // COEFF_DIR = 'implementation: memory initialization file'

@@ -87,6 +87,10 @@
 // 4 = '4'
 // 8 = '8'
 //
+// [[unsupported]]
+// when = 'USE_BRAM_DELAY != 0 && ACC_LEN * ((N_ANTS + 1) / 2) - N_ANTS / 2 > 0 && ACC_LEN * ((N_ANTS + 1) / 2) - N_ANTS / 2 <= (BRAM_LATENCY > 2 ? BRAM_LATENCY : 2) + 1'
+// reason = 'the auto_tap inside xeng gets the same n_ants / acc_len / bram_latency / use_bram_delay (xeng_init.m:84-92): auto_tap_init.m:61-68 gives its delay_bram DelayLen = (acc_len-1)*ceil(n_ants/2) + ceil(n_ants/2) - floor(n_ants/2) and sets DelayLen before bram_latency, so the check in delay_bram_init.m:40-42 (DelayLen > bram_latency + 1) runs first against the library default bram_latency 2 and then against BRAM_LATENCY: delay_bram_init: delay value must be greater than BRAM Latency + 1'
+//
 // [hdl_only]
 // MCNT_BITS = 'inherited width: Simulink takes it from the input signal (mcnt_in)'
 // PLATFORM = 'implementation: memory / primitive vendor (GENERIC, XILINX, ALTERA)'

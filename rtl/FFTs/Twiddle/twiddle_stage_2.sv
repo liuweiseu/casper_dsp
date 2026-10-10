@@ -79,6 +79,10 @@
 // type = 'edit'
 // note = 'same parameter; the mask name is camelCase'
 //
+// [[unsupported]]
+// when = 'MULT_LATENCY + CONV_LATENCY + ADD_LATENCY == 0'
+// reason = 'twiddle_stage_2_init.m:169-192 sets the delay2 / delay3 latency to mult_latency+conv_latency+add_latency-1, which is -1 when the three latencies are 0 (Simulink: Latency is set to a value of -1)'
+//
 // [hdl_only]
 //
 // [mask_missing]
