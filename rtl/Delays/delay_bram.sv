@@ -40,6 +40,14 @@
 // type = 'edit'
 // note = 'same parameter; the mask name is camelCase'
 //
+// [[unsupported]]
+// when = 'DELAY_LEN == 0'
+// reason = 'mlib_devel bug 7 (docs/bugs.md): delay_bram_init.m:30-34 clears the block (clean_blocks) for DelayLen = 0, leaving it without din/dout ports, so it cannot be connected; the HDL is a wire'
+//
+// [[unsupported]]
+// when = 'DELAY_LEN >= 1 && DELAY_LEN <= 3'
+// reason = 'mlib_devel bug 7 (docs/bugs.md): delay_bram_init.m:40-43 errors (delay value must be greater than BRAM Latency + 1) for DelayLen <= bram_latency + 1; bram_latency is not set from the HDL, so the library default 2 applies (DelayLen 1 fails for any bram_latency); the HDL accepts any DELAY_LEN'
+//
 // [hdl_only]
 // BITWIDTH = 'inherited width: Simulink takes it from the input signal'
 // PLATFORM = 'implementation: memory / primitive vendor (GENERIC, XILINX, ALTERA)'

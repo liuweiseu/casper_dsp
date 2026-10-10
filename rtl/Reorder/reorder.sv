@@ -83,7 +83,9 @@
 // PLATFORM = 'implementation: memory / primitive vendor (GENERIC, XILINX, ALTERA)'
 //
 // [mask_set.map]
-// manual = '0-based permutation vector, length MAP_LEN (out[k] = previous frame[map[k]]); it is MAP in test_data/Reorder/reorder/simdataN/params.json, also the rows of MAP_INIT_FILE'
+// from_mem = 'MAP_INIT_FILE'
+// [mask_set.map.else]
+// manual = '0-based permutation vector, length MAP_LEN (out[k] = previous frame[map[k]]); the rows of MAP_INIT_FILE when one is given'
 //
 // [mask_missing]
 //

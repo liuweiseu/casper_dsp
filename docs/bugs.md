@@ -16,6 +16,7 @@ MATLAB R2021a Update 8; Vivado / Model Composer 2021.1.
 | 4 | `fft_direct_init` sizes the output `bus_expand` with `*` instead of `+` | `fft_direct` with `bitgrowth` on | From source only |
 | 5 | Stored copies of `bus_expand` still call the deleted `bus_expand_callback` | `cmult` (in `cmac`, `dual_pol_cmac`, `auto_tap`, `baseline_tap`, `xeng`) and other blocks with a stored `bus_expand` copy | Confirmed in MATLAB R2021a |
 | 6 | `cosin_init` connects to `add_convert1`, which it does not draw for small tables | `twiddle_general` (via `coeff_gen` → `cosin`) with few coefficient phase steps | Confirmed in MATLAB R2021a |
+| 7 | `delay_bram_init` rejects `DelayLen ≤ bram_latency + 1` and empties the block for `DelayLen = 0` | `delay_bram` with `DelayLen ≤ 3` (default `bram_latency` 2), and blocks that use it (e.g. `auto_tap`) | Confirmed in MATLAB R2021a |
 
 **Environment note:** `pfb_coeff_gen_calc.m:57, 72` computes the PFB
 window through MATLAB's Python interface (`casper_library/python/window.py`).
@@ -335,6 +336,52 @@ source.
 or have `draw_basic_partial_cycle` draw a pass-through `add_convert1` in
 that case.
 
+## 7. delay_bram cannot be built for short delays
+
+**Affected code:** `casper_library/delay_bram_init.m:30-34` (`DelayLen = 0`)
+and `delay_bram_init.m:40-43` (minimum delay check).
+
+**Symptom:**
+- `DelayLen` 1 or 2:
+  ```
+  Error in '<model>/delay_bram': Failed to evaluate mask initialization commands
+  ```
+  raised by `delay_bram_init: delay value must be greater than BRAM Latency + 1`.
+- `DelayLen` 0: the block is left empty, so connecting it fails
+  (`delay_bram/1: block 'delay_bram' has 0 input port(s), not 1`, reported
+  by the model builder).
+
+**Trigger:**
+- `DelayLen ≤ bram_latency + 1`, i.e. `DelayLen ≤ 3` with the library
+  default `bram_latency = 2`. `DelayLen = 1` fails for any `bram_latency`.
+- `DelayLen = 0`.
+
+**Root cause:**
+- `delay_bram` is a counter-addressed RAM. With `DelayLen = bram_latency + 1`
+  the counter would drive the RAM with a maximum value of 0 (comment at
+  `delay_bram_init.m:37-39`), so the init rejects short delays instead of
+  falling back to a register delay.
+- For `DelayLen = 0`, the "default state, do nothing" branch
+  (`delay_bram_init.m:29-34`) calls `clean_blocks` and returns. It removes
+  the ports as well, so the block cannot serve as a zero delay.
+
+**Origin:** long-standing design checks in `delay_bram_init.m`, not a
+recent regression.
+
+**Impact on casper designs:** any block that sizes a `delay_bram` from its
+own parameters fails for short delays. `auto_tap` reaches the same check
+through `auto_tap_init.m:61-68` (see its `unsupported` entry). Designs
+that use `delay_bram` only for long delays are unaffected.
+
+**Confirmed in MATLAB R2021a:** `delay_bram` sets 0 (`DELAY_LEN = 2`) and
+5 (`DELAY_LEN = 1`) failed with the minimum-delay error, and set 6
+(`DELAY_LEN = 0`) left the block without ports. The other sets (5, 16, 100
+and 1000) built.
+
+**Suggested fix:** for `DelayLen = 0`, connect `din` to `dout` instead of
+clearing the block; for `DelayLen ≤ bram_latency + 1`, fall back to a
+register delay (as `delay_srl`) instead of erroring.
+
 ## How casper_dsp handles these bugs
 
 - **Mapping:** the HDL-Simulink Mapping blocks record the bugs, so that
@@ -368,6 +415,12 @@ that case.
   coefficients; the HDL holds the list only in `INIT_FILE`) and on
   `rtl/FFTs/fft_direct.sv`
   (`MAP_TAIL != 0 && LARGER_FFT_SIZE == FFT_SIZE + 1 && FFT_SIZE >= 2`).
+- **Bug 7:** two `unsupported` entries on `rtl/Delays/delay_bram.sv`:
+  `DELAY_LEN == 0` and `DELAY_LEN >= 1 && DELAY_LEN <= 3` (the latter
+  assumes the default `bram_latency = 2`, which the HDL does not set). They
+  skip `delay_bram` sets 0, 5 and 6; the HDL tests still run. The
+  `auto_tap` / `xeng` entries below are the same check, reached through
+  `auto_tap_init.m`.
 - **Simulink parameter limits:** other configurations that the init scripts
   reject are also `unsupported` entries (each with the init-script
   reference in its `reason`):
