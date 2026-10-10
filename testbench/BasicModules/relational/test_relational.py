@@ -2,12 +2,11 @@ import cocotb
 from cocotb.clock import Clock
 from cocotb.triggers import RisingEdge, Timer
 
-from pathlib import Path
 import json
 import numpy as np
+from testbench.data_paths import module_data_dir
 
-_here = Path(__file__).parent
-testdatadir = (_here / "../../../test_data" / _here.parent.name / _here.name).resolve()
+testdatadir = module_data_dir(__file__)
 
 EQ = 0
 NE = 1

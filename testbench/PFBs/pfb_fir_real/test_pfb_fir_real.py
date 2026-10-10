@@ -2,16 +2,14 @@ import cocotb
 from cocotb.clock import Clock
 from cocotb.triggers import RisingEdge
 
-from pathlib import Path
 import json
 import numpy as np
 
 from testbench.csv_ports import load_rows
+from testbench.data_paths import module_data_dir
 
-# test_data mirrors testbench/ at any depth: locate the testbench root
-_here = Path(__file__).resolve().parent
-_tb_root = next(p for p in _here.parents if p.name == "testbench")
-testdatadir = _tb_root.parent / "test_data" / _here.relative_to(_tb_root)
+# test data of this module: $CASPER_TEST_DATA or test_data/, same path as below testbench/
+testdatadir = module_data_dir(__file__)
 
 # Integer parameters used to match the DUT against simdataN/params.json
 PARAMS = ['PFB_SIZE', 'TOTAL_TAPS', 'N_INPUTS', 'N_POL_BLOCKS', 'MAKE_BIPLEX', 'BIT_WIDTH_IN', 'BIT_WIDTH_OUT', 'COEFF_BIT_WIDTH', 'ADD_LATENCY', 'MULT_LATENCY', 'BRAM_LATENCY', 'FAN_LATENCY', 'CONV_LATENCY', 'QUANTIZATION', 'COEFFS_SHARE']

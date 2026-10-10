@@ -1,0 +1,9 @@
+# Added by scripts/run-*.sh for --test-data / $CASPER_TEST_DATA: mounts the
+# chosen test data root (laid out like test_data/) read-only and points the
+# testbenches and tests/test_runner.py at it.
+services:
+  test-runner:
+    volumes:
+      - ${HOST_TEST_DATA:?HOST_TEST_DATA is not set (use scripts/run-*.sh --test-data)}:/work/test_data_ext:ro
+    environment:
+      CASPER_TEST_DATA: /work/test_data_ext

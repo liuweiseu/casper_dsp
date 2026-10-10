@@ -109,10 +109,10 @@ Supporting Python scripts:
    The data can be imported (e.g. exported from MATLAB) or produced by a generator script in `test_data/scripts/` (see *Test data generation* below).
 
 3. **Testbench** — create `testbench/<Category>/<module>/test_<module>.py`.  
-   Derive the data path dynamically from `__file__` so no path is hardcoded:
+   Get the data path from `testbench/data_paths.py`, so no path is hardcoded and an external test data root (see *Test data and config location* below) is honoured:
    ```python
-   _here = Path(__file__).parent
-   testdatadir = (_here / "../../../test_data" / _here.parent.name / _here.name).resolve()
+   from testbench.data_paths import module_data_dir
+   testdatadir = module_data_dir(__file__)
    ```
    Example: [testbench/Templates/simple_adder/test_simple_adder.py](testbench/Templates/simple_adder/test_simple_adder.py)
 
@@ -196,6 +196,26 @@ test_data_script = "gen_fixed_point_test_data.py"   # generator of this module's
 - `generate = true`: before a module's tests, `tests/test_runner.py` runs `test_data/scripts/<test_data_script> --module <top>`, so only that module's data is rewritten. Entries without `test_data_script` (e.g. MATLAB-exported data) are never regenerated.
 - `generate_test_data` on a `[[simulations]]` entry overrides the global switch for that module, e.g. to keep your own imported data while the rest is regenerated.
 - Generation writes into the test container's copy of `test_data/`; the repository's `test_data/` is not modified. To update the repository, run the script directly, e.g. `python3 test_data/scripts/gen_fixed_point_test_data.py --module convert`.
+
+### Test data and config location
+By default the tests use `tests/simulation.toml` and the repository's `test_data/` (the copies built into the test image). Either can be replaced, independently:
+
+| What | Command-line option | Environment variable | Default |
+|------|---------------------|----------------------|---------|
+| Simulation config | `--config FILE` | `CASPER_SIM_CONFIG` | `tests/simulation.toml` |
+| Test data root | `--test-data DIR` | `CASPER_TEST_DATA` | `test_data/` |
+
+```
+./scripts/run-local-test.sh --test-data /data/my_test_data
+./scripts/run-module-test.sh --config /data/my_sim.toml --test-data /data/my_test_data FFTs/fft_direct
+CASPER_TEST_DATA=/data/my_test_data ./scripts/run-local-test.sh
+```
+- The command-line option wins over the environment variable, which wins over the default. The scripts print which config and test data they use, and where each choice came from.
+- Paths are host paths. The scripts mount the file / directory read-only into the container (`container/docker-compose.config.yml`, `container/docker-compose.testdata.yml`) and set the variables there, so no image rebuild is needed for other data.
+- The test data root must be laid out exactly like `test_data/` (`<Category>/<module>/…`) and hold every module the config lists. A module whose directory is missing, or whose `simdataN/` subdirectories do not match the number of `[[simulations.parameters]]` blocks, fails with a message naming the path.
+- Memory-file parameters in the config (`INIT_FILE`, `COEFF_DIR`, `MEM_DIR`, … written as `../…/test_data/…`) are redirected to the chosen root.
+- An external test data root is read-only: test data generation (`[test_data] generate`) cannot be combined with it, and the test stops with an error if both are set.
+- When running `pytest` directly (inside the container or elsewhere), the same two environment variables apply, with paths valid where `pytest` runs.
 
 ### Local simulation
 

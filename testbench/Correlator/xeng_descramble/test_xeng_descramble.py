@@ -2,13 +2,11 @@ import cocotb
 from cocotb.clock import Clock
 from cocotb.triggers import RisingEdge
 
-from pathlib import Path
 import json
+from testbench.data_paths import module_data_dir
 
-# test_data mirrors testbench/ at any depth: locate the testbench root
-_here = Path(__file__).resolve().parent
-_tb_root = next(p for p in _here.parents if p.name == "testbench")
-testdatadir = _tb_root.parent / "test_data" / _here.relative_to(_tb_root)
+# test data of this module: $CASPER_TEST_DATA or test_data/, same path as below testbench/
+testdatadir = module_data_dir(__file__)
 
 # Integer parameters matched against simdataN/params.json
 PARAMS = ['NUM_ANTS', 'N_BITS', 'ACC_LEN', 'DEMUX_FACTOR', 'RAM_LATENCY']

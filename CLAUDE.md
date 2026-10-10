@@ -21,6 +21,8 @@ sudo ./scripts/run-module-test.sh BasicModules           # entire category
 ```
 The argument is passed to pytest's `-k` filter. Test IDs follow the `<Category>/<module>` format from `simulation.toml`.
 
+Both scripts take `--config FILE` (simulation config instead of `tests/simulation.toml`) and `--test-data DIR` (a test data root laid out exactly like `test_data/`); without an option they use `$CASPER_SIM_CONFIG` / `$CASPER_TEST_DATA` from the host environment, else the defaults. Option parsing is in `scripts/lib/test-paths.sh`.
+
 Test results (`.vcd`, `.xml`) land in `tests/results/`. VCD waveforms can be viewed at https://app.surfer-project.org.
 
 ## Adding a New Module
@@ -45,10 +47,10 @@ Test results (`.vcd`, `.xml`) land in `tests/results/`. VCD waveforms can be vie
 
 3. **Testbench**: Create `testbench/<Category>/<module_name>/test_<module_name>.py`. The directory hierarchy must mirror `rtl/`.
    - Tests are `async` cocotb functions decorated with `@cocotb.test()`. Load CSV data with `np.loadtxt`, drive inputs before `RisingEdge`, sample outputs after.
-   - Derive the test data path from `__file__` — do not hardcode it:
+   - Get the test data path from `testbench/data_paths.py` — do not hardcode it (this also honours `CASPER_TEST_DATA`):
      ```python
-     _here = Path(__file__).parent
-     testdatadir = (_here / "../../../test_data" / _here.parent.name / _here.name).resolve()
+     from testbench.data_paths import module_data_dir
+     testdatadir = module_data_dir(__file__)
      ```
    - The standard loop pattern is `await RisingEdge` then read — never read an output before the first clock edge. `expected[0]` must correspond to the value read after the first rising edge (which, due to cocotb's pre-NB-read convention, reflects the module's initial state):
      ```python
@@ -83,6 +85,7 @@ Test results (`.vcd`, `.xml`) land in `tests/results/`. VCD waveforms can be vie
 ### How a test run works (non-obvious details)
 
 - The Docker image **copies** `rtl/`, `tests/`, `testbench/` → `tests/testbench/`, and `test_data/` → `tests/test_data/` into `/work`. Only `tests/results/` is mounted back to the host, so source changes need an image rebuild (the scripts run `docker compose build` each time). `platform/` is **not** copied into the image, so a `PLATFORM` parameter would fail in the container until the Dockerfile is updated.
+- Alternative config / test data: `scripts/lib/test-paths.sh` mounts the chosen file / directory read-only (`container/docker-compose.config.yml` → `/work/sim_config.toml`, `container/docker-compose.testdata.yml` → `/work/test_data_ext`) and sets `CASPER_SIM_CONFIG` / `CASPER_TEST_DATA` in the container. `tests/test_runner.py` reads the config from `CASPER_SIM_CONFIG`, checks that each module's data directory exists and that its `simdataN/` match the parameter blocks, rewrites `../…/test_data/…` string parameters to the external root, and refuses test data generation with an external root. Testbenches find their data through `testbench/data_paths.py` (`module_data_dir(__file__)`).
 - `tests/run_test.sh` runs `prepare_dump.py --dir ../rtl`, which injects a `$dumpfile`/`$dumpvars` block before `endmodule` in **every** RTL file. It edits the copies inside the container, never the host tree.
 - `test_runner.py` compiles **all** files under `rtl/` for every test, whatever `top` is. A syntax error or duplicate module name in any file breaks every test.
 - cocotb's Verilator build passes no `-Wno-fatal`, so any Verilator warning (e.g. `PINMISSING`, `WIDTHTRUNC`) is fatal. When adding an optional input port to a shared module, give it a default value (`input logic en = 1'b1`) so existing instances can leave it unconnected, as the `BasicModules` `en`/`rst`/`load` ports do. Check with `verilator --lint-only -DSIM --top-module <top> $(find rtl -name "*.v" -o -name "*.sv")`.

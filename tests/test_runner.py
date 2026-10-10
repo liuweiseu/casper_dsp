@@ -5,8 +5,10 @@ import os
 import subprocess
 import sys
 import logging
+import re
 from cocotb_tools.runner import get_runner
 from prepare_dump import replace_vcd_filename, find_file
+from testbench.data_paths import TEST_DATA_ENV, test_data_root
 
 logger = logging.getLogger(__name__)
 
@@ -36,9 +38,64 @@ def get_vendor_sources(platform: str, vendor_cfgs: dict) -> list:
         raise FileNotFoundError(f"Vendor lib not found: {resolved}")
     return list(resolved.rglob("*.v")) + list(resolved.rglob("*.sv"))
 
+# ── simulation config and test data location ────────────────────────────────
+# CASPER_SIM_CONFIG: the simulation config file to use (default:
+# simulation.toml next to this file). CASPER_TEST_DATA: a test data root laid
+# out exactly like test_data/ (default: test_data/ next to testbench/, see
+# testbench/data_paths.py). scripts/run-*.sh set both inside the container
+# from their --config / --test-data options or the host environment.
+SIM_CONFIG_ENV = "CASPER_SIM_CONFIG"
+SIM_CONFIG = Path(os.environ.get(SIM_CONFIG_ENV) or Path(__file__).parent / "simulation.toml").resolve()
+TEST_DATA_OVERRIDE = bool(os.environ.get(TEST_DATA_ENV))
+TEST_DATA_ROOT = test_data_root()
+if not SIM_CONFIG.is_file():
+    raise FileNotFoundError(f"simulation config not found: {SIM_CONFIG}"
+                            + (f" (from {SIM_CONFIG_ENV})" if os.environ.get(SIM_CONFIG_ENV) else ""))
+if not TEST_DATA_ROOT.is_dir():
+    raise FileNotFoundError(f"test data directory not found: {TEST_DATA_ROOT}"
+                            + (f" (from {TEST_DATA_ENV})" if TEST_DATA_OVERRIDE else ""))
+
+# parameters naming memory files are written relative to the build directory
+# (sim_build/<dir>/<top>/), e.g. "../../../test_data/FFTs/...": with an
+# external test data root they are redirected to it (absolute path)
+_REL_TEST_DATA = re.compile(r"^(?:\.\./)+test_data/")
+
+
+def test_data_param(value):
+    if TEST_DATA_OVERRIDE and isinstance(value, str) and _REL_TEST_DATA.match(value):
+        return f"{TEST_DATA_ROOT}/{_REL_TEST_DATA.sub('', value)}"
+    return value
+
+
+test_data_param.__test__ = False   # a helper, not a pytest test
+
+
+def check_test_data(cfg):
+    """Fail early if the module's test data does not match its config entry.
+
+    The module needs <root>/<dir>/<top>/; if that holds simdataN/
+    subdirectories they must be simdata0 .. simdata<n-1>, one per
+    [[simulations.parameters]] block (n = 1 for an entry without blocks).
+    """
+    d = TEST_DATA_ROOT / cfg["dir"] / cfg["top"]
+    if not d.is_dir():
+        pytest.fail(f"test data directory missing: {d}")
+    sims = sorted(int(p.name[7:]) for p in d.iterdir()
+                  if p.is_dir() and re.fullmatch(r"simdata\d+", p.name))
+    n_sets = max(1, len(cfg.get("parameters", [])))
+    if sims and sims != list(range(n_sets)):
+        pytest.fail(f"{d}: has simdata{sims} but {SIM_CONFIG.name} lists {n_sets} "
+                    f"parameter set(s) for {cfg['dir']}/{cfg['top']} (expected simdata0..{n_sets - 1})")
+
+
+check_test_data.__test__ = False
+
 # read the toml file
-with open("simulation.toml", "rb") as f:
-    full_config = tomllib.load(f)
+with open(SIM_CONFIG, "rb") as f:
+    try:
+        full_config = tomllib.load(f)
+    except tomllib.TOMLDecodeError as e:
+        raise ValueError(f"{SIM_CONFIG}: {e}") from e
     config      = full_config["simulations"]
     vendor_cfgs = {k: v for k, v in full_config.items()
                    if isinstance(v, dict) and k not in ("simulations", "test_data")}
@@ -60,6 +117,13 @@ def generate_test_data(cfg):
     if not script:
         logger.info(f"{cfg['dir']}/{top}: no test_data_script, using existing test data")
         return
+    if TEST_DATA_OVERRIDE:
+        # the generators write into the default test_data/, never into the
+        # external (read-only) directory the tests would read
+        raise RuntimeError(f"{cfg['dir']}/{top}: test data generation is enabled, but "
+                           f"{TEST_DATA_ENV} points to external test data ({TEST_DATA_ROOT}); "
+                           "set generate = false (or generate_test_data = false) in "
+                           f"{SIM_CONFIG.name}, or drop the external test data")
     if _TEST_DATA_SCRIPTS is None:
         raise FileNotFoundError("test_data/scripts/ not found, cannot generate test data")
     path = _TEST_DATA_SCRIPTS / script
@@ -81,6 +145,8 @@ def test_runner(cfg):
     # nested categories (dir = "FFTs/Twiddle") map to nested Python packages
     tb_package = "testbench." + target_dir.replace("/", ".")
     generate_test_data(cfg)
+    check_test_data(cfg)
+    logger.info(f"config {SIM_CONFIG}, test data {TEST_DATA_ROOT}")
     
     sim = os.getenv("SIM", "verilator")
     result_path = Path("results")
@@ -132,7 +198,7 @@ def test_runner(cfg):
             # cocotb's Verilator runner passes parameters as -G<name>=<value>
             # verbatim, so string parameters (e.g. INIT_FILE, PLATFORM) need
             # explicit SystemVerilog quotes
-            hdl_params = {k: f'"{v}"' if isinstance(v, str) else v
+            hdl_params = {k: f'"{test_data_param(v)}"' if isinstance(v, str) else v
                           for k, v in parameters[i].items()}
             runner.build(
                 sources=sources + extra,
