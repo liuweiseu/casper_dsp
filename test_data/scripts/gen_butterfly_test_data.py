@@ -143,8 +143,9 @@ BUTTERFLY_TESTS = [
      "pass_through (biplex stage 1), dynamic shift, round + wrap"),
     (2, 0, 5, [0], 4, [18, 12, 11, 0, 1, 1, 1, 2, 1, 1, 0, 1, 4], 256,
      "coeff_0 (non-biplex), 2 lanes, hardcoded downshift, truncate + saturate"),
-    (1, 0, 5, [1], 4, [18, 16, 15, 0, 0, 0, 2, 1, 1, 2, 2, 1, 1], 256,
-     "coeff_1, dynamic shift with MAX_FANOUT 1 (shift latency 2), round even + saturate"),
+    (1, 0, 5, [3], 4, [18, 16, 15, 0, 0, 0, 2, 1, 1, 2, 2, 1, 1], 256,
+     "single-coefficient general (constant twiddle, Coeffs [3]), dynamic shift with MAX_FANOUT 1 "
+     "(shift latency 2), round even + saturate"),
     (1, 1, 4, [0, 1], 2, [18, 18, 17, 0, 0, 0, 1, 2, 1, 1, 1, 0, 4], 256,
      "stage_2 (biplex stage 2 of a 16-point FFT), dynamic shift"),
     (1, 1, 4, [0, 1, 2, 3], 1, [18, 18, 17, 0, 0, 0, 1, 2, 1, 1, 1, 1, 4], 512,

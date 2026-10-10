@@ -110,11 +110,6 @@
 // 0 = 'off'
 // 1 = 'on'
 //
-// [params.SHIFT_SCHEDULE]
-// mask = 'shift_schedule'
-// type = 'edit'
-// note = "casper's per-stage 0/1 vector becomes a bit mask here: bit k = stage k+1 (bit s = stage s, s = 0 .. FFT_SIZE-1)"
-//
 // [params.MULT_SPEC]
 // mask = 'mult_spec'
 // type = 'edit'
@@ -180,7 +175,11 @@
 // when = 'FFT_SIZE >= 2 && (MAP_TAIL == 0 || (LARGER_FFT_SIZE == FFT_SIZE && START_STAGE == 1))'
 // reason = 'mlib_devel bug: with map_tail off, butterfly u of stage s gets Coeffs = [u] (fft_direct_init.m:348-351), so FFT_SIZE >= 2 gives a Coeffs = [1] butterfly; map_tail on with LargerFFTSize = FFTSize and StartStage = 1 gives the same one-element lists. butterfly_direct_init.m:297-304 then passes float params that twiddle_coeff_1 lacks and the mask init fails'
 //
+// [mask_set.shift_schedule]
+// template = 'bitget({SHIFT_SCHEDULE}, 1:{FFT_SIZE})'
+//
 // [hdl_only]
+// SHIFT_SCHEDULE = 'bit mask, bit s = stage s+1 (s = 0 .. FFT_SIZE-1); set on the mask as the per-stage 0/1 vector shift_schedule = bitget(SHIFT_SCHEDULE, 1:FFT_SIZE) (mask_set)'
 // COEFF_DIR = 'implementation: memory initialization file'
 // PLATFORM = 'implementation: memory / primitive vendor (GENERIC, XILINX, ALTERA)'
 // N_BITS_OUT = 'derived from other parameters (do not override)'

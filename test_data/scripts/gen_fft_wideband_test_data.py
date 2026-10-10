@@ -194,16 +194,17 @@ def check_direct_is_fft(p, st, out):
 
 FD_TESTS = [
     # values: FD order; amp: input amplitude (bits below full scale), shift: "ones" or "random"
-    (P(FD, [1, 2, 18, 17, 18, 0, 0, 0, 1, 2, 2, 1, 1, 1, 4, 0, 19, 0, 0]), 3, "ones",
-     "4-point, 1 stream, coeff_0 / coeff_1 twiddles only"),
-    (P(FD, [2, 3, 16, 15, 18, 0, 0, 0, 1, 2, 2, 1, 2, 1, 4, 1, 21, 0, 0]), 3, "ones",
-     "8-point, 2 streams, general twiddles, bit growth (output width min(MAX_BITS, IW+F))"),
-    (P(FD, [1, 4, 18, 17, 18, 0, 0, 0, 2, 3, 1, 0, 1, 1, 2, 0, 19, 0, 0]), 3, "ones",
-     "16-point, combinational convert, MAX_FANOUT 2"),
+    (P(FD, [1, 2, 18, 17, 18, 1, 5, 4, 1, 2, 2, 1, 1, 1, 4, 0, 19, 0, 0]), 3, "ones",
+     "MAP_TAIL: last 2 stages of a 32-point FFT, 1 stream, 8 coefficients"),
+    (P(FD, [2, 3, 16, 15, 18, 1, 6, 4, 1, 2, 2, 1, 2, 1, 4, 1, 19, 0, 0]), 3, "ones",
+     "MAP_TAIL: last 3 stages of a 64-point FFT, 2 streams, bit growth up to MAX_BITS = IW+F"),
+    (P(FD, [1, 4, 18, 17, 18, 1, 7, 4, 2, 3, 1, 0, 1, 1, 2, 0, 19, 0, 0]), 3, "ones",
+     "MAP_TAIL: last 4 stages of a 128-point FFT, combinational convert, MAX_FANOUT 2"),
     (P(FD, [3, 1, 12, 11, 18, 0, 0, 0, 1, 2, 2, 1, 1, 0, 4, 0, 19, 0, 0]), 0, "random",
      "FFT_SIZE 1 (one butterfly), 3 streams, full-scale data, random shift, wrap"),
-    (P(FD, [2, 3, 12, 11, 12, 0, 0, 0, 1, 2, 2, 1, 1, 1, 4, 0, 19, 1, 0b110]), 0, "random",
-     "8-point, full-scale data, hardcoded shifts 110 (stages 1, 2), saturate: overflow flags"),
+    (P(FD, [2, 3, 12, 11, 12, 1, 5, 3, 1, 2, 2, 1, 1, 1, 4, 0, 19, 1, 0b110]), 0, "random",
+     "MAP_TAIL: last 3 stages of a 32-point FFT, full-scale data, hardcoded shifts 110 "
+     "(stages 1, 2), saturate: overflow flags"),
     (P(FD, [1, 2, 18, 17, 18, 1, 6, 5, 1, 2, 2, 1, 1, 1, 4, 0, 19, 0, 0]), 3, "random",
      "MAP_TAIL: last 2 stages of a 64-point FFT (as in fft_wideband_real), 16 coefficients"),
 ]

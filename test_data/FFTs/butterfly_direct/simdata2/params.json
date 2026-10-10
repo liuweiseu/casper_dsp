@@ -3,7 +3,7 @@
   "BIPLEX": 0,
   "FFT_SIZE": 5,
   "N_COEFFS": 1,
-  "COEFF_0": 1,
+  "COEFF_0": 3,
   "COEFF_1": 0,
   "STEP_PERIOD": 4,
   "COEFF_BIT_WIDTH": 18,
@@ -19,7 +19,8 @@
   "QUANTIZATION": 2,
   "OVERFLOW": 1,
   "MAX_FANOUT": 1,
+  "INIT_FILE": "../../../test_data/FFTs/butterfly_direct/simdata2/twiddle.mem",
   "COEFFS": [
-    1
+    3
   ]
 }

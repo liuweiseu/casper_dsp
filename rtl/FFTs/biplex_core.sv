@@ -80,11 +80,6 @@
 // 0 = 'off'
 // 1 = 'on'
 //
-// [params.SHIFT_SCHEDULE]
-// mask = 'shift_schedule'
-// type = 'edit'
-// note = "casper's per-stage 0/1 vector becomes a bit mask here: bit k = stage k+1 (bit s-1 = stage s)"
-//
 // [params.MULT_SPEC]
 // mask = 'mult_spec'
 // type = 'edit'
@@ -145,7 +140,11 @@
 // type = 'edit'
 // note = 'same parameter; the mask name is camelCase'
 //
+// [mask_set.shift_schedule]
+// template = 'bitget({SHIFT_SCHEDULE}, 1:{FFT_SIZE})'
+//
 // [hdl_only]
+// SHIFT_SCHEDULE = 'bit mask, bit s-1 = stage s (s = 1 .. FFT_SIZE); set on the mask as the per-stage 0/1 vector shift_schedule = bitget(SHIFT_SCHEDULE, 1:FFT_SIZE) (mask_set)'
 // COEFF_DIR = 'implementation: memory initialization file'
 // PLATFORM = 'implementation: memory / primitive vendor (GENERIC, XILINX, ALTERA)'
 // N_BITS_OUT = 'derived from other parameters (do not override)'

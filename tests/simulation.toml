@@ -1842,13 +1842,13 @@ CONV_LATENCY = 1
 QUANTIZATION = 0
 OVERFLOW = 1
 MAX_FANOUT = 4
-# coeff_1, dynamic shift with MAX_FANOUT 1 (shift latency 2), round even + saturate
+# single-coefficient general (constant twiddle, Coeffs [3]), dynamic shift with MAX_FANOUT 1 (shift latency 2), round even + saturate
 [[simulations.parameters]]
 N_INPUTS = 1
 BIPLEX = 0
 FFT_SIZE = 5
 N_COEFFS = 1
-COEFF_0 = 1
+COEFF_0 = 3
 COEFF_1 = 0
 STEP_PERIOD = 4
 COEFF_BIT_WIDTH = 18
@@ -1864,6 +1864,7 @@ CONV_LATENCY = 2
 QUANTIZATION = 2
 OVERFLOW = 1
 MAX_FANOUT = 1
+INIT_FILE = "../../../test_data/FFTs/butterfly_direct/simdata2/twiddle.mem"
 # stage_2 (biplex stage 2 of a 16-point FFT), dynamic shift
 [[simulations.parameters]]
 N_INPUTS = 1
@@ -2078,17 +2079,17 @@ MAP_DIR = "../../../test_data/FFTs/fft_biplex_real_4x/simdata3/"
 dir = "FFTs"
 top = "fft_direct"
 test_data_script = "gen_fft_wideband_test_data.py"
-simulation_cycles = [139, 139, 139, 139, 139, 139]
-# 4-point, 1 stream, coeff_0 / coeff_1 twiddles only
+simulation_cycles = [91, 91, 91, 139, 67, 139]
+# MAP_TAIL: last 2 stages of a 32-point FFT, 1 stream, 8 coefficients
 [[simulations.parameters]]
 N_STREAMS = 1
 FFT_SIZE = 2
 INPUT_BIT_WIDTH = 18
 BIN_PT_IN = 17
 COEFF_BIT_WIDTH = 18
-MAP_TAIL = 0
-LARGER_FFT_SIZE = 0
-START_STAGE = 0
+MAP_TAIL = 1
+LARGER_FFT_SIZE = 5
+START_STAGE = 4
 ADD_LATENCY = 1
 MULT_LATENCY = 2
 BRAM_LATENCY = 2
@@ -2101,16 +2102,16 @@ MAX_BITS = 19
 HARDCODE_SHIFTS = 0
 SHIFT_SCHEDULE = 0
 COEFF_DIR = "../../../test_data/FFTs/fft_direct/simdata0/"
-# 8-point, 2 streams, general twiddles, bit growth (output width min(MAX_BITS, IW+F))
+# MAP_TAIL: last 3 stages of a 64-point FFT, 2 streams, bit growth up to MAX_BITS = IW+F
 [[simulations.parameters]]
 N_STREAMS = 2
 FFT_SIZE = 3
 INPUT_BIT_WIDTH = 16
 BIN_PT_IN = 15
 COEFF_BIT_WIDTH = 18
-MAP_TAIL = 0
-LARGER_FFT_SIZE = 0
-START_STAGE = 0
+MAP_TAIL = 1
+LARGER_FFT_SIZE = 6
+START_STAGE = 4
 ADD_LATENCY = 1
 MULT_LATENCY = 2
 BRAM_LATENCY = 2
@@ -2119,20 +2120,20 @@ QUANTIZATION = 2
 OVERFLOW = 1
 MAX_FANOUT = 4
 BITGROWTH = 1
-MAX_BITS = 21
+MAX_BITS = 19
 HARDCODE_SHIFTS = 0
 SHIFT_SCHEDULE = 0
 COEFF_DIR = "../../../test_data/FFTs/fft_direct/simdata1/"
-# 16-point, combinational convert, MAX_FANOUT 2
+# MAP_TAIL: last 4 stages of a 128-point FFT, combinational convert, MAX_FANOUT 2
 [[simulations.parameters]]
 N_STREAMS = 1
 FFT_SIZE = 4
 INPUT_BIT_WIDTH = 18
 BIN_PT_IN = 17
 COEFF_BIT_WIDTH = 18
-MAP_TAIL = 0
-LARGER_FFT_SIZE = 0
-START_STAGE = 0
+MAP_TAIL = 1
+LARGER_FFT_SIZE = 7
+START_STAGE = 4
 ADD_LATENCY = 2
 MULT_LATENCY = 3
 BRAM_LATENCY = 1
@@ -2167,16 +2168,16 @@ MAX_BITS = 19
 HARDCODE_SHIFTS = 0
 SHIFT_SCHEDULE = 0
 COEFF_DIR = "../../../test_data/FFTs/fft_direct/simdata3/"
-# 8-point, full-scale data, hardcoded shifts 110 (stages 1, 2), saturate: overflow flags
+# MAP_TAIL: last 3 stages of a 32-point FFT, full-scale data, hardcoded shifts 110 (stages 1, 2), saturate: overflow flags
 [[simulations.parameters]]
 N_STREAMS = 2
 FFT_SIZE = 3
 INPUT_BIT_WIDTH = 12
 BIN_PT_IN = 11
 COEFF_BIT_WIDTH = 12
-MAP_TAIL = 0
-LARGER_FFT_SIZE = 0
-START_STAGE = 0
+MAP_TAIL = 1
+LARGER_FFT_SIZE = 5
+START_STAGE = 3
 ADD_LATENCY = 1
 MULT_LATENCY = 2
 BRAM_LATENCY = 2
@@ -2752,39 +2753,10 @@ ADD_LATENCY = 0
 BRAM_LATENCY = 1
 CONV_LATENCY = 0
 
-# test twiddle_coeff_1
-[[simulations]]
-dir = "FFTs/Twiddle"
-top = "twiddle_coeff_1"
-test_data_script = "gen_twiddle_test_data.py"
-simulation_cycles = [256, 256, 256]
-# casper-style latencies (total 5)
-[[simulations.parameters]]
-N_INPUTS = 1
-INPUT_BIT_WIDTH = 18
-BIN_PT_IN = 17
-MULT_LATENCY = 2
-ADD_LATENCY = 1
-BRAM_LATENCY = 1
-CONV_LATENCY = 1
-# 3 lanes, 8-bit, total latency 3
-[[simulations.parameters]]
-N_INPUTS = 3
-INPUT_BIT_WIDTH = 8
-BIN_PT_IN = 7
-MULT_LATENCY = 1
-ADD_LATENCY = 1
-BRAM_LATENCY = 2
-CONV_LATENCY = 0
-# 2 lanes, minimum latency 1
-[[simulations.parameters]]
-N_INPUTS = 2
-INPUT_BIT_WIDTH = 16
-BIN_PT_IN = 12
-MULT_LATENCY = 0
-ADD_LATENCY = 0
-BRAM_LATENCY = 1
-CONV_LATENCY = 0
+# twiddle_coeff_1: not listed. casper_library_ffts_twiddle/twiddle_coeff_1 cannot
+# be built in Simulink with mlib_devel (docs/bugs.md, bugs 1-3), so there is no
+# Simulink reference; its testbench and test_data/FFTs/Twiddle/twiddle_coeff_1/
+# are kept and the entry can be restored from git history.
 
 # test twiddle_general
 [[simulations]]

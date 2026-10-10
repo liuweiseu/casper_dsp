@@ -54,7 +54,7 @@ The simulation is based on [Verilator](https://www.veripool.org/verilator/) and 
 | 45 | FFTs/Internal | [`hilbert`](docs/FFTs/Internal/hilbert.md) | Split the FFT of two real signals packed as one complex signal |
 | 46 | FFTs/Internal | [`mirror_spectrum`](docs/FFTs/Internal/mirror_spectrum.md) | Complete the upper half of four real-signal spectra by conjugate mirroring |
 | 47 | FFTs/Twiddle | [`twiddle_coeff_0`](docs/FFTs/Twiddle/twiddle_coeff_0.md) | Twiddle for coefficient 0 (w = 1) with delay matching |
-| 48 | FFTs/Twiddle | [`twiddle_coeff_1`](docs/FFTs/Twiddle/twiddle_coeff_1.md) | Twiddle for coefficient 1 (w = −j): swap re/im and negate |
+| 48 | FFTs/Twiddle | [`twiddle_coeff_1`](docs/FFTs/Twiddle/twiddle_coeff_1.md) | Twiddle for coefficient 1 (w = −j): swap re/im and negate. Not in `tests/simulation.toml`: the Simulink block cannot be built ([bugs](docs/bugs.md)) |
 | 49 | FFTs/Twiddle | [`twiddle_general`](docs/FFTs/Twiddle/twiddle_general.md) | General twiddle: bi × coefficient table (ROM, sync-reset schedule) |
 | 50 | FFTs/Twiddle | [`twiddle_pass_through`](docs/FFTs/Twiddle/twiddle_pass_through.md) | Twiddle pass-through (w = 1, zero latency) |
 | 51 | FFTs/Twiddle | [`twiddle_stage_2`](docs/FFTs/Twiddle/twiddle_stage_2.md) | Twiddle alternating w = 1 / −j for the second FFT stage |
@@ -154,6 +154,8 @@ python3 tools/check_simulink_mapping.py --dump -o out/mapping.json # save the JS
 python3 tools/check_simulink_mapping.py -o out/check.txt           # save the check report
 ```
 With `-o`, missing parent directories are created and only a one-line summary is printed.
+
+Library bugs found while building the Simulink models from these blocks are listed in [docs/bugs.md](docs/bugs.md).
 
 ## 📦 Run Simulation
 ### Requirements
