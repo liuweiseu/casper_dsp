@@ -17,3 +17,4 @@ Encodings: `TYPE` 0=unsigned, 1=signed; `QUANTIZATION` 0=truncate, 1=round half 
 | 4 | `simdata4` | 12 | 10 | 1 | 8 | 4 | 0 | 1 | 1 | 1 | 128 | Fix_12_10 → UFix_8_4, round + saturate (negatives clamp to 0) |
 | 5 | `simdata5` | 16 | 12 | 1 | 8 | 4 | 1 | 2 | 0 | 1 | 128 | Fix_16_12 → Fix_8_4, round half to even + wrap |
 | 6 | `simdata6` | 8 | -2 | 1 | 12 | 0 | 1 | 0 | 0 | 0 | 128 | Fix_8_-2 → Fix_12_0, negative input binary point (exact ×4) |
+| 7 | `simdata7` | 8 | 0 | 1 | 12 | 2 | 1 | 0 | 0 | 0 | 128 | Fix_8_0 → Fix_12_2, same shift as set 6 (exact ×4), Simulink-buildable |

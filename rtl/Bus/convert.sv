@@ -49,6 +49,10 @@
 // [mask_set.misc]
 // value = 'off'
 //
+// [[unsupported]]
+// when = 'BIN_PT_IN < 0 || BIN_PT_OUT < 0'
+// reason = 'System Generator fixed-point types need bin_pt >= 0: Invalid output binary point detected: binary point must be greater than or equal to 0 (bus_convert_init.m:169 bus_expand reinterpret, confirmed in MATLAB R2021a); the HDL only uses BIN_PT_IN - BIN_PT_OUT, so shift both binary points up by the same amount for an equivalent buildable set (convert set 7 is set 6 shifted by 2)'
+//
 // [hdl_only]
 // TYPE_IN = 'bus_convert_init.m default type_in=1, not a mask parameter: Simulink always reinterprets each input lane as signed (bus_convert_init.m:13,167)'
 // TYPE_OUT = "bus_convert_init.m default type_out=1, not a mask parameter: the Convert / convert_of output is always 'Signed  (2''s comp)' (bus_convert_init.m:247, convert_of_init.m:120)"

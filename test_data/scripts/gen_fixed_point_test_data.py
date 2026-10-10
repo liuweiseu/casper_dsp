@@ -255,6 +255,8 @@ MODULES = {
              "Fix_16_12 → Fix_8_4, round half to even + wrap"),
             (P(CONV, [8, -2, 1, 12, 0, 1, 0, 0, 0]),
              "Fix_8_-2 → Fix_12_0, negative input binary point (exact ×4)"),
+            (P(CONV, [8, 0, 1, 12, 2, 1, 0, 0, 0]),
+             "Fix_8_0 → Fix_12_2, same shift as set 6 (exact ×4), Simulink-buildable"),
         ]),
     "adder_subtractor": dict(
         category="Bus",

@@ -17,6 +17,7 @@ MATLAB R2021a Update 8; Vivado / Model Composer 2021.1.
 | 5 | Stored copies of `bus_expand` still call the deleted `bus_expand_callback` | `cmult` (in `cmac`, `dual_pol_cmac`, `auto_tap`, `baseline_tap`, `xeng`) and other blocks with a stored `bus_expand` copy | Confirmed in MATLAB R2021a |
 | 6 | `cosin_init` connects to `add_convert1`, which it does not draw for small tables | `twiddle_general` (via `coeff_gen` → `cosin`) with few coefficient phase steps | Confirmed in MATLAB R2021a |
 | 7 | `delay_bram_init` rejects `DelayLen ≤ bram_latency + 1` and empties the block for `DelayLen = 0` | `delay_bram` with `DelayLen ≤ 3` (default `bram_latency` 2), and blocks that use it (e.g. `auto_tap`) | Confirmed in MATLAB R2021a |
+| 8 | `bus_mult` passes 'Round  (unbiased: Even Values)' to a Xilinx `Mult`, which does not offer it | `bus_mult` real lanes with `quantization = 2` | Confirmed in MATLAB R2021a |
 
 **Environment note:** `pfb_coeff_gen_calc.m:57, 72` computes the PFB
 window through MATLAB's Python interface (`casper_library/python/window.py`).
@@ -382,6 +383,48 @@ and 1000) built.
 clearing the block; for `DelayLen ≤ bram_latency + 1`, fall back to a
 register delay (as `delay_srl`) instead of erroring.
 
+## 8. bus_mult rounds to even inside a Xilinx Mult
+
+**Affected code:** `casper_library/bus_mult_init.m:634-641` (quantization
+mapping) and `bus_mult_init.m:683-686` (the real-lane `xbsIndex_r4/Mult`).
+
+**Symptom:**
+
+```
+Invalid setting in Xilinx Multiplier Block 'mult1' for parameter 'quantization'
+```
+
+(the `bus_mult` mask initialization then fails).
+
+**Trigger:** `bus_mult` with real lanes (`cmplx_a` / `cmplx_b` off) and
+`quantization = 2` (round half to even).
+
+**Root cause:** `bus_mult_init.m:640` maps quantization 2 to
+`'Round  (unbiased: Even Values)'` and passes it to `xbsIndex_r4/Mult` with
+`precision = 'User Defined'`. In Vivado 2021.1 (`xbsIndex_r4.slx`) the
+quantization popup of `Mult` (and of `AddSub` and `CMult`) offers only
+`'Truncate'` and `'Round  (unbiased: +/- Inf)'`; `Convert` offers all three.
+
+**Origin:** `970d1b3cf` (andrewvanderbyl, 2019-10-01, "Updated bus_mult to
+allow Rounding: Unbiased Even Values") added the option to the mapping
+without a block that supports it.
+
+**Impact on casper designs:** only `bus_mult` real lanes with
+quantization 2. Complex lanes use `cmult`, which multiplies at full
+precision and rounds in an `xbsIndex_r4/Convert` (`cmult_init.m:605-613`),
+so `twiddle_general` (complex `bus_mult`) and `cmult` work with round to
+even. `pfb_fir_taps` passes quantization 0.
+
+**Confirmed in MATLAB R2021a:** `multiplier` set 1 (Fix_18_17 × Fix_18_17
+→ Fix_18_17, `QUANTIZATION = 2`, `OVERFLOW = 1`, `MULT_LATENCY = 3`) failed
+with the error above.
+
+**Suggested fix:** for quantization 2, build the real lane as `cmult`
+does: a full-precision `Mult` followed by an `xbsIndex_r4/Convert`, whose
+popup has `'Round  (unbiased: Even Values)'` (verified in the 2021.1
+`xbsIndex_r4.slx`). Alternatively, remove option 2 from `bus_mult`'s
+quantization.
+
 ## How casper_dsp handles these bugs
 
 - **Mapping:** the HDL-Simulink Mapping blocks record the bugs, so that
@@ -421,6 +464,9 @@ register delay (as `delay_srl`) instead of erroring.
   skip `delay_bram` sets 0, 5 and 6; the HDL tests still run. The
   `auto_tap` / `xeng` entries below are the same check, reached through
   `auto_tap_init.m`.
+- **Bug 8:** an `unsupported` entry on `rtl/Bus/multiplier.sv`
+  (`QUANTIZATION == 2`). It skips `multiplier` set 1; the HDL test still
+  runs.
 - **Simulink parameter limits:** other configurations that the init scripts
   reject are also `unsupported` entries (each with the init-script
   reference in its `reason`):
