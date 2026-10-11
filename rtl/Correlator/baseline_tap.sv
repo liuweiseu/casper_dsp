@@ -49,6 +49,12 @@
 //   "ANT_SEP*ACC_LEN must fit the ceil(log2 N_ANTS)+ceil(log2 ACC_LEN)-bit Constant, or the HDL stops with a $fatal; Simulink's Xilinx Constant would quantize it (round/saturate, see xlRegister.sgm's constant convention) and build. Inside xeng ANT_SEP <= N_ANTS/2, so the value always fits.",
 // ]
 //
+// [params.ACC_LEN]
+// mask = 'acc_len'
+// type = 'edit'
+// template = '{ACC_LEN}*1'
+// note = 'mlib_devel bug 10 (docs/bugs.md): acc_len is written as an expression so the mask string differs from the one hashed in the stored UserData.state; same_state() then reports a change and the init rebuilds the stale internals, which it skips for a plain value equal to the stored one. Verified in MATLAB R2021a with baseline_tap_0 (acc_len "32*1").'
+//
 // [[unsupported]]
 // when = 'USE_BRAM_DELAY == 0'
 // reason = 'mlib_devel bug 12 (docs/bugs.md): with use_bram_delay off, baseline_tap_init.m:86-89 replace_block()s the delay with casper_library_delays/delay_slr, whose stored library copy is an empty DelayLen = 0 shell without ports, so the lines to and from the delay are dropped; setting DelayLen brings the ports back unconnected: Undriven input port .../delay/dly and .../Delay3 (confirmed in MATLAB R2021a, set 2)'

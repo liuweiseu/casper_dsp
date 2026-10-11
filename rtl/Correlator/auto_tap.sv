@@ -48,6 +48,12 @@
 //   'N_SIMULTAN is declared only; it does nothing in Simulink either (the mask field is disabled and auto_tap_init.m never reads it).',
 // ]
 //
+// [params.ACC_LEN]
+// mask = 'acc_len'
+// type = 'edit'
+// template = '{ACC_LEN}*1'
+// note = 'mlib_devel bug 10 (docs/bugs.md): acc_len is written as an expression so the mask string differs from the one hashed in the stored UserData.state; same_state() then reports a change and the init rebuilds the stale internals, which it skips for a plain value equal to the stored one. Verified in MATLAB R2021a with auto_tap_0 (acc_len "64*1").'
+//
 // [[unsupported]]
 // when = 'USE_BRAM_DELAY != 0 && ACC_LEN * ((N_ANTS + 1) / 2) - N_ANTS / 2 > 0 && ACC_LEN * ((N_ANTS + 1) / 2) - N_ANTS / 2 <= (BRAM_LATENCY > 2 ? BRAM_LATENCY : 2) + 1'
 // reason = 'auto_tap_init.m:61-68 gives its delay_bram DelayLen = (acc_len-1)*ceil(n_ants/2) + ceil(n_ants/2) - floor(n_ants/2) and sets DelayLen before bram_latency, so the check in delay_bram_init.m:40-42 (DelayLen > bram_latency + 1) runs first against the library default bram_latency 2 and then against BRAM_LATENCY: delay_bram_init: delay value must be greater than BRAM Latency + 1'

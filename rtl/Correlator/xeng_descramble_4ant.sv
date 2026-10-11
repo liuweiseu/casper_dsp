@@ -35,6 +35,8 @@
 //   "Read/write collision: Simulink returns NaN on port A when port B ('No Read On Write') writes the same wide word in the same cycle (xlDPBRAM.sgm). The HDL returns defined data. This does not happen with legal xeng traffic.",
 // ]
 //
+// break_link = 'mlib_devel bug 11 (docs/bugs.md): the x_cast mask initialization sets parameters of blocks inside itself, which Simulink refuses inside a resolved library link (Attempting to override parameters of .../x_cast which is inside a library link), so the block is placed as an unlinked copy (LinkStatus inactive). Verified in MATLAB R2021a with sets 0, 1 and 2.'
+//
 // [hdl_only]
 // PLATFORM = 'implementation: memory / primitive vendor (GENERIC, XILINX, ALTERA)'
 // W = 'derived from other parameters (do not override)'

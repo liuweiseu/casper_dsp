@@ -38,6 +38,14 @@ The lines in between are TOML once the leading "// " (or "//") is removed:
     operand is real, e.g. INIT_VAL / 2.0**BIN_P is real. values and expr
     are mutually exclusive. parse_expr() / eval_expr() below implement it.
 
+    An edit entry may instead carry a template (same rules as the mask_set
+    template below; exclusive with values and expr), e.g.
+
+    [params.ACC_LEN]
+    mask = 'acc_len'
+    type = 'edit'
+    template = '{ACC_LEN}*1'       # mask value string, e.g. "64*1"
+
     [mask_set.<mask param>]        # sets a mask parameter no HDL param maps to;
     value = 'Unsigned'             # exactly one of: value = <TOML scalar>,
                                    # expr = '<expr>', template = 'text {expr}'
@@ -60,6 +68,11 @@ The lines in between are TOML once the leading "// " (or "//") is removed:
     for parameter set N (the root is $CASPER_TEST_DATA if set, else test_data/;
     <dir>/<module> is the RTL file's path below rtl/). Every simdataN of the
     module must have the field, unless an else entry is given.
+
+    break_link = 'why'             # optional: the exporter places an unlinked
+                                   # copy of the block (LinkStatus 'inactive')
+                                   # instead of a library link; the reason is
+                                   # a non-empty string
 
     [hdl_only]                     # HDL parameter -> why the mask lacks it
     [mask_missing]                 # mask parameter -> why the HDL lacks it
@@ -100,10 +113,10 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 BEGIN, END = "@simulink-mapping begin", "@simulink-mapping end"
 TOP_KEYS = {"block", "deviations", "params", "mask_set", "hdl_only", "mask_missing", "ports",
-            "unsupported"}
+            "unsupported", "break_link"}
 MASK_SET_KINDS = ("value", "expr", "template", "from_mem", "from_params_json", "manual")
 FILE_KINDS = ("from_mem", "from_params_json")       # kinds that may have an else entry
-PARAM_KEYS = {"mask", "type", "values", "hdl_unsupported", "note", "expr"}
+PARAM_KEYS = {"mask", "type", "values", "hdl_unsupported", "note", "expr", "template"}
 PORT_KEYS = {"order", "note", "renamed", "missing", "extra"}
 
 
@@ -396,6 +409,19 @@ def _missing_params_json_field(field, data_dir):
     return missing
 
 
+def _check_template(where, text, params):
+    """Errors of one template string (each {...} is an expr)."""
+    if not isinstance(text, str):
+        return [f"{where}: template must be a string"]
+    errs = []
+    for part in re.findall(r"\{([^{}]*)\}", text):
+        errs += _check_expr(where, part, params)
+    rest = re.sub(r"\{[^{}]*\}", "", text)
+    if rest.count("{") or rest.count("}"):
+        errs.append(f"{where}: unbalanced braces in template")
+    return errs
+
+
 def _check_mask_set_entry(where, e, params, allow_from_mem, data_dir=None):
     errs = []
     if not isinstance(e, dict):
@@ -414,14 +440,7 @@ def _check_mask_set_entry(where, e, params, allow_from_mem, data_dir=None):
     elif kind == "expr":
         errs += _check_expr(where, e["expr"], params)
     elif kind == "template":
-        if not isinstance(e["template"], str):
-            errs.append(f"{where}: template must be a string")
-        else:
-            for part in re.findall(r"\{([^{}]*)\}", e["template"]):
-                errs += _check_expr(where, part, params)
-            if re.sub(r"\{[^{}]*\}", "", e["template"]).count("{") or \
-               re.sub(r"\{[^{}]*\}", "", e["template"]).count("}"):
-                errs.append(f"{where}: unbalanced braces in template")
+        errs += _check_template(where, e["template"], params)
     elif kind == "manual":
         if not isinstance(e["manual"], str) or not e["manual"].strip():
             errs.append(f"{where}: manual must be a non-empty string (how to obtain the value)")
@@ -452,6 +471,9 @@ def check(path, data, text):
         errs.append(f"unknown key '{k}'")
     if not isinstance(data.get("block"), str) or "/" not in data["block"]:
         errs.append("block must be '<library>.slx/<block>'")
+    if "break_link" in data and not (isinstance(data["break_link"], str)
+                                     and data["break_link"].strip()):
+        errs.append("break_link must be a non-empty string (the reason)")
     if not isinstance(data.get("deviations", []), list):
         errs.append("deviations must be a list of strings")
     for name, p in data.get("params", {}).items():
@@ -474,6 +496,12 @@ def check(path, data, text):
                                 "not parameters of the module")
             except (ValueError, TypeError) as e:
                 errs.append(f"params.{name}: expr does not parse: {e}")
+        if "template" in p:
+            if vals or "expr" in p:
+                errs.append(f"params.{name}: template excludes values and expr")
+            if p.get("type") != "edit":
+                errs.append(f"params.{name}: template is only for an edit field")
+            errs += _check_template(f"params.{name}", p["template"], params)
         if p.get("type") == "edit":
             if vals:
                 errs.append(f"params.{name}: an edit field has no values table")

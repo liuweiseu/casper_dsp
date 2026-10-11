@@ -529,9 +529,10 @@ stored library values. Any other configuration runs the init.
 fails the same way.
 
 **Workaround (verified in MATLAB R2021a):** give `acc_len` as an equivalent
-expression: `'2^6'` for `auto_tap_0`, `'2^5'` for `baseline_tap_0`.
-`same_state` compares the strings, so the init runs. Both sets then build
-and simulate (1085 and 573 samples).
+expression: `'2^6'` or `'64*1'` for `auto_tap_0`, `'2^5'` or `'32*1'` for
+`baseline_tap_0`. `same_state` compares the strings, so the init runs.
+Both sets then build and simulate (1085 and 573 samples). casper_dsp
+writes `acc_len` as `'<ACC_LEN>*1'` (see the handling section below).
 
 **Suggested fix:** re-save the library blocks after running their init, or
 make `same_state` also check that the stored contents match.
@@ -558,12 +559,12 @@ resolved library link. The init code was not analysed further.
 **Impact on casper designs:** `xeng_descramble_4ant`. The plain
 `xeng_descramble` (`xeng_descramble_0`) simulates fine.
 
-**Confirmed in MATLAB R2021a:** `xeng_descramble_4ant` sets 0, 1 and 2
-(the workaround below was verified with set 0).
+**Confirmed in MATLAB R2021a:** `xeng_descramble_4ant` sets 0, 1 and 2.
 
-**Workaround (verified in MATLAB R2021a):** set `LinkStatus` to
-`'inactive'` on the top `xeng_descramble_4ant` block when it is added.
-It then builds and simulates (5596 samples).
+**Workaround (verified in MATLAB R2021a with sets 0, 1 and 2):** set
+`LinkStatus` to `'inactive'` on the top `xeng_descramble_4ant` block when
+it is added. All three sets then build and simulate (set 0: 5596 samples).
+casper_dsp records this as `break_link` (see the handling section below).
 
 **Suggested fix:** the `x_cast` / `xeng_descramble_4ant` mask code should
 break the link (`set_param(gcb, 'LinkStatus', 'inactive')`) before it
@@ -667,10 +668,16 @@ with explicit `add_line` calls).
   and `fft_direct`. The other 8 blocks map it through their
   `FLOATING_POINT` parameter (HDL default 0 = `'off'`). A later re-save of
   a library block therefore cannot switch an export to float.
-- **Bug 10:** workaround verified in the Simulink spec (`acc_len` as an
-  equivalent expression); not yet in casper_dsp.
-- **Bug 11:** workaround verified in the Simulink spec (`LinkStatus`
-  `'inactive'`); not yet in casper_dsp.
+- **Bug 10:** `rtl/Correlator/auto_tap.sv` and `baseline_tap.sv` map
+  `ACC_LEN` with `template = '{ACC_LEN}*1'`, so the exported `acc_len` is
+  an expression such as `'64*1'` and the init always runs. Verified with
+  `auto_tap_0` (`'64*1'`) and `baseline_tap_0` (`'32*1'`). `xeng` needs no
+  entry: `xeng_init.m:84-99` passes the inner taps `num2str(acc_len)`, so a
+  template on the `xeng` mask would not reach them, and all `xeng` sets
+  build.
+- **Bug 11:** `rtl/Correlator/xeng_descramble_4ant.sv` has a top-level
+  `break_link` entry; exporters then place the block with `LinkStatus`
+  `'inactive'`. Verified with `xeng_descramble_4ant` sets 0, 1 and 2.
 - **Bug 12:** `unsupported` entries `USE_BRAM_DELAY == 0` on
   `rtl/Correlator/auto_tap.sv`, `baseline_tap.sv` and `xeng.sv`. They skip
   `auto_tap` set 1, `baseline_tap` set 2 and `xeng` set 1.
