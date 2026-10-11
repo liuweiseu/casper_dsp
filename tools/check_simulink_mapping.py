@@ -44,11 +44,22 @@ The lines in between are TOML once the leading "// " (or "//") is removed:
                                    # (each {...} is an expr) or
                                    # from_mem = '<HDL param>' ($readmemh file
                                    # named by that parameter -> "[w0 w1 ...]")
+                                   # or from_params_json = '<FIELD>' (field of
+                                   # the test set's simdataN/params.json: list
+                                   # -> "[v0 v1 ...]", scalar / string as is)
                                    # or manual = '<how to obtain the value>'
                                    # (per-config data, e.g. a permutation
                                    # vector, filled in by hand at export)
-    [mask_set.<mask param>.else]   # from_mem only, optional: one value / expr /
-    template = 'zeros(1,{2**N})'   # template entry used when the file name is ""
+    [mask_set.<mask param>.else]   # from_mem / from_params_json only, optional:
+    template = 'zeros(1,{2**N})'   # one value / expr / template / manual entry
+                                   # used when the file name is "" (from_mem)
+                                   # or params.json / the field is missing
+                                   # (from_params_json)
+
+    from_params_json reads <test data root>/<dir>/<module>/simdataN/params.json
+    for parameter set N (the root is $CASPER_TEST_DATA if set, else test_data/;
+    <dir>/<module> is the RTL file's path below rtl/). Every simdataN of the
+    module must have the field, unless an else entry is given.
 
     [hdl_only]                     # HDL parameter -> why the mask lacks it
     [mask_missing]                 # mask parameter -> why the HDL lacks it
@@ -80,6 +91,7 @@ Run from any directory: paths are resolved from this file (tools/ -> repository 
 
 import argparse
 import json
+import os
 import re
 import sys
 import tomllib
@@ -89,7 +101,8 @@ ROOT = Path(__file__).resolve().parent.parent
 BEGIN, END = "@simulink-mapping begin", "@simulink-mapping end"
 TOP_KEYS = {"block", "deviations", "params", "mask_set", "hdl_only", "mask_missing", "ports",
             "unsupported"}
-MASK_SET_KINDS = ("value", "expr", "template", "from_mem", "manual")
+MASK_SET_KINDS = ("value", "expr", "template", "from_mem", "from_params_json", "manual")
+FILE_KINDS = ("from_mem", "from_params_json")       # kinds that may have an else entry
 PARAM_KEYS = {"mask", "type", "values", "hdl_unsupported", "note", "expr"}
 PORT_KEYS = {"order", "note", "renamed", "missing", "extra"}
 
@@ -361,7 +374,29 @@ def _check_expr(where, text, params):
         return [f"{where}: expr does not parse: {e}"]
 
 
-def _check_mask_set_entry(where, e, params, allow_from_mem):
+def test_data_dir(path):
+    """Test data directory of the module in RTL file `path` (as testbench/data_paths.py)."""
+    env = os.environ.get("CASPER_TEST_DATA")
+    root = Path(env).resolve() if env else ROOT / "test_data"
+    return root / path.parent.relative_to(ROOT / "rtl") / path.stem
+
+
+def _missing_params_json_field(field, data_dir):
+    """simdataN names whose params.json lacks `field` (all of them if there is no simdataN)."""
+    sets = sorted(data_dir.glob("simdata[0-9]*"), key=lambda d: int(d.name[7:]))
+    if not sets:
+        return [f"{data_dir.relative_to(data_dir.parents[1])} (no simdataN)"]
+    missing = []
+    for d in sets:
+        try:
+            if field not in json.loads((d / "params.json").read_text()):
+                missing.append(d.name)
+        except (OSError, ValueError):
+            missing.append(d.name)
+    return missing
+
+
+def _check_mask_set_entry(where, e, params, allow_from_mem, data_dir=None):
     errs = []
     if not isinstance(e, dict):
         return [f"{where}: must be a table"]
@@ -372,8 +407,8 @@ def _check_mask_set_entry(where, e, params, allow_from_mem):
     if len(kinds) != 1:
         return errs + [f"{where}: needs exactly one of {', '.join(MASK_SET_KINDS)}"]
     kind = kinds[0]
-    if kind == "from_mem" and not allow_from_mem:
-        errs.append(f"{where}: an else entry cannot be from_mem")
+    if kind in FILE_KINDS and not allow_from_mem:
+        errs.append(f"{where}: an else entry cannot be {kind}")
     elif kind == "value" and isinstance(e["value"], (dict, list)):
         errs.append(f"{where}: value must be a scalar")
     elif kind == "expr":
@@ -393,9 +428,18 @@ def _check_mask_set_entry(where, e, params, allow_from_mem):
     elif kind == "from_mem":
         if e["from_mem"] not in params:
             errs.append(f"{where}: from_mem names '{e['from_mem']}', not a parameter of the module")
+    elif kind == "from_params_json":
+        field = e["from_params_json"]
+        if not isinstance(field, str) or not field.strip():
+            errs.append(f"{where}: from_params_json must name a params.json field")
+        elif allow_from_mem and data_dir is not None and "else" not in e:
+            missing = _missing_params_json_field(field, data_dir)
+            if missing:
+                errs.append(f"{where}: field '{field}' missing in {', '.join(missing)}; "
+                            "add an else entry")
     if "else" in e:
-        if kind != "from_mem":
-            errs.append(f"{where}: else is only allowed with from_mem")
+        if kind not in FILE_KINDS:
+            errs.append(f"{where}: else is only allowed with {' / '.join(FILE_KINDS)}")
         else:
             errs += _check_mask_set_entry(f"{where}.else", e["else"], params, False)
     return errs
@@ -441,7 +485,7 @@ def check(path, data, text):
     for m, e in data.get("mask_set", {}).items():
         if m in masks_of_params:
             errs.append(f"mask_set.{m}: already set through a params entry")
-        errs += _check_mask_set_entry(f"mask_set.{m}", e, params, True)
+        errs += _check_mask_set_entry(f"mask_set.{m}", e, params, True, test_data_dir(path))
     for name in data.get("hdl_only", {}):
         if name not in params:
             errs.append(f"hdl_only.{name}: not a parameter of the module")

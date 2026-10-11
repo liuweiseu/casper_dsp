@@ -157,6 +157,15 @@
 // type = 'edit'
 // note = 'same parameter; the mask name is camelCase'
 //
+// [mask_set.Coeffs]
+// from_params_json = 'COEFFS'
+// [mask_set.Coeffs.else]
+// manual = "coefficient index vector, length N_COEFFS: the coeffs list INIT_FILE was generated from (rtl/FFTs/Twiddle/scripts/gen_twiddle_coeffs.py --coeffs). INIT_FILE holds only the quantized values w[k] = exp(-2*pi*j*bit_rev(Coeffs[k], FFT_SIZE-1)/2^FFT_SIZE), so Coeffs[k] = bit_rev(round(-angle(w[k])*2^FFT_SIZE/(2*pi)) mod 2^FFT_SIZE, FFT_SIZE-1), which recovers indices below 2^(FFT_SIZE-1) only (bit_rev drops higher bits); from_mem cannot express this decode"
+//
+// [[unsupported]]
+// when = 'N_COEFFS > 1 && 2 ** $clog2(N_COEFFS) != N_COEFFS'
+// reason = 'coeff_gen_init.m:281-285 errors (The FFT size must be a power-of-two-multiple of the number of coefficients) when 2^(FFTSize-StepPeriod) / (Coeffs(end) + step - Coeffs(1)) is not a power of two; for an in-order or bit-reversed list with a constant step this span is N_COEFFS * step, so N_COEFFS must be a power of two. A length-3 list is also always treated as in order (coeff_gen_init.m:209-213 checks no step) and errors at coeff_gen_init.m:267-271 unless Coeffs(1) = 0. From source, not run in MATLAB'
+//
 // [[unsupported]]
 // when = 'N_COEFFS > 1 && FFT_SIZE - STEP_PERIOD < 3'
 // reason = 'mlib_devel bug 6 (docs/bugs.md): for in-order Coeffs 0, 1, ..., N_COEFFS-1, coeff_gen gives cosin full_cycle_bits = FFT_SIZE - STEP_PERIOD; below 3, draw_basic_partial_cycle (cosin_init.m:660-663) draws no add_convert1 but cosin_init.m:226 connects to it: Invalid Simulink object name: add_convert1/2 (confirmed in MATLAB R2021a, set 1). The rule depends on the Coeffs list, which the HDL only has in INIT_FILE; this when assumes in-order coefficients'
@@ -167,7 +176,6 @@
 // PLATFORM = 'implementation: memory / primitive vendor (GENERIC, XILINX, ALTERA)'
 //
 // [mask_missing]
-// Coeffs = 'vector parameter: replaced by N_COEFFS and the coefficient file'
 // add_pipe_latency = 'not implemented'
 // mult_pipe_latency = 'not implemented'
 //

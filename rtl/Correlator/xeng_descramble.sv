@@ -62,6 +62,10 @@
 //   "NUM_ANTS odd or < 4 is a $fatal. Simulink builds these (the block description says 'NOT TESTED FOR non-2^N antennas'), but the pivot_pnt / Counter2 range is then non-integer or degenerate.",
 // ]
 //
+// [[unsupported]]
+// when = 'NUM_ANTS == 4'
+// reason = 'Xilinx Counter limit: write_ctrl/Counter2 (casper_library_correlator.slx, SID 489) counts from start_count = pivot_pnt = num_ants/2*num_taps + num_taps*num_ants/4 to cnt_to = num_elements - 1 (num_taps = floor(num_ants/2) + 1, num_elements = nchoosek(num_ants,2) + num_ants; xeng_descramble mask initialization). The two are equal only for num_ants = 4 (9 = 9): Illegal Parameterization: Initial value cannot equal count to value (confirmed in MATLAB R2021a, set 2). xeng uses xeng_descramble_4ant for 4 antennas'
+//
 // [hdl_only]
 // RAM_LATENCY = 'RAM latency fixed in the diagram (1 here, 2 in xeng_descramble_4ant)'
 // PLATFORM = 'implementation: memory / primitive vendor (GENERIC, XILINX, ALTERA)'

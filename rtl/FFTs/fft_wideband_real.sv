@@ -186,6 +186,10 @@
 // when = 'COEFF_GENERATION != 0 && FFT_SIZE - N_INPUTS > $clog2(MULT_LATENCY + (DSP48_ADDERS != 0 ? 2 : ADD_LATENCY) + CONV_LATENCY + 1) + CAL_BITS && FFT_SIZE - N_INPUTS <= $clog2(MULT_LATENCY + CONV_LATENCY + 5) + CAL_BITS'
 // reason = 'coeff_gen draws a feedback_osc for the bit-reversed 2^(FFT_SIZE-N_INPUTS)-entry twiddle lists of fft_direct when log2(length) > ceil(log2(mult+add+conv+1)) + cal_bits (coeff_gen_init.m:260, 496-544), and feedback_osc_init.m:63-73 then errors when ceil(log2(5+mult+conv)) + cal_bits >= log2(length): The number of calibration values requested is the same or larger than the number of output values requested (derived from the init scripts; matches all sets, set 2 confirmed in MATLAB R2021a)'
 //
+// [[unsupported]]
+// when = 'BITGROWTH != 0 && ((INPUT_BIT_WIDTH + FFT_SIZE - N_INPUTS < MAX_BITS ? INPUT_BIT_WIDTH + FFT_SIZE - N_INPUTS : MAX_BITS) * N_INPUTS < MAX_BITS ? (INPUT_BIT_WIDTH + FFT_SIZE - N_INPUTS < MAX_BITS ? INPUT_BIT_WIDTH + FFT_SIZE - N_INPUTS : MAX_BITS) * N_INPUTS : MAX_BITS) != ((INPUT_BIT_WIDTH + FFT_SIZE - N_INPUTS < MAX_BITS ? INPUT_BIT_WIDTH + FFT_SIZE - N_INPUTS : MAX_BITS) + N_INPUTS < MAX_BITS ? (INPUT_BIT_WIDTH + FFT_SIZE - N_INPUTS < MAX_BITS ? INPUT_BIT_WIDTH + FFT_SIZE - N_INPUTS : MAX_BITS) + N_INPUTS : MAX_BITS)'
+// reason = 'mlib_devel bug 4 (docs/bugs.md): the inner fft_direct gets FFTSize = n_inputs and input_bit_width = min(max_bits, input_bit_width + FFTSize - n_inputs) (fft_wideband_real_init.m:382-393) with bitgrowth and max_bits passed on, and fft_direct_init.m:228 then sizes its output bus_expand with min(max_bits, width*n_inputs) instead of min(max_bits, width+n_inputs): Width of slice / Incorrect slice end point in fft_direct/adebus1_0/slice1 (confirmed in MATLAB R2021a, set 3: 44-bit slices of a 36-bit bus)'
+//
 // [hdl_only]
 // SHIFT_SCHEDULE = 'bit mask, bit k = stage k+1; the low FFT_SIZE-N_INPUTS bits go to the biplex part, the rest to fft_direct; set on the mask as the per-stage 0/1 vector shift_schedule = bitget(SHIFT_SCHEDULE, 1:FFT_SIZE) (mask_set)'
 // MEM_DIR = 'implementation: memory initialization file'

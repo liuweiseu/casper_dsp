@@ -36,6 +36,10 @@
 // [mask_set.misc]
 // value = 'off'
 //
+// [[unsupported]]
+// when = 'SCALE_FACTOR < BIN_PT_IN - N_BITS_IN || SCALE_FACTOR > BIN_PT_IN'
+// reason = 'Xilinx Scale (bus_scale -> xbsIndex_r4/Scale scale1, System Generator 2021.1): the output binary point bin_pt_in - scale_factor must lie between the LSB and MSB of the input word, inclusive, i.e. bin_pt_in - n_bits_in <= scale_factor <= bin_pt_in; otherwise Illegal parameterization: Scale factor s ... must be between <lo> and <hi>, inclusive (confirmed in MATLAB R2021a, sets 3 and 4)'
+//
 // [hdl_only]
 // N_BITS_OUT = 'the HDL adds a requantizing convert after the scale'
 // BIN_PT_OUT = 'the HDL adds a requantizing convert after the scale'

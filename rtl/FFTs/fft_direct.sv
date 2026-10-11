@@ -189,6 +189,10 @@
 // [mask_set.floating_point]
 // value = 'off'
 //
+// [[unsupported]]
+// when = 'BITGROWTH != 0 && (INPUT_BIT_WIDTH * FFT_SIZE < MAX_BITS ? INPUT_BIT_WIDTH * FFT_SIZE : MAX_BITS) != (INPUT_BIT_WIDTH + FFT_SIZE < MAX_BITS ? INPUT_BIT_WIDTH + FFT_SIZE : MAX_BITS)'
+// reason = 'mlib_devel bug 4 (docs/bugs.md): fft_direct_init.m:228 sizes the output bus_expand blocks (<a|b>debus<FFTSize-1>_*) with min(max_bits, input_bit_width*FFTSize) instead of the data width min(max_bits, input_bit_width+FFTSize); when the two differ the slices do not match the bus (wider: Incorrect slice end point, confirmed in MATLAB R2021a through fft_wideband_real set 3; narrower, FFT_SIZE = 1: the MSBs are dropped, from source)'
+//
 // [hdl_only]
 // SHIFT_SCHEDULE = 'bit mask, bit s = stage s+1 (s = 0 .. FFT_SIZE-1); set on the mask as the per-stage 0/1 vector shift_schedule = bitget(SHIFT_SCHEDULE, 1:FFT_SIZE) (mask_set)'
 // COEFF_DIR = 'implementation: memory initialization file'

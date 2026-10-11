@@ -13,14 +13,15 @@ MATLAB R2021a Update 8; Vivado / Model Composer 2021.1.
 | 1 | `butterfly_direct_init` passes float parameters that `twiddle_coeff_1` does not have | `butterfly_direct` with `Coeffs = [1]`, `fft_direct` with `map_tail` off | Confirmed in MATLAB R2021a |
 | 2 | `twiddle_coeff_1_init` sets `latency` on `bus_negate`, renamed `csp_latency` | `twiddle_coeff_1` (any use) | Confirmed in MATLAB R2021a |
 | 3 | `twiddle_coeff_1_init` leaves `bus_negate` in floating-point mode | `twiddle_coeff_1` (any use) | From source only (masked by bug 2) |
-| 4 | `fft_direct_init` sizes the output `bus_expand` with `*` instead of `+` | `fft_direct` with `bitgrowth` on | From source only |
+| 4 | `fft_direct_init` sizes the output `bus_expand` with `*` instead of `+` | `fft_direct` with `bitgrowth` on (also inside `fft` and `fft_wideband_real`) | Confirmed in MATLAB R2021a |
 | 5 | Stored copies of `bus_expand` still call the deleted `bus_expand_callback` | `cmult` (in `cmac`, `dual_pol_cmac`, `auto_tap`, `baseline_tap`, `xeng`) and other blocks with a stored `bus_expand` copy | Confirmed in MATLAB R2021a |
 | 6 | `cosin_init` connects to `add_convert1`, which it does not draw for small tables | `twiddle_general` (via `coeff_gen` → `cosin`) with few coefficient phase steps | Confirmed in MATLAB R2021a |
 | 7 | `delay_bram_init` rejects `DelayLen ≤ bram_latency + 1` and empties the block for `DelayLen = 0` | `delay_bram` with `DelayLen ≤ 3` (default `bram_latency` 2), and blocks that use it (e.g. `auto_tap`) | Confirmed in MATLAB R2021a |
 | 8 | `bus_mult` passes 'Round  (unbiased: Even Values)' to a Xilinx `Mult`, which does not offer it | `bus_mult` real lanes with `quantization = 2` | Confirmed in MATLAB R2021a |
 | 9 | The `complex_conj` library block is saved with `floating_point = 'on'` | `complex_conj` added without setting `floating_point` | Confirmed in MATLAB R2021a |
 | 10 | `auto_tap` / `baseline_tap` library blocks hold stale internals that the init skips | `auto_tap` / `baseline_tap` whose mask values equal the stored library values | Confirmed in MATLAB R2021a (`auto_tap`; `baseline_tap` inferred) |
-| 11 | `xeng_descramble_4ant`'s `x_cast` overrides parameters inside a library link | `xeng_descramble_4ant` (any use, at simulation time) | Confirmed in MATLAB R2021a |
+| 11 | `xeng_descramble_4ant`'s `x_cast` overrides parameters inside a library link | `xeng_descramble_4ant` (verified with sets 0, 1 and 2, at simulation time) | Confirmed in MATLAB R2021a |
+| 12 | `auto_tap` / `baseline_tap` replace their delay with a portless stored `delay_slr` and lose its lines | `auto_tap`, `baseline_tap` and `xeng` with `use_bram_delay` off | Confirmed in MATLAB R2021a |
 
 **Environment note:** `pfb_coeff_gen_calc.m:57, 72` computes the PFB
 window through MATLAB's Python interface (`casper_library/python/window.py`).
@@ -194,9 +195,17 @@ with bit growth on, when the width is not capped by `max_bits` (with the
 mask default `max_bits = 19` and 18-bit data the width is capped and the
 bug has no effect).
 
-**Status:** from source only. The port widths come from the casper_dsp
-port analysis; the mis-slicing for `n_streams > 1` has not been run in
-MATLAB.
+**Confirmed in MATLAB R2021a:** `fft_wideband_real` set 3
+(`FFT_SIZE = 6`, `N_INPUTS = 2`, `INPUT_BIT_WIDTH = 12`, `BITGROWTH = 1`,
+`MAX_BITS = 22`). Its `fft_direct` gets `FFTSize = 2` and
+`input_bit_width = min(22, 12 + 4) = 16`, so the final butterflies carry
+`2·min(22, 18) = 36`-bit words while `adebus1_0` slices
+`2·min(22, 32) = 44` bits: "Illegal parameterization: Width of slice" and
+"Incorrect slice end point" in `fft_direct/adebus1_0/slice1` (simulation
+fails at a Gateway Out first; see "Misleading simulation error" below).
+The mis-slicing for `n_streams > 1`, and the narrower case
+`FFTSize = 1` (`input_bit_width·1 < input_bit_width + 1`, the MSBs are
+dropped without an error), are from source only.
 
 **Suggested fix:** in `fft_direct_init.m:228`, use
 `min(max_bits, input_bit_width+FFTSize)`.
@@ -429,9 +438,9 @@ popup has `'Round  (unbiased: Even Values)'` (verified in the 2021.1
 `xbsIndex_r4.slx`). Alternatively, remove option 2 from `bus_mult`'s
 quantization.
 
-## Misleading simulation error (bugs 9 and 10)
+## Misleading simulation error (bugs 4, 9, 10 and 12)
 
-Bugs 9 and 10 build without an error, but simulating the model
+Bugs 4, 9, 10 and 12 build without an error, but simulating the model
 (`run_simulation`) fails at a Gateway Out with an unrelated message:
 
 ```
@@ -439,9 +448,10 @@ The S-function 'sysgen' in '<model>/gw_out_<port>' has specified the option SS_O
 ```
 
 The real error shows only after the `gw_out_*` blocks are commented out
-and the model is compiled. System Generator then reports "Incorrect slice
-end point / Slice endpoints must lie between the LSB and MSB" (during
-"Rate and Type Error Checking") inside the block.
+and the model is compiled. System Generator then reports the real error
+in `sysgen_error.log`: "Incorrect slice end point / Slice endpoints must
+lie between the LSB and MSB" (bugs 4, 9 and 10, during "Rate and Type
+Error Checking") or "Undriven input port" (bug 12) inside the block.
 
 ## 9. complex_conj library block is saved with floating_point = 'on'
 
@@ -548,7 +558,8 @@ resolved library link. The init code was not analysed further.
 **Impact on casper designs:** `xeng_descramble_4ant`. The plain
 `xeng_descramble` (`xeng_descramble_0`) simulates fine.
 
-**Confirmed in MATLAB R2021a:** `xeng_descramble_4ant_0`.
+**Confirmed in MATLAB R2021a:** `xeng_descramble_4ant` sets 0, 1 and 2
+(the workaround below was verified with set 0).
 
 **Workaround (verified in MATLAB R2021a):** set `LinkStatus` to
 `'inactive'` on the top `xeng_descramble_4ant` block when it is added.
@@ -557,6 +568,47 @@ It then builds and simulates (5596 samples).
 **Suggested fix:** the `x_cast` / `xeng_descramble_4ant` mask code should
 break the link (`set_param(gcb, 'LinkStatus', 'inactive')`) before it
 modifies the contents, as the `dual_pol_cmac` mask code does.
+
+## 12. auto_tap / baseline_tap lose the delay lines with use_bram_delay off
+
+**Affected code:** `casper_library/auto_tap_init.m:69-72` and
+`casper_library/baseline_tap_init.m:86-89` (the `use_bram_delay` off
+branch).
+
+**Symptom:** the simulation fails at a Gateway Out (see above). The real
+error is "Undriven input port" at `<model>/auto_tap/delay/dly`
+(`auto_tap`), at `baseline_tap/delay/dly` and `baseline_tap/Delay3`
+(`baseline_tap`), and at `xeng/auto_tap/delay/dly`,
+`xeng/baseline_tap1/Delay3` and `Delay8` (`xeng`).
+
+**Trigger:** `use_bram_delay = 0`, whatever the other parameters. `xeng`
+passes its `use_bram_delay` to its `auto_tap` and `baseline_tap` blocks
+(`xeng_init.m:84-104`).
+
+**Root cause:** the init swaps the block named `delay` with
+`replace_block(blk, 'Name', 'delay', 'casper_library_delays/delay_slr',
+'noprompt')`. The library copy of `delay_slr` is stored with
+`DelayLen = 0`, an empty shell without ports, so `replace_block` drops all
+lines to and from the delay. The following `set_param(..., 'DelayLen', ...)`
+brings the ports back, but nothing reconnects them. The `use_bram_delay`
+on branch replaces it with `delay_bram`, which keeps its ports, so it is
+unaffected.
+
+**Impact on casper designs:** every `auto_tap`, `baseline_tap` and `xeng`
+built with `use_bram_delay` off (SRL delays instead of BRAM).
+
+**Confirmed in MATLAB R2021a:**
+- `auto_tap` set 1 (`N_ANTS = 4`, `N_SIMULTAN = 2`, `N_BITS = 4`,
+  `ACC_LEN = 8`, `USE_BRAM_DELAY = 0`);
+- `baseline_tap` set 2 (`N_ANTS = 6`, `ANT_SEP = 3`, `ACC_LEN = 4`,
+  `USE_BRAM_DELAY = 0`);
+- `xeng` set 1 (`N_ANTS = 4`, `DEMUX_FACTOR = 2`, `ACC_LEN = 16`,
+  `USE_BRAM_DELAY = 0`).
+
+**Suggested fix:** re-save `casper_library_delays` with a `delay_slr` that
+has ports (`DelayLen ≥ 1`), or, in the init scripts, set `DelayLen` and
+reconnect the delay's lines after `replace_block` (or use `reuse_block`
+with explicit `add_line` calls).
 
 ## How casper_dsp handles these bugs
 
@@ -569,6 +621,13 @@ modifies the contents, as the `dual_pol_cmac` mask code does.
     `when = 'FFT_SIZE >= 2 && (MAP_TAIL == 0 || (LARGER_FFT_SIZE == FFT_SIZE && START_STAGE == 1))'`.
     Bug 4 is a `deviations` entry: the HDL uses the real width
     `min(MAX_BITS, INPUT_BIT_WIDTH + FFT_SIZE)`.
+- **Bug 4:** `unsupported` entries on `rtl/FFTs/fft_direct.sv`
+  (`BITGROWTH != 0` and `min(MAX_BITS, INPUT_BIT_WIDTH·FFT_SIZE)` ≠
+  `min(MAX_BITS, INPUT_BIT_WIDTH + FFT_SIZE)`) and on
+  `rtl/FFTs/fft_wideband_real.sv` (the same rule for the inner
+  `fft_direct`: `FFTSize = N_INPUTS`, input width
+  `min(MAX_BITS, INPUT_BIT_WIDTH + FFT_SIZE − N_INPUTS)`). They skip
+  `fft_wideband_real` set 3; no `fft_direct` set is affected.
 - **Test configurations** (`tests/simulation.toml`): no parameter set
   hits bugs 1–3.
   - `butterfly_direct` set 2 (formerly `Coeffs = [1]`) is now a
@@ -612,6 +671,9 @@ modifies the contents, as the `dual_pol_cmac` mask code does.
   equivalent expression); not yet in casper_dsp.
 - **Bug 11:** workaround verified in the Simulink spec (`LinkStatus`
   `'inactive'`); not yet in casper_dsp.
+- **Bug 12:** `unsupported` entries `USE_BRAM_DELAY == 0` on
+  `rtl/Correlator/auto_tap.sv`, `baseline_tap.sv` and `xeng.sv`. They skip
+  `auto_tap` set 1, `baseline_tap` set 2 and `xeng` set 1.
 - **Simulink parameter limits:** other configurations that the init scripts
   reject are also `unsupported` entries (each with the init-script
   reference in its `reason`):
@@ -619,13 +681,24 @@ modifies the contents, as the `dual_pol_cmac` mask code does.
     and the modules that reach it: `butterfly_direct`, `fft_stage_n`,
     `biplex_core`, `fft_biplex_real_4x` and `fft_wideband_real`;
   - `auto_tap` and `xeng` when the `delay_bram` delay is not larger than
-    `max(BRAM_LATENCY, 2) + 1`;
+    `max(BRAM_LATENCY, 2) + 1`, and `tap_real` when `DELAY ≤ BRAM_LATENCY + 1`
+    (its stored `delay_bram` gets `DelayLen = delay`; bug 7);
+  - `twiddle_general` when `N_COEFFS > 1` is not a power of two
+    (`coeff_gen_init.m:281-285`);
+  - `scale` when `SCALE_FACTOR` is outside
+    `BIN_PT_IN − N_BITS_IN … BIN_PT_IN` (the Xilinx `Scale` output binary
+    point must lie within the input word: "Illegal parameterization: Scale
+    factor s");
+  - `xeng_descramble` with `NUM_ANTS == 4`, where `write_ctrl/Counter2`
+    would count from `pivot_pnt` = 9 to `num_elements − 1` = 9 (Xilinx
+    `Counter`: "Initial value cannot equal count to value");
   - `adder_subtractor` with `QUANTIZATION == 2`;
   - `fft_wideband_real` and `fft_direct` when `coeff_gen` draws a
     `feedback_osc` with too few phase steps.
 
-  They skip `twiddle_stage_2` set 2, `auto_tap` set 3, `adder_subtractor`
-  set 4, `fft_wideband_real` set 2 and `twiddle_general` set 1; the HDL
+  They skip `twiddle_stage_2` set 2, `auto_tap` set 3, `tap_real` set 3,
+  `twiddle_general` sets 1 and 3, `scale` sets 3 and 4, `xeng_descramble`
+  set 2, `adder_subtractor` set 4 and `fft_wideband_real` set 2; the HDL
   tests of these sets still run.
 - **Coverage lost:** the HDL `twiddle_coeff_1` (and the
   `N_COEFFS = 1, COEFF_0 = 1` branch of `butterfly_direct`) and

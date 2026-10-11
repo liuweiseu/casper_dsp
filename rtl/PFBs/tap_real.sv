@@ -59,6 +59,10 @@
 // 0 = 'off'
 // 1 = 'on'
 //
+// [[unsupported]]
+// when = 'DELAY <= BRAM_LATENCY + 1'
+// reason = 'mlib_devel bug 7 (docs/bugs.md): the stored delay_bram inside tap_real has DelayLen = delay and bram_latency = bram_latency (casper_library_pfbs.slx, system_39, SID 39:17), and delay_bram_init.m:40-43 rejects DelayLen <= bram_latency + 1 (delay value must be greater than BRAM Latency + 1; DelayLen = 0 empties the block, delay_bram_init.m:29-34). Confirmed in MATLAB R2021a, set 3'
+//
 // [hdl_only]
 // N_COEFFS = "coefficient count; casper infers the coeff bus width from the input signal (Slice1 'Two Bit Locations' MSB..coeff_width, system_39.xml)"
 // PLATFORM = 'implementation: memory / primitive vendor (GENERIC, XILINX, ALTERA)'
