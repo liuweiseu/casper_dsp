@@ -92,12 +92,14 @@
 // type = 'edit'
 // note = 'same parameter; the mask name is camelCase'
 //
+// [mask_set.floating_point]
+// value = 'off'
+//
 // [hdl_only]
 // MAP_DIR = 'implementation: memory initialization file'
 // PLATFORM = 'implementation: memory / primitive vendor (GENERIC, XILINX, ALTERA)'
 //
 // [mask_missing]
-// floating_point = 'floating point is not implemented'
 // float_type = 'floating point is not implemented'
 // exp_width = 'floating point is not implemented'
 // frac_width = 'floating point is not implemented'

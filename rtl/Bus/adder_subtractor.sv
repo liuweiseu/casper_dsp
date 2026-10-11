@@ -47,11 +47,13 @@
 // when = 'QUANTIZATION == 2'
 // reason = "bus_addsub_init.m:333-338 maps only quantization 0 and 1, so quant is undefined for 2: Unrecognized function or variable 'quant'"
 //
+// [mask_set.floating_point]
+// value = 'off'
+//
 // [hdl_only]
 //
 // [mask_missing]
 // async = 'async mode (en/dvalid ports) is not implemented'
-// floating_point = 'floating point is not implemented'
 // float_type = 'floating point is not implemented'
 // exp_width = 'floating point is not implemented'
 // frac_width = 'floating point is not implemented'

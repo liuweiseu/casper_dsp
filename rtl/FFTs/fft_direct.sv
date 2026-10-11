@@ -186,6 +186,9 @@
 // when = 'MAP_TAIL != 0 && LARGER_FFT_SIZE == FFT_SIZE + 1 && FFT_SIZE >= 2'
 // reason = "mlib_devel bug 6 (docs/bugs.md): with 2-entry twiddle lists, coeff_gen's cosin gets full_cycle_bits < 3, draw_basic_partial_cycle (cosin_init.m:660-663) draws no add_convert1 but cosin_init.m:226 still connects to it: Invalid Simulink object name: add_convert1/2 (some butterflies also hit coeff_gen_init.m:267-271, in-order coefficients not starting at 0); from source, exact for START_STAGE = LARGER_FFT_SIZE - FFT_SIZE + 1"
 //
+// [mask_set.floating_point]
+// value = 'off'
+//
 // [hdl_only]
 // SHIFT_SCHEDULE = 'bit mask, bit s = stage s+1 (s = 0 .. FFT_SIZE-1); set on the mask as the per-stage 0/1 vector shift_schedule = bitget(SHIFT_SCHEDULE, 1:FFT_SIZE) (mask_set)'
 // COEFF_DIR = 'implementation: memory initialization file'
@@ -193,7 +196,6 @@
 // N_BITS_OUT = 'derived from other parameters (do not override)'
 //
 // [mask_missing]
-// floating_point = 'floating point is not implemented'
 // float_type = 'floating point is not implemented'
 // exp_width = 'floating point is not implemented'
 // frac_width = 'floating point is not implemented'

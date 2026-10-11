@@ -38,11 +38,13 @@
 // type = 'edit'
 // note = 'same parameter; the mask name is camelCase'
 //
+// [mask_set.floating_point]
+// value = 'off'
+//
 // [hdl_only]
 //
 // [mask_missing]
 // misc = 'misc pass-through (misci/misco ports) is not implemented'
-// floating_point = 'floating point is not implemented'
 // float_type = 'floating point is not implemented'
 // exp_width = 'floating point is not implemented'
 // frac_width = 'floating point is not implemented'

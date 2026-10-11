@@ -18,6 +18,9 @@ MATLAB R2021a Update 8; Vivado / Model Composer 2021.1.
 | 6 | `cosin_init` connects to `add_convert1`, which it does not draw for small tables | `twiddle_general` (via `coeff_gen` → `cosin`) with few coefficient phase steps | Confirmed in MATLAB R2021a |
 | 7 | `delay_bram_init` rejects `DelayLen ≤ bram_latency + 1` and empties the block for `DelayLen = 0` | `delay_bram` with `DelayLen ≤ 3` (default `bram_latency` 2), and blocks that use it (e.g. `auto_tap`) | Confirmed in MATLAB R2021a |
 | 8 | `bus_mult` passes 'Round  (unbiased: Even Values)' to a Xilinx `Mult`, which does not offer it | `bus_mult` real lanes with `quantization = 2` | Confirmed in MATLAB R2021a |
+| 9 | The `complex_conj` library block is saved with `floating_point = 'on'` | `complex_conj` added without setting `floating_point` | Confirmed in MATLAB R2021a |
+| 10 | `auto_tap` / `baseline_tap` library blocks hold stale internals that the init skips | `auto_tap` / `baseline_tap` whose mask values equal the stored library values | Confirmed in MATLAB R2021a (`auto_tap`; `baseline_tap` inferred) |
+| 11 | `xeng_descramble_4ant`'s `x_cast` overrides parameters inside a library link | `xeng_descramble_4ant` (any use, at simulation time) | Confirmed in MATLAB R2021a |
 
 **Environment note:** `pfb_coeff_gen_calc.m:57, 72` computes the PFB
 window through MATLAB's Python interface (`casper_library/python/window.py`).
@@ -283,8 +286,9 @@ With the workaround applied to all failing correlator sets:
   `N_BITS = 8`, `ACC_LEN = 4`, ADD / MULT / BRAM latency 1 / 1 / 1,
   `MULT_TYPE = 0`, `USE_BRAM_DELAY = 1`). The `CallbackEvalErr` is gone, but
   the build now stops with a bare "Failed to evaluate mask initialization
-  commands" and no further detail in the log. This is a different cause,
-  still unknown.
+  commands" and no further detail in the log. This is a different cause:
+  the `delay_bram` minimum delay check (bug 7), reached through
+  `auto_tap_init.m`.
 
 ## 6. cosin connects to an add_convert1 it does not draw
 
@@ -425,6 +429,135 @@ popup has `'Round  (unbiased: Even Values)'` (verified in the 2021.1
 `xbsIndex_r4.slx`). Alternatively, remove option 2 from `bus_mult`'s
 quantization.
 
+## Misleading simulation error (bugs 9 and 10)
+
+Bugs 9 and 10 build without an error, but simulating the model
+(`run_simulation`) fails at a Gateway Out with an unrelated message:
+
+```
+The S-function 'sysgen' in '<model>/gw_out_<port>' has specified the option SS_OPTION_PORT_SAMPLE_TIMES_ASSIGNED and specified inherited for sample time number 0. ...
+```
+
+The real error shows only after the `gw_out_*` blocks are commented out
+and the model is compiled. System Generator then reports "Incorrect slice
+end point / Slice endpoints must lie between the LSB and MSB" (during
+"Rate and Type Error Checking") inside the block.
+
+## 9. complex_conj library block is saved with floating_point = 'on'
+
+**Affected code:** `casper_library_misc.slx/complex_conj`
+(`system_root.xml`, SID 415), with `complex_conj_init.m` (the
+`if floating_point == 1` branch).
+
+**Symptom:** the simulation fails at `gw_out_z_conj` with the sample time
+error above. The real error is an incorrect slice end point in
+`complex_conj/munge_in/split/slice1`.
+
+**Trigger:** a freshly added `complex_conj` whose `floating_point` is not
+set.
+
+**Root cause:** the saved mask value is `floating_point = 'on'`, while
+the defaults listed in `complex_conj_init.m` are `'off'`. The block
+therefore builds in single-precision float: `complex_conj_init.m` sets
+`n_bits = exp_width + frac_width = 32` and `bin_pt = 0`.
+`munge_in/split/slice1` then slices out of range against a fixed-point
+input (`complex_conj_0`: a 36-bit bus, 2 × 18).
+
+**Impact on casper designs:** any design that drops in `complex_conj` and
+relies on the mask defaults. Of the 18 mapped casper_dsp blocks with a
+`floating_point` mask parameter, only `complex_conj` and `bus_negate`
+are saved with `'on'` (for `bus_negate` see bug 3).
+
+**Confirmed in MATLAB R2021a:** all 4 `complex_conj` sets failed. With
+`floating_point = 'off'` all 4 build and simulate (129 samples each).
+
+**Suggested fix:** re-save the library block with `floating_point = 'off'`,
+matching the defaults in `complex_conj_init.m`.
+
+## 10. auto_tap / baseline_tap hold stale internals that the init skips
+
+**Affected code:** `casper_library_correlator.slx/auto_tap` and
+`baseline_tap`; `auto_tap_init.m:24` (the early return) and
+`auto_tap_init.m:45-59` (the skipped `dual_pol_cmac` setup).
+
+**Symptom:** the simulation fails with the sample time error above
+(`gw_out_a_del_out` for `baseline_tap`). The real error is an incorrect
+slice end point in `dual_pol_cmac/Slice11`.
+
+**Trigger:** the mask values of the added block equal the values stored
+in the library. `auto_tap` set 0 and `baseline_tap` set 0 failed.
+
+**Root cause (verified for `auto_tap` in MATLAB):**
+- The saved mask values of the library `auto_tap` are `n_ants` 4,
+  `n_simultan` 2, `n_bits` 4, `acc_len` 64, `add_latency` 1,
+  `mult_latency` 2, `bram_latency` 2, `mult_type` 0,
+  `use_bram_delay` 1. These are exactly `auto_tap` set 0.
+- Its `UserData.state` hash (69913246) matches these values.
+- The stored internal `dual_pol_cmac` is stale: `acc_len` 128,
+  `mult_latency` 1, `multiplier_implementation` 'embedded multiplier core'.
+- When the block is added with these values,
+  `auto_tap_init.m:24` (`if same_state(blk, varargin{:}), return, end`)
+  returns early. `dual_pol_cmac` is never re-parameterised;
+  `auto_tap_init.m:45-59` would set `acc_len` 64, `mult_latency` 2 and
+  'behavioral HDL'.
+- `dual_pol_cmac` then expects a 128-bit `acc_in` (4 × 16 × 2), while the
+  port carries 120 bits (4 × 15 × 2), so `dual_pol_cmac/Slice11` goes out
+  of range.
+
+`baseline_tap` shows the same symptom and the same fix works. Its library
+values were not dumped, so the cause there is inferred.
+
+**Experiment:**
+- Added with `acc_len` `'64'`: the internals stay stale.
+- Added with `acc_len` `'2^6'`, or with 65 and then changed to 64: the
+  init runs, and `dual_pol_cmac` gets `acc_len` 64 and `mult_latency` 2.
+
+**Impact on casper designs:** only blocks whose mask values equal the
+stored library values. Any other configuration runs the init.
+
+**Confirmed in MATLAB R2021a:** `auto_tap` set 0. `baseline_tap` set 0
+fails the same way.
+
+**Workaround (verified in MATLAB R2021a):** give `acc_len` as an equivalent
+expression: `'2^6'` for `auto_tap_0`, `'2^5'` for `baseline_tap_0`.
+`same_state` compares the strings, so the init runs. Both sets then build
+and simulate (1085 and 573 samples).
+
+**Suggested fix:** re-save the library blocks after running their init, or
+make `same_state` also check that the stored contents match.
+
+## 11. xeng_descramble_4ant: x_cast overrides parameters inside a library link
+
+**Affected code:** `casper_library_correlator.slx/xeng_descramble_4ant`
+and its `x_cast` mask initialization.
+
+**Symptom:** `xeng_descramble_4ant_0` builds, but the simulation fails:
+
+```
+Error in '<model>/xeng_descramble_4ant/x_cast': Failed to evaluate mask initialization commands.
+Caused by: Attempting to override parameters of '<model>/xeng_descramble_4ant/x_cast' which is inside a library link
+```
+
+**Trigger:** simulating any `xeng_descramble_4ant` whose block is still a
+resolved library link.
+
+**Root cause:** the `x_cast` mask initialization sets parameters of blocks
+inside itself while the enclosing `xeng_descramble_4ant` is still a
+resolved library link. The init code was not analysed further.
+
+**Impact on casper designs:** `xeng_descramble_4ant`. The plain
+`xeng_descramble` (`xeng_descramble_0`) simulates fine.
+
+**Confirmed in MATLAB R2021a:** `xeng_descramble_4ant_0`.
+
+**Workaround (verified in MATLAB R2021a):** set `LinkStatus` to
+`'inactive'` on the top `xeng_descramble_4ant` block when it is added.
+It then builds and simulates (5596 samples).
+
+**Suggested fix:** the `x_cast` / `xeng_descramble_4ant` mask code should
+break the link (`set_param(gcb, 'LinkStatus', 'inactive')`) before it
+modifies the contents, as the `dual_pol_cmac` mask code does.
+
 ## How casper_dsp handles these bugs
 
 - **Mapping:** the HDL-Simulink Mapping blocks record the bugs, so that
@@ -451,8 +584,9 @@ quantization.
   Simulink builds use the no-op `bus_expand_callback.m` workaround above
   (`/data/casper/tools/plugins-demo2/matlab_compat/bus_expand_callback.m`,
   outside mlib_devel, on `MATLABPATH`). All correlator sets that bug 5
-  broke now build, except `auto_tap` set 3, which fails for another,
-  still unknown reason.
+  broke now build, except `auto_tap` set 3, which hits bug 7 (the
+  `delay_bram` minimum delay) and is covered by the `auto_tap`
+  `unsupported` entry.
 - **Bug 6:** `unsupported` entries on `rtl/FFTs/Twiddle/twiddle_general.sv`
   (`N_COEFFS > 1 && FFT_SIZE - STEP_PERIOD < 3`, assuming in-order
   coefficients; the HDL holds the list only in `INIT_FILE`) and on
@@ -467,6 +601,17 @@ quantization.
 - **Bug 8:** an `unsupported` entry on `rtl/Bus/multiplier.sv`
   (`QUANTIZATION == 2`). It skips `multiplier` set 1; the HDL test still
   runs.
+- **Bug 9:** the mapping sets `floating_point = 'off'` explicitly:
+  `[mask_set.floating_point] value = 'off'` in `complex_conj` (required),
+  `negate`, `adder_subtractor`, `multiplier`, `bi_real_unscr_4x`,
+  `hilbert`, `mirror_spectrum`, `fft_unscrambler`, `fft_biplex_real_4x`
+  and `fft_direct`. The other 8 blocks map it through their
+  `FLOATING_POINT` parameter (HDL default 0 = `'off'`). A later re-save of
+  a library block therefore cannot switch an export to float.
+- **Bug 10:** workaround verified in the Simulink spec (`acc_len` as an
+  equivalent expression); not yet in casper_dsp.
+- **Bug 11:** workaround verified in the Simulink spec (`LinkStatus`
+  `'inactive'`); not yet in casper_dsp.
 - **Simulink parameter limits:** other configurations that the init scripts
   reject are also `unsupported` entries (each with the init-script
   reference in its `reason`):

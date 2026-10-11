@@ -34,10 +34,12 @@
 // 1 = 'Saturate'
 // 2 = 'Wrap'
 //
+// [mask_set.floating_point]
+// value = 'off'
+//
 // [hdl_only]
 //
 // [mask_missing]
-// floating_point = 'floating point is not implemented'
 // float_type = 'floating point is not implemented'
 // exp_width = 'floating point is not implemented'
 // frac_width = 'floating point is not implemented'

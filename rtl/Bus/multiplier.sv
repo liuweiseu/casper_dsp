@@ -48,10 +48,12 @@
 // when = 'QUANTIZATION == 2'
 // reason = 'mlib_devel bug 8 (docs/bugs.md): bus_mult_init.m:638-641 maps quantization 2 to Round  (unbiased: Even Values) and passes it to xbsIndex_r4/Mult (bus_mult_init.m:683-686), whose quantization popup offers only Truncate and Round  (unbiased: +/- Inf): Invalid setting in Xilinx Multiplier Block for parameter quantization (confirmed in MATLAB R2021a)'
 //
+// [mask_set.floating_point]
+// value = 'off'
+//
 // [hdl_only]
 //
 // [mask_missing]
-// floating_point = 'floating point is not implemented'
 // float_type = 'floating point is not implemented'
 // input_vec_a = 'single lane: the lane count is not modelled'
 // input_vec_b = 'single lane: the lane count is not modelled'
