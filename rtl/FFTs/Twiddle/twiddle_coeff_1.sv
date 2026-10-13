@@ -21,7 +21,8 @@
 //   LATENCY = 1 + MULT_LATENCY + ADD_LATENCY + CONV_LATENCY
 // (casper_library: "must match twiddle_general with single coefficient");
 // BRAM_LATENCY is accepted but, as in casper_library, not used.
-// ASYNC is declared for traceability; must be 0.
+// ASYNC = 1 (casper async): en only qualifies the data; dvalid = en delayed
+// by the latency.
 //
 // ── HDL-Simulink Mapping ─────────────────────────────────────────────────────
 // Differences between this HDL and its Simulink block (casper_library
@@ -43,8 +44,7 @@
 // [params.ASYNC]
 // mask = 'async'
 // type = 'checkbox'
-// hdl_unsupported = [1]
-// note = 'async=on (en/dvalid ports) is not implemented: elaboration stops with $fatal'
+// note = 'async = on: dvalid = en delayed 1 + mult_latency + add_latency + conv_latency by a free Delay; the data path is not gated. The HDL ports always exist, dvalid = 0 when ASYNC = 0'
 // [params.ASYNC.values]
 // 0 = 'off'
 // 1 = 'on'
@@ -54,11 +54,10 @@
 // [mask_missing]
 //
 // [ports]
+// order = 'Simulink: ai, bi, sync_in, en (async only) -> ao, bwo, sync_out, dvalid (async only) (checked on a built block for twiddle_coeff_0); HDL: the same order with ai / bi / ao / bwo split into re / im lanes'
 // note = 'each Simulink complex port x is split into x_re / x_im'
 // [ports.renamed]
 // [ports.missing]
-// en = 'async=on only (not implemented)'
-// dvalid = 'async=on only (not implemented)'
 // [ports.extra]
 // @simulink-mapping end
 
@@ -82,12 +81,20 @@ module twiddle_coeff_1 #(
     output logic [INPUT_BIT_WIDTH-1:0] ao_im  [N_INPUTS],
     output logic [INPUT_BIT_WIDTH-1:0] bwo_re [N_INPUTS],
     output logic [INPUT_BIT_WIDTH-1:0] bwo_im [N_INPUTS],
-    output logic                       sync_out
+    input  logic                       en = 1'b1,
+    output logic                       sync_out,
+    output logic                       dvalid
 );
 
     localparam int LATENCY = 1 + MULT_LATENCY + ADD_LATENCY + CONV_LATENCY;
 
-    if (ASYNC != 0) $fatal(1, "twiddle_coeff_1: ASYNC is not implemented");
+    // ASYNC = 1: en only qualifies the data; dvalid = en through a free Delay
+    // of LATENCY (den, twiddle_coeff_1_init.m:32, 101-105); 0 when ASYNC = 0
+    if (ASYNC != 0) begin : GEN_DVALID
+        delay #(.LATENCY(LATENCY), .BITWIDTH(1)) u_dvalid (.clk(clk), .din(en), .dout(dvalid));
+    end else begin : GEN_NO_DVALID
+        assign dvalid = 1'b0;
+    end
 
     for (genvar n = 0; n < N_INPUTS; n++) begin : GEN_LANE
         // a leg: delay-matched only
@@ -105,7 +112,7 @@ module twiddle_coeff_1 #(
             .N_BITS_IN (INPUT_BIT_WIDTH), .BIN_PT_IN (BIN_PT_IN), .TYPE_IN (1),
             .N_BITS_OUT(INPUT_BIT_WIDTH), .BIN_PT_OUT(BIN_PT_IN), .TYPE_OUT(1),
             .QUANTIZATION(0), .OVERFLOW(1), .CSP_LATENCY(LATENCY)
-        ) u_neg_re (.clk(clk), .din(bi_re[n]), .dout(bwo_im[n]));
+        ) u_neg_re (.clk(clk), .din(bi_re[n]), .dout(bwo_im[n]), .misco());
     end
 
     pipeline #(.BITWIDTH(1), .CSP_LATENCY(LATENCY)) u_sync (

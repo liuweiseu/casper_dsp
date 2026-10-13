@@ -71,45 +71,107 @@ def m_pipeline(p, stim):
     return delayed_din(stim["din"], p["CSP_LATENCY"])
 
 
+def opt(stim, name, default, cycles):
+    """Optional input stream (rst / en), or a constant when the set has none."""
+    return stim.get(name, [default] * cycles)
+
+
 def m_single_port_ram(p, stim):
+    """Xilinx Single Port RAM, latency 1, Read Before Write (built block).
+
+    en = 0 freezes the edge (no read, no write); rst loads INIT_REG instead of
+    the read whatever en is (the built block, unlike the literal xlSPRAM.sgm
+    text), and an enabled write still happens. dout powers up to INIT_REG.
+    """
+    cycles = len(stim["we"])
     mem = [0] * (1 << p["ADDR_WIDTH"])
-    dout = 0
+    dout = p.get("INIT_REG", 0)
     out = []
-    for we, addr, din in zip(stim["we"], stim["addr"], stim["din"]):
+    rsts = opt(stim, "rst", 0, cycles) if p.get("RST") else [0] * cycles
+    ens = opt(stim, "en", 1, cycles) if p.get("EN") else [1] * cycles
+    for we, addr, din, rst, en in zip(stim["we"], stim["addr"], stim["din"], rsts, ens):
         out.append((dout,))
-        dout = mem[addr]            # READ_FIRST: old contents
-        if we:
+        if rst:
+            dout = p.get("INIT_REG", 0)
+        elif en:
+            dout = mem[addr]                # READ_FIRST: old contents
+        if en and we:
             mem[addr] = din
     return out
 
 
 def m_dual_port_ram(p, stim):
+    """Xilinx Dual Port RAM, latency 1, Read Before Write on both ports (built block).
+
+    A disabled port (enx = 0) neither reads nor writes and holds its output;
+    rstx loads INIT_X whether or not the port is enabled. Outputs show
+    INIT_A / INIT_B in the first cycle only: the output registers power up to
+    0, so a port whose first edge is disabled reads 0 until it is enabled.
+    """
+    cycles = len(stim["we_a"])
     mem = [0] * (1 << p["ADDR_WIDTH"])
-    da = db = 0
+    ia, ib = p.get("INIT_A", 0), p.get("INIT_B", 0)
+    da, db = 0, 0
+    ena = opt(stim, "ena", 1, cycles) if p.get("EN_A") else [1] * cycles
+    enb = opt(stim, "enb", 1, cycles) if p.get("EN_B") else [1] * cycles
+    rsta = opt(stim, "rsta", 0, cycles) if p.get("RST_A") else [0] * cycles
+    rstb = opt(stim, "rstb", 0, cycles) if p.get("RST_B") else [0] * cycles
     out = []
-    for we_a, addr_a, din_a, we_b, addr_b, din_b in zip(
+    for t, (we_a, addr_a, din_a, we_b, addr_b, din_b) in enumerate(zip(
             stim["we_a"], stim["addr_a"], stim["din_a"],
-            stim["we_b"], stim["addr_b"], stim["din_b"]):
-        out.append((da, db))
-        da, db = mem[addr_a], mem[addr_b]   # READ_FIRST on both ports
-        if we_a:
+            stim["we_b"], stim["addr_b"], stim["din_b"])):
+        out.append((ia, ib) if t == 0 else (da, db))
+        ra, rb = mem[addr_a], mem[addr_b]    # READ_FIRST on both ports
+        da = ia if rsta[t] else (ra if ena[t] else da)
+        db = ib if rstb[t] else (rb if enb[t] else db)
+        if ena[t] and we_a:
             mem[addr_a] = din_a
-        if we_b:
+        if enb[t] and we_b:
             mem[addr_b] = din_b
     return out
 
 
 def m_rom(p, stim, image):
+    """Xilinx ROM, latency 1 (built block): en = 0 freezes dout; rst loads
+    INIT_REG whatever en is. dout shows INIT_REG in the first cycle only: the
+    output register powers up to 0, so a disabled first edge leaves 0."""
+    cycles = len(stim["addr"])
     dout = 0
+    rsts = opt(stim, "rst", 0, cycles) if p.get("RST") else [0] * cycles
+    ens = opt(stim, "en", 1, cycles) if p.get("EN") else [1] * cycles
     out = []
-    for addr in stim["addr"]:
-        out.append((dout,))
-        dout = image[addr]
+    for t, (addr, rst, en) in enumerate(zip(stim["addr"], rsts, ens)):
+        out.append((p.get("INIT_REG", 0) if t == 0 else dout,))
+        if rst:
+            dout = p.get("INIT_REG", 0)
+        elif en:
+            dout = image[addr]
     return out
 
 
 def m_delay_bram(p, stim):
-    return delayed_din(stim["din"], p["DELAY_LEN"])
+    """din delayed DELAY_LEN cycles; with ASYNC a delay of DELAY_LEN enabled
+    samples that holds while en = 0 (delay_bram_init.m:104-158: counter, RAM
+    and output stages all gated by en; checked against Simulink)."""
+    if not p.get("ASYNC"):
+        return delayed_din(stim["din"], p["DELAY_LEN"])
+    n, sr, out = p["DELAY_LEN"], [0] * p["DELAY_LEN"], []
+    for d, e in zip(stim["din"], stim["en"]):
+        out.append((sr[-1],))
+        if e:
+            sr = [d] + sr[:-1]
+    return out
+
+
+def s_delay_bram(rng, p, cycles):
+    """din, plus a random en for ASYNC sets (~70 % high, a few long gaps)."""
+    s = s_din(rng, p["BITWIDTH"], cycles)
+    if p.get("ASYNC"):
+        en = [1 if rng.random() < 0.75 else 0 for _ in range(cycles)]
+        for start in (cycles // 4, cycles // 2):
+            en[start:start + 8] = [0] * 8
+        s["en"] = en
+    return s
 
 
 # ── stimulus ────────────────────────────────────────────────────────────────
@@ -129,15 +191,34 @@ def s_din(rng, width, cycles):
     return {"din": [rng.randrange(1 << width) for _ in range(cycles)]}
 
 
+def s_options(rng, p, cycles, names):
+    """Random streams for the enabled optional ports: {param: port}.
+
+    Drawn after the other stimulus, so sets without options are unchanged.
+    en is mostly 1, rst rare (plus one reset mid-run).
+    """
+    s = {}
+    for param, port in names.items():
+        if not p.get(param):
+            continue
+        if param.startswith("EN"):
+            s[port] = [1 if rng.random() < 0.7 else 0 for _ in range(cycles)]
+        else:
+            s[port] = [1 if rng.random() < 0.06 else 0 for _ in range(cycles)]
+            s[port][cycles // 2] = 1
+    return s
+
+
 def s_single_port_ram(rng, p, cycles):
     dw, aw = p["DATA_WIDTH"], p["ADDR_WIDTH"]
     # write-heavy first half (fills the memory), read-heavy second half
     we = [int(rng.random() < (0.75 if i < cycles // 2 else 0.25)) for i in range(cycles)]
-    return {
+    s = {
         "we": we,
         "addr": [rng.randrange(1 << aw) for _ in range(cycles)],
         "din": [rng.randrange(1 << dw) for _ in range(cycles)],
     }
+    return dict(s, **s_options(rng, p, cycles, {"RST": "rst", "EN": "en"}))
 
 
 def s_dual_port_ram(rng, p, cycles):
@@ -152,7 +233,8 @@ def s_dual_port_ram(rng, p, cycles):
         for k, v in [("we_a", we_a), ("addr_a", addr_a), ("din_a", rng.randrange(1 << dw)),
                      ("we_b", we_b), ("addr_b", addr_b), ("din_b", rng.randrange(1 << dw))]:
             s[k].append(v)
-    return s
+    return dict(s, **s_options(rng, p, cycles, {"EN_A": "ena", "EN_B": "enb",
+                                                 "RST_A": "rsta", "RST_B": "rstb"}))
 
 
 def s_rom(rng, p, cycles):
@@ -161,6 +243,11 @@ def s_rom(rng, p, cycles):
     addrs = [i % (1 << aw) for i in range(1 << aw)]
     addrs += [rng.randrange(1 << aw) for _ in range(cycles - len(addrs))]
     return {"addr": addrs[:cycles]}
+
+
+def s_rom_options(rng, p, cycles):
+    """ROM stimulus plus the enabled rst / en streams (drawn after the image)."""
+    return s_options(rng, p, cycles, {"RST": "rst", "EN": "en"})
 
 
 # ── test configurations ─────────────────────────────────────────────────────
@@ -208,12 +295,21 @@ MODULES = {
               "1-cycle registered read. The first half of each run is "
               "write-heavy (75 % writes) to fill the memory, the second half "
               "read-heavy (25 % writes); every write is also a "
-              "read-during-write of the same address.",
+              "read-during-write of the same address. Sets with `RST` / `EN` "
+              "drive random `sim_rst.csv` (rare, plus one mid-run) / "
+              "`sim_en.csv` (70 % high) as the built Xilinx block (latency 1, "
+              "checked against Simulink): `en` = 0 freezes the edge, `rst` "
+              "loads `INIT_REG` whatever `en` is, and `INIT_REG` is also the "
+              "power-on output; the other sets leave the "
+              "options at 0 (not in `params.json`).",
         tests=[
             (P(RAM, [8, 4]), 512, "16 × 8"),
             (P(RAM, [16, 6]), 512, "64 × 16"),
             (P(RAM, [1, 3]), 256, "8 × 1"),
             (P(RAM, [32, 8]), 1024, "256 × 32"),
+            (dict(P(RAM, [8, 4]), RST=1, EN=1, INIT_REG=0xA5), 512,
+             "16 × 8 with rst / en ports, init_reg 0xA5"),
+            (dict(P(RAM, [6, 3]), EN=1), 256, "8 × 6 with the en port only"),
         ]),
     "dual_port_ram": dict(
         inputs=["we_a", "addr_a", "din_a", "we_b", "addr_b", "din_b"],
@@ -224,11 +320,21 @@ MODULES = {
               "write at random (50 % writes each); cross-port collisions "
               "(same address with a write), which the contract leaves "
               "undefined, are removed from the stimulus by moving port B to "
-              "the next address.",
+              "the next address. Sets with `RST_x` / `EN_x` drive random "
+              "`sim_rstx.csv` / `sim_enx.csv` as Xilinx `xlDPBRAMXPM.sgm` "
+              "(latency 1): a disabled port neither reads nor writes and holds "
+              "its output, `rstx` loads `INIT_X` even on a disabled port, and "
+              "the outputs show `INIT_A` / `INIT_B` in cycle 0 only, then 0 "
+              "until the port's first enabled read (checked against Simulink); the other sets "
+              "leave the options at 0 (not in `params.json`).",
         tests=[
             (P(RAM, [8, 4]), 512, "16 × 8"),
             (P(RAM, [16, 6]), 512, "64 × 16"),
             (P(RAM, [32, 5]), 512, "32 × 32"),
+            (dict(P(RAM, [8, 4]), RST_A=1, RST_B=1, EN_A=1, EN_B=1, INIT_A=0x5A, INIT_B=0x3C), 512,
+             "16 × 8 with rsta / rstb / ena / enb, init_a 0x5A, init_b 0x3C"),
+            (dict(P(RAM, [12, 5]), EN_B=1, RST_A=1, INIT_A=0x123), 512,
+             "32 × 12 with enb and rsta only, init_a 0x123"),
         ]),
     "rom": dict(
         inputs=["addr"], outputs=["dout"],
@@ -239,19 +345,30 @@ MODULES = {
               "same directory (random words, one hex word per line); "
               "`INIT_FILE` is its path relative to the simulator's working "
               "directory `tests/sim_build/Delays/rom/`. Test 3 has no "
-              "`INIT_FILE`, so every word must read as 0.",
+              "`INIT_FILE`, so every word must read as 0. Sets with `RST` / "
+              "`EN` drive random `sim_rst.csv` / `sim_en.csv` as Xilinx "
+              "block (latency 1, checked against Simulink): `en` = 0 freezes "
+              "`dout`, `rst` loads `INIT_REG` whatever `en` is; `dout` shows "
+              "`INIT_REG` in cycle 0 only, then 0 until the first enabled read.",
         tests=[
             (P(RAM, [8, 4]), 256, "16 × 8"),
             (P(RAM, [16, 8]), 512, "256 × 16"),
             (P(RAM, [18, 5]), 256, "32 × 18 (twiddle-coefficient width)"),
             (P(RAM, [8, 3]), 64, "no INIT_FILE: all words 0"),
+            (dict(P(RAM, [8, 4]), RST=1, EN=1, INIT_REG=0x3C), 256,
+             "16 × 8 with rst / en ports, init_reg 0x3C"),
         ]),
     "delay_bram": dict(
         inputs=["din"], outputs=["dout"],
-        stim=lambda rng, p, c: s_din(rng, p["BITWIDTH"], c), model=m_delay_bram,
+        stim=s_delay_bram, model=m_delay_bram,
         prose="`delay_bram` delays `din` by `DELAY_LEN` cycles using a RAM "
               "(read-first single-port RAM plus an address counter that wraps "
-              "at `DELAY_LEN`−1), or a register pipeline when `DELAY_LEN` < 2.",
+              "at `DELAY_LEN`−1), or a register pipeline when `DELAY_LEN` < 2. "
+              "Sets with `ASYNC` = 1 drive a random `sim_en.csv` (about 75 % high, "
+              "plus two 8-cycle gaps): casper's async mode stalls the counter, the "
+              "RAM and its output, so `dout` is `din` delayed by `DELAY_LEN` "
+              "enabled samples and holds while `en` = 0 (checked against Simulink, "
+              "MATLAB R2021a). `BRAM_LATENCY` only matters to Simulink.",
         tests=[
             (P(BRAM, [8, 2]), 256, "shortest RAM-based delay (1-word address range)"),
             (P(BRAM, [8, 5]), 256, "address range 4 (power of two)"),
@@ -260,6 +377,10 @@ MODULES = {
             (P(BRAM, [18, 1000]), 2500, "1000-cycle delay"),
             (P(BRAM, [4, 1]), 256, "DELAY_LEN = 1: register fallback"),
             (P(BRAM, [4, 0]), 256, "DELAY_LEN = 0: combinational fallback"),
+            (dict(P(BRAM, [8, 16]), BRAM_LATENCY=2, ASYNC=1), 400,
+             "async, bram_latency 2: random en stalls the delay line (16 enabled samples)"),
+            (dict(P(BRAM, [8, 20]), BRAM_LATENCY=3, ASYNC=1), 400,
+             "async, bram_latency 3, 20 enabled samples"),
         ]),
 }
 
@@ -291,19 +412,24 @@ def write_module(name, spec):
                 image = [rng.randrange(1 << dw) for _ in range(1 << aw)]
                 digits = (dw + 3) // 4
                 (d / "rom_init.mem").write_text("".join(f"{v:0{digits}x}\n" for v in image))
+            stim.update(s_rom_options(rng, params, cycles))
             results = m_rom(params, stim, image)
         else:
             results = spec["model"](params, stim)
         (d / "params.json").write_text(json.dumps(full_params(name, n, params), indent=2) + "\n")
-        for port in spec["inputs"]:
+        for port in spec["inputs"] + [k for k in stim if k not in spec["inputs"]]:
             (d / f"sim_{port}.csv").write_text("".join(f"{v}\n" for v in stim[port]))
         for k, port in enumerate(spec["outputs"]):
             (d / f"sim_{port}.csv").write_text("".join(f"{r[k]}\n" for r in results))
     (mdir / "test_data.md").write_text(test_data_md(name, spec))
 
 
+OPTION_DEFAULTS = {"ASYNC": 0, "BRAM_LATENCY": 2, "RST": 0, "EN": 0, "INIT_REG": 0, "RST_A": 0, "RST_B": 0, "EN_A": 0,
+                   "EN_B": 0, "INIT_A": 0, "INIT_B": 0}
+
+
 def test_data_md(name, spec):
-    keys = list(spec["tests"][0][0].keys())
+    keys = list(dict.fromkeys(k for params, _, _ in spec["tests"] for k in params))
     ins = ", ".join(f"`sim_{p}.csv`" for p in spec["inputs"])
     outs = ", ".join(f"`sim_{p}.csv`" for p in spec["outputs"])
     lines = [
@@ -329,7 +455,7 @@ def test_data_md(name, spec):
         "|" + "---|" * (len(keys) + 4),
     ]
     for n, (params, cycles, desc) in enumerate(spec["tests"]):
-        vals = " | ".join(str(params[k]) for k in keys)
+        vals = " | ".join(str(params.get(k, OPTION_DEFAULTS.get(k))) for k in keys)
         lines.append(f"| {n} | `simdata{n}` | {vals} | {cycles} | {desc} |")
     return "\n".join(lines) + "\n"
 

@@ -15,14 +15,18 @@ testdatadir = module_data_dir(__file__)
 PARAMS = ['N_INPUTS', 'INPUT_BIT_WIDTH', 'MULT_LATENCY', 'ADD_LATENCY', 'BRAM_LATENCY', 'CONV_LATENCY']
 LANE_IN = ["ai_re", "ai_im", "bi_re", "bi_im"]
 LANE_OUT = ["ao_re", "ao_im", "bwo_re", "bwo_im"]
+# casper async (ASYNC = 1): in params.json only for async sets; the en input
+# and dvalid output are driven / checked when their CSV exists
+OPTION_DEFAULTS = {'ASYNC': 0}
+ASYNC_IN, ASYNC_OUT = "en", "dvalid"
 
 
 def find_datadir(dut):
     """Return the simdataN directory whose integer parameters match the DUT."""
-    dut_params = {name: int(getattr(dut, name).value) for name in PARAMS}
+    dut_params = {name: int(getattr(dut, name).value) for name in PARAMS + list(OPTION_DEFAULTS)}
     for d in sorted(testdatadir.glob("simdata*")):
-        p = json.loads((d / "params.json").read_text())
-        if {k: p[k] for k in PARAMS} == dut_params:
+        p = dict(OPTION_DEFAULTS, **json.loads((d / "params.json").read_text()))
+        if {k: p[k] for k in dut_params} == dut_params:
             return d, dut_params
     return None, dut_params
 
@@ -53,6 +57,8 @@ async def module_test(dut):
     stim = {p: load(datadir, p) for p in LANE_IN + ["sync_in"]}
     expected = {p: load(datadir, p) for p in LANE_OUT + ["sync_out"]}
     cycles = len(expected["sync_out"])
+    async_in = load(datadir, ASYNC_IN) if (datadir / f"sim_{ASYNC_IN}.csv").exists() else None
+    async_out = load(datadir, ASYNC_OUT) if (datadir / f"sim_{ASYNC_OUT}.csv").exists() else None
     cocotb.log.info(f"Loaded {cycles} cycles × {lanes} lanes from {datadir.name}")
 
     for i in range(cycles):
@@ -60,6 +66,8 @@ async def module_test(dut):
             for k in range(lanes):
                 getattr(dut, p)[k].value = stim[p][i][k]
         dut.sync_in.value = stim["sync_in"][i][0]
+        if async_in is not None:
+            getattr(dut, ASYNC_IN).value = async_in[i][0]
         await RisingEdge(dut.clk)
         for p in LANE_OUT:
             for k in range(lanes):
@@ -71,5 +79,10 @@ async def module_test(dut):
         assert actual == expected["sync_out"][i][0], (
             f"Index {i}: expected sync_out={expected['sync_out'][i][0]}, got {actual}"
         )
+        if async_out is not None:
+            actual = int(getattr(dut, ASYNC_OUT).value)
+            assert actual == async_out[i][0], (
+                f"Index {i}: expected {ASYNC_OUT}={async_out[i][0]}, got {actual}"
+            )
 
     cocotb.log.info(f"module_test PASSED — {cycles} cycles verified")

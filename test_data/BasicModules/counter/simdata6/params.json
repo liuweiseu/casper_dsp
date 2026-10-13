@@ -3,9 +3,9 @@
   "NBITS": 4,
   "COUNT_TO_VAL": 0,
   "COUNT_DIR": 0,
-  "INIT_VAL": 0,
+  "INIT_VAL": 11,
   "STEP": 1,
   "ENABLE_SYNC_RST": 1,
   "ENABLE_ENABLE": 1,
-  "RST_VAL": 15
+  "RST_VAL": 11
 }

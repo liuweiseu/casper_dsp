@@ -6,10 +6,10 @@ A shift-register pipeline delay modelled on the Xilinx System Generator Delay bl
 
 On each clock edge (from the Sysgen block model `data/sysgen/block_models/xlDelay.sgm`):
 
-- `rst` (when `USE_RST = 1`) clears every stage.
-- `en`, or always when `USE_ENABLE = 0`, then shifts: stage 0 takes `din`, and each later stage takes the one before it.
+- `rst` (when `USE_RST = 1`) clears every stage, including stage 0, and nothing is shifted in, whatever `en` is.
+- Otherwise `en`, or always when `USE_ENABLE = 0`, shifts: stage 0 takes `din`, and each later stage takes the one before it.
 
-The two apply in that order. So when `rst` and `en` are high together, stage 0 takes `din` and the other stages clear.
+This matches the built Simulink Delay block (checked against Simulink with delay sets 2 and 4). The literal block model `xlDelay.sgm` would clear and then still shift `din` in when `en` is high; the built block does not. The Simulink input order is `d`, `rst`, `en`.
 
 `rst` and `en` have default values (0 and 1). An instance that does not use them may leave them unconnected.
 

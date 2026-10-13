@@ -75,8 +75,11 @@ the localparam `LATENCY`.
 | `a_im`    | input     | `N_BITS_A`   | Imaginary part of `a` |
 | `b_re`    | input     | `N_BITS_B`   | Real part of `b` |
 | `b_im`    | input     | `N_BITS_B`   | Imaginary part of `b` |
+| `a_tvalid` | input    | 1            | AXI4-Stream valid of `a` (default 1); does not gate the data |
+| `b_tvalid` | input    | 1            | AXI4-Stream valid of `b` (default 1); does not gate the data |
 | `dout_re` | output    | `N_BITS_OUT` | Real part of the product |
 | `dout_im` | output    | `N_BITS_OUT` | Imaginary part of the product |
+| `dout_tvalid` | output | 1           | `a_tvalid & b_tvalid` delayed by the latency (power-on 0) |
 
 ## Functional Description
 
@@ -91,3 +94,30 @@ Intermediate formats (all signed and exact):
 
 Quantization and overflow are applied only by the two output `adder_subtractor`
 instances, using the semantics of [`convert`](../Bus/convert.md).
+
+## Differences from the Simulink Complex Multiplier 6.0 (cmpy IP)
+
+The HDL-Simulink mapping maps this module to `xbsIndex_r4/Complex Multiplier
+6.0 ` with `flowcontrol = 'NonBlocking'`, `latencyconfig = 'Manual'` and
+`minimumlatency` = the HDL latency. The remaining differences:
+
+- **No blocking or backpressure.** There is no `tready`. The data path ignores
+  `a_tvalid` / `b_tvalid`, so `dout_re` / `dout_im` follow the inputs every
+  cycle whatever the valids are. `dout_tvalid = a_tvalid & b_tvalid`, delayed
+  with the data. The IP only transfers when every input channel holds valid
+  data, so its `tdata` between transfers is not modelled.
+- **No side channels.** There is no `tlast` / `tuser` on A, B or CTRL
+  (`hasatlast`, `hasbtlast`, `hasctrltlast`, `hasatuser`, `hasbtuser`,
+  `hasctrltuser`, `outtlastbehv`). There is also no CTRL rounding bit for
+  `Random_Rounding`.
+- **Rounding and overflow.** The IP keeps the MSBs of the full-precision
+  product (`outputwidth`) and truncates or random-rounds. It never overflows.
+  The HDL requantizes to `N_BITS_OUT` / `BIN_PT_OUT` / `TYPE_OUT` with
+  `QUANTIZATION` / `OVERFLOW`. Only `QUANTIZATION = 0` (truncate) has an IP
+  option, and it matches the IP only when the output format keeps the MSBs.
+- **Latency.** The HDL latency is `MULT_LATENCY + ADD_LATENCY` (4-multiply)
+  or `MULT_LATENCY + 2·ADD_LATENCY` (3-multiply). It is not verified whether
+  cmpy accepts a manual latency below its own minimum for the operand widths,
+  or raises it. The IP's power-on data output is not modelled; the HDL
+  outputs power up to 0.
+- **No `aclken` / `aresetn`.**

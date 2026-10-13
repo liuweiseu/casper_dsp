@@ -3,7 +3,7 @@
 ## Description
 
 A pipelined sum of `N_INPUTS` values. It corresponds to casper_library's
-`adder_tree` (fixed point, `dvalid_en` off), and is built as
+`adder_tree` (fixed point), and is built as
 `adder_tree_init.m` builds it: the inputs are reduced pairwise, stage by
 stage, and the odd value of a stage is carried on through a delay.
 
@@ -43,7 +43,7 @@ the inputs.
 `FIRST_STAGE_HDL` (casper `first_stage_hdl` / pfb `adder_folding`) and
 `ADDER_IMP` (`Fabric` / `DSP48` / `Behavioral`) choose how the adders are
 implemented, not what they compute. They are declared for traceability and
-ignored. `DVALID_EN` and `FLOATING_POINT` must be 0.
+ignored. `FLOATING_POINT` must be 0.
 
 ## Parameters
 
@@ -59,13 +59,15 @@ ignored. `DVALID_EN` and `FLOATING_POINT` must be 0.
 | `QUANTIZATION` | 0 | `0` = truncate, `1` = round ±inf, `2` = round even (`PRECISION = 1`) |
 | `OVERFLOW` | 0 | `0` = wrap, `1` = saturate (`PRECISION = 1`) |
 | `FIRST_STAGE_HDL`, `ADDER_IMP` | 0 | Ignored |
-| `DVALID_EN`, `FLOATING_POINT` | 0 | Must be 0 |
+| `DVALID_EN` | 0 | casper `dvalid_en`: `1` = the raw `dv_in` stalls every adder; the carried odd values and `sync` stay free and there is no valid output (checked against Simulink, MATLAB R2021a) |
+| `FLOATING_POINT` | 0 | Must be 0 |
 
 ## Ports
 
 | Port | Direction | Width | Description |
 |------|-----------|-------|-------------|
 | `clk` | input | 1 | Clock |
+| `dv_in` | input | 1 | Adder enable (used when `DVALID_EN = 1`; default 1); Simulink port 1, before `sync` |
 | `sync` | input | 1 | Sync |
 | `din` | input | `DATA_WIDTH` × `N_INPUTS` | Values to sum |
 | `sync_out` | output | 1 | `sync` delayed `STAGES·CSP_LATENCY` cycles |

@@ -89,7 +89,7 @@ module last_tap_real #(
         .N_BITS_OUT(BIT_WIDTH_IN + COEFF_BIT_WIDTH),
         .BIN_PT_OUT(BIT_WIDTH_IN + COEFF_BIT_WIDTH - 2),
         .TYPE_OUT(1), .QUANTIZATION(0), .OVERFLOW(0), .MULT_LATENCY(MULT_LATENCY)
-    ) u_mult (.clk(clk), .a(din), .b(coeff), .dout(tap_out));
+    ) u_mult (.clk(clk), .a(din), .b(coeff), .dout(tap_out), .misco());
 
     pipeline #(.BITWIDTH(1), .CSP_LATENCY(MULT_LATENCY)) u_delay (
         .clk(clk), .din(sync), .dout(sync_out));

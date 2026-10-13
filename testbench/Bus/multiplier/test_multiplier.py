@@ -12,6 +12,9 @@ PARAMS = ["N_BITS_A", "BIN_PT_A", "TYPE_A", "N_BITS_B", "BIN_PT_B", "TYPE_B",
           "N_BITS_OUT", "BIN_PT_OUT", "TYPE_OUT", "QUANTIZATION", "OVERFLOW",
           "MULT_LATENCY"]
 
+# casper misc pass-through: in params.json only for sets with MISC = 1
+MISC_PARAMS = ["MISC", "MISC_WIDTH"]
+
 
 def read_param(dut, name):
     """Read an integer parameter, keeping its sign (parameters are declared as signed int)."""
@@ -39,6 +42,8 @@ async def module_test(dut):
     cocotb.start_soon(clock.start())
 
     params = {name: read_param(dut, name) for name in PARAMS}
+    if read_param(dut, "MISC"):
+        params.update({name: read_param(dut, name) for name in MISC_PARAMS})
     cocotb.log.info(f"Testing with {params}")
 
     datadir = find_datadir(params)
@@ -49,15 +54,24 @@ async def module_test(dut):
     a = np.loadtxt(datadir / "sim_a.csv", dtype=int).tolist()
     b = np.loadtxt(datadir / "sim_b.csv", dtype=int).tolist()
     expected = np.loadtxt(datadir / "sim_dout.csv", dtype=int).tolist()
+    misc = params.get("MISC", 0)
+    if misc:
+        misci = np.loadtxt(datadir / "sim_misci.csv", dtype=int).tolist()
+        misco = np.loadtxt(datadir / "sim_misco.csv", dtype=int).tolist()
     cocotb.log.info(f"Loaded {len(expected)} expected values from {datadir.name}")
 
     for i in range(len(expected)):
         dut.a.value = a[i]
         dut.b.value = b[i]
+        if misc:
+            dut.misci.value = misci[i]
         await RisingEdge(dut.clk)
         actual = int(dut.dout.value)
         assert actual == expected[i], (
             f"Index {i}: a={a[i]}, b={b[i]} → expected dout={expected[i]}, got {actual}"
         )
+        if misc:
+            actual = int(dut.misco.value)
+            assert actual == misco[i], f"Index {i}: expected misco={misco[i]}, got {actual}"
 
     cocotb.log.info(f"module_test PASSED — {len(expected)} cycles verified")

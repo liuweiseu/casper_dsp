@@ -190,7 +190,7 @@ module write_ctrl #(
         negate #(
             .N_BITS_IN(W), .BIN_PT_IN(0), .TYPE_IN(1), .N_BITS_OUT(W), .BIN_PT_OUT(0),
             .TYPE_OUT(1), .QUANTIZATION(0), .OVERFLOW(0), .CSP_LATENCY(0)
-        ) u_neg (.clk(clk), .din(cpx[i][W-1:0]), .dout(im_neg));
+        ) u_neg (.clk(clk), .din(cpx[i][W-1:0]), .dout(im_neg), .misco());
         assign conj[i] = {cpx[i][2*W-1:W], im_neg};
     end
 

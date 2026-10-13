@@ -113,6 +113,6 @@ module tap_real #(
         .N_BITS_B(COEFF_WIDTH), .BIN_PT_B(COEFF_FRAC_WIDTH), .TYPE_B(1),
         .N_BITS_OUT(DATA_WIDTH + COEFF_WIDTH), .BIN_PT_OUT(DATA_WIDTH - 1 + COEFF_FRAC_WIDTH),
         .TYPE_OUT(1), .QUANTIZATION(0), .OVERFLOW(0), .MULT_LATENCY(MULT_LATENCY)
-    ) u_mult (.clk(clk), .a(din), .b(coeff[COEFF_WIDTH-1:0]), .dout(taps_out));
+    ) u_mult (.clk(clk), .a(din), .b(coeff[COEFF_WIDTH-1:0]), .dout(taps_out), .misco());
 
 endmodule

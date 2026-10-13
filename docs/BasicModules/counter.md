@@ -12,7 +12,7 @@ On each clock edge, in priority order (from the Sysgen block model `data/sysgen/
    2. `load` (when `ENABLE_LOAD = 1`): load `din`.
    3. Otherwise count by `STEP`. The direction is up for `COUNT_DIR = 0` and down for `COUNT_DIR = 1`. For `COUNT_DIR = 2` it follows the `up` port: 1 counts up, 0 counts down.
 
-The counter powers on at `INIT_VAL`. Sysgen's `start_count` is the power-on value, the reset value and the count-limit wrap value. So a Sysgen Counter maps to `INIT_VAL = start_count`, and `RST_VAL` defaults to `INIT_VAL`. Set `RST_VAL` only to model a reset value that differs from `start_count`.
+The counter powers on at `INIT_VAL`. Sysgen's `start_count` is the power-on value, the reset value and the count-limit wrap value. So a Sysgen Counter maps to `INIT_VAL = start_count`, and `RST_VAL` defaults to `INIT_VAL`. Set `RST_VAL` only to model a reset value that differs from `start_count`: this is an HDL-only extension. Simulink's Xilinx Counter has no separate reset value, so only `RST_VAL = INIT_VAL` is Simulink-equivalent.
 
 `INIT_VAL`, `STEP`, `COUNT_TO_VAL` and `din` are raw bit patterns. The Sysgen binary point and signedness only change how those bits are read, not how the counter counts.
 

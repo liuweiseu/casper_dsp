@@ -16,7 +16,11 @@ a write at different addresses in the same cycle.
   block RAMs leave this undefined, so callers must avoid it. The GENERIC model
   returns the old data and lets port B's write win, but other platforms need
   not match.
-- The memory contents and both outputs power up to 0.
+- The memory contents power up to 0. The outputs show `INIT_A` / `INIT_B` in the first
+  cycle only; the output registers power up to 0, so a port whose first edge is
+  disabled reads 0 until its first enabled read (as the built Simulink block does).
+- `RST_x` / `EN_x` / `INIT_x` follow `xlDPBRAMXPM.sgm` (latency 1) and are
+  GENERIC only (`$fatal` on other platforms).
 
 ## Platform Implementations
 
@@ -32,6 +36,9 @@ a write at different addresses in the same cycle.
 |--------------|-------------|-------------|
 | `DATA_WIDTH` | 8           | Word width (both ports) |
 | `ADDR_WIDTH` | 4           | Address width; depth = `2^ADDR_WIDTH` |
+| `RST_A`, `RST_B` | 0       | `1` enables `rsta` / `rstb`: `dout_x` <= `INIT_X` instead of the read, even on a disabled port |
+| `EN_A`, `EN_B`   | 0       | `1` enables `ena` / `enb`: a disabled port neither reads nor writes, `dout_x` holds |
+| `INIT_A`, `INIT_B` | 0     | Output-register words at power-up and on reset (raw bits; Xilinx `init_a` / `init_b`) |
 | `PLATFORM`   | `"GENERIC"` | `"GENERIC"`, `"XILINX"` or `"ALTERA"` |
 
 ## Ports
@@ -47,3 +54,5 @@ a write at different addresses in the same cycle.
 | `addr_b` | input     | `ADDR_WIDTH` | Port B address |
 | `din_b`  | input     | `DATA_WIDTH` | Port B write data |
 | `dout_b` | output    | `DATA_WIDTH` | Port B read data (1-cycle latency) |
+| `ena`, `enb`   | input | 1 | Port enables (used when `EN_x = 1`; default 1) |
+| `rsta`, `rstb` | input | 1 | Output resets (used when `RST_x = 1`; default 0) |

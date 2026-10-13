@@ -157,7 +157,7 @@ module cross_multiplier #(
                     .N_BITS_AB(2 * W + 1), .BIN_PT_AB(2 * BINARY_POINT_IN), .QUANTIZATION(0),
                     .OVERFLOW(0), .MULT_LATENCY(MULT_LATENCY), .ADD_LATENCY(ADD_LATENCY),
                     .CONV_LATENCY(0), .IN_LATENCY(0), .CONJUGATED(1)
-                ) u_cmult (.clk(clk), .a({xr_d, xi_d}), .b({yr_d, yi_d}), .ab(prod));
+                ) u_cmult (.clk(clk), .a({xr_d, xi_d}), .b({yr_d, yi_d}), .ab(prod), .dvalid());
 
                 assign {p_re, p_im} = prod;
 

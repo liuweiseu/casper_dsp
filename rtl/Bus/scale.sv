@@ -30,17 +30,22 @@
 // block = 'casper_library_bus.slx/bus_scale'
 // deviations = [
 //   'bus_scale is a pure reinterpretation with zero latency. xlScale.sgm only moves the binary point (bin_pt_in - scale_factor), and bus_create concatenates the unchanged bits (bus_scale_init.m:126,140). The HDL adds a requantizing convert plus LATENCY registers, so it is bit- and cycle-exact only with N_BITS_OUT=N_BITS_IN, BIN_PT_OUT=BIN_PT_IN-SCALE_FACTOR, TYPE_OUT=TYPE_IN and LATENCY=0. The HDL default LATENCY=1 adds one cycle.',
-//   'misc: bus_scale passes misci straight to misco with no delay (bus_scale_init.m:160-165); not implemented in the HDL.',
 // ]
-//
-// [mask_set.misc]
-// value = 'off'
 //
 // [[unsupported]]
 // when = 'SCALE_FACTOR < BIN_PT_IN - N_BITS_IN || SCALE_FACTOR > BIN_PT_IN'
 // reason = 'Xilinx Scale (bus_scale -> xbsIndex_r4/Scale scale1, System Generator 2021.1): the output binary point bin_pt_in - scale_factor must lie between the LSB and MSB of the input word, inclusive, i.e. bin_pt_in - n_bits_in <= scale_factor <= bin_pt_in; otherwise Illegal parameterization: Scale factor s ... must be between <lo> and <hi>, inclusive (confirmed in MATLAB R2021a, sets 3 and 4)'
 //
+// [params.MISC]
+// mask = 'misc'
+// type = 'checkbox'
+// note = 'misci -> misco (bus_scale_init.m:159-164: misci is wired straight to misco, no delay); the HDL ports always exist, misco = 0 when MISC = 0'
+// [params.MISC.values]
+// 0 = 'off'
+// 1 = 'on'
+//
 // [hdl_only]
+// MISC_WIDTH = 'inherited width: Simulink takes the misci width from the input signal'
 // N_BITS_OUT = 'the HDL adds a requantizing convert after the scale'
 // BIN_PT_OUT = 'the HDL adds a requantizing convert after the scale'
 // TYPE_OUT = 'the HDL adds a requantizing convert after the scale'
@@ -54,8 +59,6 @@
 // [ports]
 // [ports.renamed]
 // [ports.missing]
-// misci = 'misc=on only (not implemented)'
-// misco = 'misc=on only (not implemented)'
 // [ports.extra]
 // @simulink-mapping end
 
@@ -69,11 +72,15 @@ module scale #(
     parameter int TYPE_OUT     = 1,
     parameter int QUANTIZATION = 0,
     parameter int OVERFLOW     = 0,
-    parameter int LATENCY      = 1
+    parameter int LATENCY      = 1,
+    parameter int MISC         = 0,     // casper misc: 1 = misci -> misco pass-through
+    parameter int MISC_WIDTH   = 1
 )(
     input  logic                  clk,
     input  logic [N_BITS_IN-1:0]  din,
-    output logic [N_BITS_OUT-1:0] dout
+    input  logic [MISC_WIDTH-1:0] misci = '0,
+    output logic [N_BITS_OUT-1:0] dout,
+    output logic [MISC_WIDTH-1:0] misco
 );
 
     convert #(
@@ -83,7 +90,20 @@ module scale #(
     ) u_convert (
         .clk (clk),
         .din (din),
-        .dout(dout)
+        .dout(dout),
+        .overflow(),
+        .misco()
     );
+
+    // misc pass-through (bus_scale_init.m:159-164: misci is wired straight to misco, no delay);
+    // misco = 0 when MISC = 0
+    generate
+        if (MISC != 0) begin : GEN_MISC
+            delay #(.LATENCY(0), .BITWIDTH(MISC_WIDTH)) u_misc (
+                .clk(clk), .din(misci), .dout(misco));
+        end else begin : GEN_NO_MISC
+            assign misco = '0;
+        end
+    endgenerate
 
 endmodule

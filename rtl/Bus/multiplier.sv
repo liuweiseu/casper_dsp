@@ -41,9 +41,6 @@
 // [mask_set.cmplx_b]
 // value = 'off'
 //
-// [mask_set.misc]
-// value = 'off'
-//
 // [[unsupported]]
 // when = 'QUANTIZATION == 2'
 // reason = 'mlib_devel bug 8 (docs/bugs.md): bus_mult_init.m:638-641 maps quantization 2 to Round  (unbiased: Even Values) and passes it to xbsIndex_r4/Mult (bus_mult_init.m:683-686), whose quantization popup offers only Truncate and Round  (unbiased: +/- Inf): Invalid setting in Xilinx Multiplier Block for parameter quantization (confirmed in MATLAB R2021a)'
@@ -51,7 +48,16 @@
 // [mask_set.floating_point]
 // value = 'off'
 //
+// [params.MISC]
+// mask = 'misc'
+// type = 'checkbox'
+// note = 'misci -> misco (bus_mult_init.m:701-711: dmisc latency = mult_latency + fan_latency for a real lane (fan_latency = 0 here)); the HDL ports always exist, misco = 0 when MISC = 0'
+// [params.MISC.values]
+// 0 = 'off'
+// 1 = 'on'
+//
 // [hdl_only]
+// MISC_WIDTH = 'inherited width: Simulink takes the misci width from the input signal'
 //
 // [mask_missing]
 // float_type = 'floating point is not implemented'
@@ -71,8 +77,6 @@
 // [ports.renamed]
 // dout = 'a*b'
 // [ports.missing]
-// misci = 'misc=on only (not implemented)'
-// misco = 'misc=on only (not implemented)'
 // [ports.extra]
 // @simulink-mapping end
 
@@ -88,12 +92,16 @@ module multiplier #(
     parameter int TYPE_OUT     = 1,
     parameter int QUANTIZATION = 0,
     parameter int OVERFLOW     = 0,
-    parameter int MULT_LATENCY = 1
+    parameter int MULT_LATENCY = 1,
+    parameter int MISC         = 0,     // casper misc: 1 = misci -> misco pass-through
+    parameter int MISC_WIDTH   = 1
 )(
     input  logic                  clk,
     input  logic [N_BITS_A-1:0]   a,
     input  logic [N_BITS_B-1:0]   b,
-    output logic [N_BITS_OUT-1:0] dout
+    input  logic [MISC_WIDTH-1:0] misci = '0,
+    output logic [N_BITS_OUT-1:0] dout,
+    output logic [MISC_WIDTH-1:0] misco
 );
 
     localparam int N_BITS_FULL = N_BITS_A + N_BITS_B + 2;
@@ -117,7 +125,20 @@ module multiplier #(
     ) u_convert (
         .clk (clk),
         .din (full),
-        .dout(dout)
+        .dout(dout),
+        .overflow(),
+        .misco()
     );
+
+    // misc pass-through (bus_mult_init.m:701-711: dmisc latency = mult_latency + fan_latency for a real lane (fan_latency = 0 here));
+    // misco = 0 when MISC = 0
+    generate
+        if (MISC != 0) begin : GEN_MISC
+            delay #(.LATENCY(MULT_LATENCY), .BITWIDTH(MISC_WIDTH)) u_misc (
+                .clk(clk), .din(misci), .dout(misco));
+        end else begin : GEN_NO_MISC
+            assign misco = '0;
+        end
+    endgenerate
 
 endmodule

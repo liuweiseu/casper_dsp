@@ -5,7 +5,10 @@
 A synchronous ROM of `2^ADDR_WIDTH` words × `DATA_WIDTH` bits, with a 1-cycle
 registered read. Its contents come from `INIT_FILE`, which is loaded at
 elaboration. Phase 3 will use it for twiddle coefficients produced by a
-generator script. `dout` powers up to 0.
+generator script. `dout` shows `INIT_REG` (0 by default) in the first cycle only; the
+output register powers up to 0, so if the first edge is disabled `dout` reads 0 until
+the first enabled read. `RST` / `EN` / `INIT_REG` follow the built Xilinx ROM (latency 1,
+checked against Simulink; `rst` also acts while `en` = 0) and are GENERIC only.
 
 ### `INIT_FILE` format
 
@@ -33,6 +36,9 @@ generator script. `dout` powers up to 0.
 | `DATA_WIDTH` | 8           | Word width |
 | `ADDR_WIDTH` | 4           | Address width; depth = `2^ADDR_WIDTH` |
 | `INIT_FILE`  | `""`        | Memory image path (see above) |
+| `RST`        | 0           | `1` enables `rst`: `dout` <= `INIT_REG` instead of the read, whatever `en` is |
+| `EN`         | 0           | `1` enables `en`: `en` = 0 freezes `dout` |
+| `INIT_REG`   | 0           | Output-register word at power-up and on `rst` (Xilinx `init_reg`) |
 | `PLATFORM`   | `"GENERIC"` | `"GENERIC"`, `"XILINX"` or `"ALTERA"` |
 
 ## Ports
@@ -41,4 +47,6 @@ generator script. `dout` powers up to 0.
 |--------|-----------|--------------|-------------|
 | `clk`  | input     | 1            | Clock |
 | `addr` | input     | `ADDR_WIDTH` | Read address |
+| `rst`  | input     | 1            | Output reset (used when `RST = 1`; defaults to 0) |
+| `en`   | input     | 1            | Enable (used when `EN = 1`; defaults to 1) |
 | `dout` | output    | `DATA_WIDTH` | `mem[addr]`, 1 cycle after `addr` |

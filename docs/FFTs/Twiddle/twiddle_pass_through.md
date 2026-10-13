@@ -14,7 +14,7 @@ matching.
 |-------------------|---------|-------------|
 | `N_INPUTS`        | 1       | Number of complex lanes |
 | `INPUT_BIT_WIDTH` | 18      | Lane word width. Added for the HDL port widths; the Simulink block does not need it. |
-| `ASYNC`           | 0       | Declared for traceability; must be 0 |
+| `ASYNC`           | 0       | casper `async`: `1` adds `dvo` = `dvi` (named `en` / `dvalid` in the other twiddle blocks) |
 
 ## Ports
 
@@ -27,5 +27,7 @@ that `bwo_re`/`bwo_im` are `INPUT_BIT_WIDTH` bits wide rather than
 | `clk` | input | 1 | Clock (unused) |
 | `ai_re`, `ai_im`, `bi_re`, `bi_im` | input | `INPUT_BIT_WIDTH` × `N_INPUTS` | Lane inputs |
 | `sync_in` | input | 1 | Sync |
+| `dvi` | input | 1 | Async enable (`en` in twiddle_coeff_0/1 and twiddle_general); default 1 |
 | `ao_re`, `ao_im`, `bwo_re`, `bwo_im` | output | `INPUT_BIT_WIDTH` × `N_INPUTS` | `ai` and `bi` passed through |
 | `sync_out` | output | 1 | `sync_in` passed through |
+| `dvo` | output | 1 | `dvi` when `ASYNC = 1` (`dvalid` in twiddle_coeff_0/1 and twiddle_general), else 0 |

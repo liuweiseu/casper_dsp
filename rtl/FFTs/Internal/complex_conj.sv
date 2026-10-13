@@ -77,7 +77,7 @@ module complex_conj #(
             .N_BITS_IN(N_BITS), .BIN_PT_IN(BIN_PT), .TYPE_IN(1),
             .N_BITS_OUT(N_BITS), .BIN_PT_OUT(BIN_PT), .TYPE_OUT(1),
             .QUANTIZATION(0), .OVERFLOW(OVERFLOW), .CSP_LATENCY(CSP_LATENCY)
-        ) u_imag_negate (.clk(clk), .din(din_im[n]), .dout(dout_im[n]));
+        ) u_imag_negate (.clk(clk), .din(din_im[n]), .dout(dout_im[n]), .misco());
     end
 
 endmodule

@@ -11,6 +11,8 @@ PARAMS = ["N_BITS_A", "BIN_PT_A", "N_BITS_B", "BIN_PT_B", "N_BITS_AB", "BIN_PT_A
           "QUANTIZATION", "OVERFLOW", "MULT_LATENCY", "ADD_LATENCY", "CONV_LATENCY",
           "IN_LATENCY", "CONJUGATED", "MULTIPLIER_IMPLEMENTATION", "PIPELINE_CMULT_EN",
           "PIPELINE_LATENCY"]
+# casper async: ASYNC / PIPELINED_ENABLE are in params.json only for async sets
+ASYNC_PARAMS = ["ASYNC", "PIPELINED_ENABLE"]
 
 
 def read_param(dut, name):
@@ -45,6 +47,8 @@ async def module_test(dut):
     cocotb.start_soon(clock.start())
 
     params = {name: read_param(dut, name) for name in PARAMS}
+    if read_param(dut, "ASYNC"):
+        params.update({name: read_param(dut, name) for name in ASYNC_PARAMS})
     cocotb.log.info(f"Testing with {params}")
 
     datadir = find_datadir(params)
@@ -55,6 +59,8 @@ async def module_test(dut):
     a = load(datadir / "sim_a.csv")
     b = load(datadir / "sim_b.csv")
     expected = load(datadir / "sim_ab.csv")
+    en = load(datadir / "sim_en.csv") if (datadir / "sim_en.csv").exists() else None
+    dvalid = load(datadir / "sim_dvalid.csv") if (datadir / "sim_dvalid.csv").exists() else None
     nab = params["N_BITS_AB"]
     mask = (1 << nab) - 1
     cocotb.log.info(f"Loaded {len(expected)} expected values from {datadir.name}")
@@ -62,6 +68,8 @@ async def module_test(dut):
     for i in range(len(expected)):
         dut.a.value = a[i]
         dut.b.value = b[i]
+        if en is not None:
+            dut.en.value = en[i]
         await RisingEdge(dut.clk)
         actual = int(dut.ab.value)
         assert actual == expected[i], (
@@ -69,5 +77,8 @@ async def module_test(dut):
             f"({expected[i] >> nab:#x}, {expected[i] & mask:#x}), "
             f"got ({actual >> nab:#x}, {actual & mask:#x})"
         )
+        if dvalid is not None:
+            actual = int(dut.dvalid.value)
+            assert actual == dvalid[i], f"Index {i}: expected dvalid={dvalid[i]}, got {actual}"
 
     cocotb.log.info(f"module_test PASSED — {len(expected)} cycles verified")

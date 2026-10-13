@@ -6,7 +6,16 @@
 //
 // Read-during-write (we = 1): READ_FIRST — dout gets the OLD contents of
 // mem[addr]; the new value is visible from the next access onward.
-// Memory contents and dout power up to 0.
+// Memory contents power up to 0, dout to INIT_REG.
+//
+// Optional ports, as the Xilinx Single Port RAM's rst / en options
+// (xlSPRAM.sgm, latency 1):
+//   en  (EN = 1): en = 0 freezes the edge: no read, no write, dout holds
+//   rst (RST = 1): dout <= INIT_REG instead of the read, whatever en is (the
+//                  built block resets on en = 0 too, unlike the literal
+//                  xlSPRAM.sgm text); an enabled write still happens
+// INIT_REG is the raw output-register word (power-on and reset value).
+// The options and INIT_REG != 0 are GENERIC only.
 //
 // PLATFORM selects the implementation (the port / parameter contract is the
 // same on every platform):
@@ -30,8 +39,9 @@
 // block = 'xbsIndex_r4.slx/Single Port RAM'
 // deviations = [
 //   "Write mode is fixed to READ_FIRST ('Read Before Write'); the mask default is 'Read After Write' (xlSPRAM.sgm case 1: dout = data_in on a write) and 'No Read On Write' (dout holds last_value_read) is not implemented. casper delay_bram sets 'Read before write' explicitly, so it matches.",
-//   'Read latency is fixed at 1; latency 0 (asynchronous read), latency > 1 and the rst/en ports (xlSPRAM.sgm: rst pushes init_reg, en = 0 freezes the output and blocks writes) are not implemented.',
-//   'Memory and dout power up to 0; Simulink powers up to initVector (rounded/saturated to the data type) and init_reg (mask default initVector = sin(pi*(0:15)/16)).',
+//   'Read latency is fixed at 1; latency 0 (asynchronous read) and latency > 1 are not implemented.',
+//   'Memory powers up to 0; the mapping sets initVector to zeros so Simulink does too (the mask default sin(pi*(0:15)/16) would give nonzero power-on contents). Other initVector contents are not supported.',
+//   'INIT_REG is the raw output-register word; Simulink quantizes the real init_reg to the data type with Round / Saturate (xlSPRAM.sgm init_op_val), so the exporter must convert it; for UFix_N_0 data the two are equal.',
 //   'Depth must be a power of two (2^ADDR_WIDTH); Simulink errors on addr > depth-1, the HDL wraps.',
 // ]
 //
@@ -41,6 +51,28 @@
 // expr = '2**ADDR_WIDTH'
 // note = 'depth = 2^ADDR_WIDTH; non-power-of-two depths are not supported'
 //
+// [params.RST]
+// mask = 'rst'
+// type = 'checkbox'
+// [params.RST.values]
+// 0 = 'off'
+// 1 = 'on'
+//
+// [params.EN]
+// mask = 'en'
+// type = 'checkbox'
+// [params.EN.values]
+// 0 = 'off'
+// 1 = 'on'
+//
+// [params.INIT_REG]
+// mask = 'init_reg'
+// type = 'edit'
+// note = 'raw output-register word; init_reg in Simulink is a real value quantized to the data type (see deviations)'
+//
+// [mask_set.initVector]
+// template = 'zeros(1,{2**ADDR_WIDTH})'
+//
 // [mask_set.write_mode]
 // value = 'Read Before Write'
 //
@@ -49,46 +81,50 @@
 // PLATFORM = 'implementation: memory / primitive vendor (GENERIC, XILINX, ALTERA)'
 //
 // [mask_missing]
-// initVector = 'memory always powers up to 0'
 // distributed_mem = 'memory type is chosen by PLATFORM / synthesis'
-// rst = 'output-register reset port not implemented'
-// init_reg = 'output register powers up to 0; no reset value'
-// en = 'enable port not implemented'
 // optimize_latency = 'implementation only'
 // latency = 'read latency fixed at 1'
 // optimize = 'implementation only'
 //
 // [ports]
-// order = 'Simulink: addr, data, we -> dout (icon port_label); HDL: we, addr, din -> dout'
+// order = 'Simulink: addr, data, we, rst, en -> dout (port_label of a built block with both options on); HDL: we, addr, din, rst, en -> dout'
 // [ports.renamed]
 // din = 'data'
 // [ports.missing]
-// rst = 'rst option only (not implemented)'
-// en = 'en option only (not implemented)'
 // [ports.extra]
 // @simulink-mapping end
 
 module single_port_ram #(
     parameter int    DATA_WIDTH = 8,
     parameter int    ADDR_WIDTH = 4,
+    parameter int    RST        = 0,      // 1 = rst port enabled
+    parameter int    EN         = 0,      // 1 = en port enabled
+    parameter        INIT_REG   = 0,      // raw output-register word
     parameter string PLATFORM   = "GENERIC"
 )(
     input  logic                  clk,
     input  logic                  we,
     input  logic [ADDR_WIDTH-1:0] addr,
     input  logic [DATA_WIDTH-1:0] din,
+    input  logic                  rst = 1'b0,
+    input  logic                  en  = 1'b1,
     output logic [DATA_WIDTH-1:0] dout
 );
+
+    localparam logic [DATA_WIDTH-1:0] INIT_REG_W = DATA_WIDTH'(INIT_REG);
 
     generate
         if (PLATFORM == "GENERIC") begin : GEN_GENERIC
             logic [DATA_WIDTH-1:0] mem [0:(1<<ADDR_WIDTH)-1] = '{default: '0};
-            logic [DATA_WIDTH-1:0] dout_r = '0;
+            logic [DATA_WIDTH-1:0] dout_r = INIT_REG_W;
             always_ff @(posedge clk) begin
-                dout_r <= mem[addr];
-                if (we) mem[addr] <= din;
+                if (RST != 0 && rst)    dout_r <= INIT_REG_W;   // rst wins over en
+                else if (EN == 0 || en) dout_r <= mem[addr];
+                if ((EN == 0 || en) && we) mem[addr] <= din;
             end
             assign dout = dout_r;
+        end else if (RST != 0 || EN != 0 || INIT_REG_W != '0) begin : GEN_BAD_OPTIONS
+            $fatal(1, "single_port_ram: RST / EN / INIT_REG are implemented for PLATFORM \"GENERIC\" only");
         end else if (PLATFORM == "XILINX") begin : GEN_XILINX
             single_port_ram_xilinx #(
                 .DATA_WIDTH(DATA_WIDTH),

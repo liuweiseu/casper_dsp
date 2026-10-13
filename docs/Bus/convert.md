@@ -26,6 +26,9 @@ instance.
 | `QUANTIZATION` | 0       | `0`=truncate, `1`=round half away from zero, `2`=round half to even |
 | `OVERFLOW`     | 0       | `0`=wrap, `1`=saturate, `2`=flag as error (treated as wrap) |
 | `CSP_LATENCY`      | 0       | Pipeline stages on the output; `0` = combinational |
+| `OF` | 0 | casper `of`: `1` drives `overflow` (casper `convert_of` rule); `0` ties it to 0 |
+| `MISC` | 0 | casper `misc`: `1` passes `misci` to `misco` (bus_convert_init.m:281-285); `0` ties `misco` to 0 |
+| `MISC_WIDTH` | 1 | `misci` / `misco` width (inherited from the signal in Simulink) |
 
 The encodings match the casper_library mask prompts: *quantization strategy
 (Truncate=0, Round (unbiased: +/- Inf)=1, Round (unbiased: Even Values)=2)* and
@@ -38,7 +41,10 @@ modules in `rtl/Bus/` and `rtl/Multipliers/` use these encodings.
 |--------|-----------|--------------|-------------|
 | `clk`  | input     | 1            | Clock (unused when `CSP_LATENCY = 0`) |
 | `din`  | input     | `N_BITS_IN`  | Input word |
+| `misci` | input | `MISC_WIDTH` | Side-channel word (e.g. sync), used when `MISC = 1`; defaults to 0 |
 | `dout` | output    | `N_BITS_OUT` | Converted word, delayed by `CSP_LATENCY` cycles |
+| `overflow` | output | 1 | `1` when the top wb_lost+1 bits of `din` are not all equal (wb_lost = (`N_BITS_IN` − `BIN_PT_IN`) − (`N_BITS_OUT` − `BIN_PT_OUT`)), delayed by `CSP_LATENCY`; 0 when `OF = 0` or wb_lost ≤ 0 |
+| `misco` | output | `MISC_WIDTH` | `misci` delayed by `CSP_LATENCY` cycles when `MISC = 1`, else 0 |
 
 ## Functional Description
 

@@ -1,0 +1,14 @@
+{
+  "N_INPUTS": 8,
+  "DATA_WIDTH": 16,
+  "BIN_PT": 8,
+  "TYPE": 1,
+  "CSP_LATENCY": 1,
+  "PRECISION": 0,
+  "N_BITS_OUT": 16,
+  "BIN_PT_OUT": 0,
+  "QUANTIZATION": 0,
+  "OVERFLOW": 0,
+  "DVALID_EN": 1,
+  "N_BITS_OUT_EFF": 19
+}

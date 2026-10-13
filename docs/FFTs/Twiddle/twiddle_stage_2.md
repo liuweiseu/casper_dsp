@@ -52,7 +52,9 @@ Every leg (`ai → ao`, `bi → bwo`, `sync`) has latency
 | `BRAM_LATENCY`    | 2       | Enters `LATENCY` (sync / data pre-delay) |
 | `CONV_LATENCY`    | 2       | Enters `LATENCY` |
 
-**Declared but not implemented:** `ASYNC` and `FLOATING_POINT` must be 0.
+**Async** (`ASYNC = 1`, ports `dvi` / `dvo`): `dvi` delayed `BRAM_LATENCY` enables the select counter, so `w` changes every 2^(`FFT_SIZE`−2) valid samples; `sync` still clears it. `dvo` = `dvi` delayed `LATENCY`; the data is not gated (checked against Simulink, MATLAB R2021a).
+
+**Declared but not implemented:** `FLOATING_POINT` must be 0.
 `FLOAT_TYPE`, `EXP_WIDTH` and `FRAC_WIDTH` are ignored. The defaults follow
 casper_library's mask.
 

@@ -147,7 +147,10 @@ HB_TESTS = [
     (P(HB, [2, 8, 7, 2, 0]), "2 lanes, combinational convert"),
     (P(HB, [3, 12, 10, 0, 1]), "3 lanes, combinational adders"),
     (P(HB, [1, 6, 5, 0, 0]), "fully combinational, 6-bit"),
+    (dict(P(HB, [2, 8, 7, 2, 1]), MISC=1, MISC_WIDTH=3),
+     "2 lanes with misc: 3-bit misci → misco, delayed ADD_LATENCY + CONV_LATENCY"),
 ]
+HB_MISC_DEFAULTS = {"MISC": 0, "MISC_WIDTH": 1}
 
 
 def m_hilbert(p, a_re, a_im, b_re, b_im):
@@ -184,15 +187,24 @@ def gen_hilbert():
             for k, val in (("a_re", x), ("a_im", y), ("b_re", y), ("b_im", x)):
                 ins[k][t] = [val] * p["N_INPUTS"]
         out = m_hilbert(p, ins["a_re"], ins["a_im"], ins["b_re"], ins["b_im"])
+        if p.get("MISC"):           # hilbert_init.m:250-264: misc delayed add + conv latency
+            mrng = random.Random(f"{name}-{n}-misc")
+            ins["misci"] = [mrng.randrange(1 << p["MISC_WIDTH"]) for _ in range(cycles)]
+            out["misco"] = delay(ins["misci"], p["ADD_LATENCY"] + p["CONV_LATENCY"], 0)
         write_set(mdir / f"simdata{n}", p, {**ins, **out})
         sets.append((p, desc, cycles))
-    md_table(mdir, name, HB, sets,
+    md_table(mdir, name, HB + list(HB_MISC_DEFAULTS),
+             [(dict(HB_MISC_DEFAULTS, **p), *rest) for p, *rest in sets],
              "`hilbert` computes `even = (a + conj(b))/2` and `odd = (a − "
              "conj(b))/(2j)` per lane: full-precision sums, then a halving "
              "bus_convert with round-half-even and wrap. Row 0 is zero, then "
              "corner words, all pairs of corner words on (a, b), then random "
              "words; the corners include the one case that wraps (`b_re` "
-             "maximum, `a_re` most negative).")
+             "maximum, `a_re` most negative). Sets with `MISC` = 1 also drive "
+             "random `MISC_WIDTH`-bit words on `sim_misci.csv`, expected on "
+             "`sim_misco.csv` delayed by `ADD_LATENCY + CONV_LATENCY` "
+             "(`hilbert_init.m`); the other sets leave `MISC` at 0 (not in "
+             "`params.json`).")
     return toml(CATEGORY, name, [(p, d) for p, d, _ in sets], SCRIPT)
 
 

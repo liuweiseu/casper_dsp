@@ -28,6 +28,8 @@ use it.
 | `QUANTIZATION` | 0       | `0`=truncate, `1`=round half away from zero, `2`=round half to even (only relevant when `BIN_PT_OUT < BIN_PT_IN`) |
 | `OVERFLOW`     | 0       | `0`=wrap, `1`=saturate, `2`=flag as error (treated as wrap) |
 | `CSP_LATENCY`      | 1       | Pipeline stages on the output; `0` = combinational |
+| `MISC` | 0 | casper `misc`: `1` passes `misci` to `misco` (bus_negate_init.m:226-230); `0` ties `misco` to 0 |
+| `MISC_WIDTH` | 1 | `misci` / `misco` width (inherited from the signal in Simulink) |
 
 With `OVERFLOW = 0` and the output in the same format as the input, `−(−2^(N−1))`
 wraps to `−2^(N−1)`, as in plain two's-complement hardware. With `OVERFLOW = 1`
@@ -39,4 +41,6 @@ it saturates to `2^(N−1) − 1`.
 |--------|-----------|--------------|-------------|
 | `clk`  | input     | 1            | Clock (unused when `CSP_LATENCY = 0`) |
 | `din`  | input     | `N_BITS_IN`  | Input word |
+| `misci` | input | `MISC_WIDTH` | Side-channel word (e.g. sync), used when `MISC = 1`; defaults to 0 |
 | `dout` | output    | `N_BITS_OUT` | `convert(−din)`, delayed by `CSP_LATENCY` cycles |
+| `misco` | output | `MISC_WIDTH` | `misci` delayed by `CSP_LATENCY` cycles when `MISC = 1`, else 0 |

@@ -94,7 +94,7 @@ module square_transposer #(
     end
 
     barrel_switcher #(.N_INPUTS(N_INPUTS), .DATA_WIDTH(DATA_WIDTH)) u_barrel_switcher (
-        .clk(clk), .sel(cnt), .sync_in(sync), .din(bs_in), .dout(bs_out), .sync_out(bs_sync));
+        .clk(clk), .sel(cnt), .sync_in(sync), .din(bs_in), .dout(bs_out), .sync_out(bs_sync), .dvalid());
 
     pipeline #(.BITWIDTH(1), .CSP_LATENCY(N - 1)) u_dsync (
         .clk(clk), .din(bs_sync), .dout(sync_out));

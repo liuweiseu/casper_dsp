@@ -87,7 +87,9 @@ module convert_of #(
     ) u_convert (
         .clk (clk),
         .din (din),
-        .dout(dout)
+        .dout(dout),
+        .overflow(),
+        .misco()
     );
 
     logic of_raw;

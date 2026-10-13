@@ -27,7 +27,7 @@ casper_library, `BRAM_LATENCY` is accepted but does not enter the formula.
 | `ADD_LATENCY`     | 1       | Enters `LATENCY` |
 | `BRAM_LATENCY`    | 1       | Accepted for traceability; unused (as in casper_library) |
 | `CONV_LATENCY`    | 1       | Enters `LATENCY` |
-| `ASYNC`           | 0       | Declared for traceability; must be 0 |
+| `ASYNC`           | 0       | casper `async`: `1` adds `dvalid` = `en` delayed by the latency; the data is not gated (checked against Simulink, MATLAB R2021a) |
 
 ## Ports
 

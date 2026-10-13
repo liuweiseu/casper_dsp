@@ -28,6 +28,8 @@ b ──► sign/zero extend ──┘
 | `QUANTIZATION` | 0       | `0`=truncate, `1`=round half away from zero, `2`=round half to even |
 | `OVERFLOW`     | 0       | `0`=wrap, `1`=saturate, `2`=flag as error (treated as wrap) |
 | `MULT_LATENCY`      | 1       | Pipeline stages on the output; `0` = combinational |
+| `MISC` | 0 | casper `misc`: `1` passes `misci` to `misco` (bus_mult_init.m:701-711); `0` ties `misco` to 0 |
+| `MISC_WIDTH` | 1 | `misci` / `misco` width (inherited from the signal in Simulink) |
 
 ## Ports
 
@@ -36,7 +38,9 @@ b ──► sign/zero extend ──┘
 | `clk`  | input     | 1            | Clock (unused when `MULT_LATENCY = 0`) |
 | `a`    | input     | `N_BITS_A`   | First operand |
 | `b`    | input     | `N_BITS_B`   | Second operand |
+| `misci` | input | `MISC_WIDTH` | Side-channel word (e.g. sync), used when `MISC = 1`; defaults to 0 |
 | `dout` | output    | `N_BITS_OUT` | `convert(a × b)`, delayed by `MULT_LATENCY` cycles |
+| `misco` | output | `MISC_WIDTH` | `misci` delayed by `MULT_LATENCY` cycles (casper: `mult_latency + fan_latency`, `fan_latency` = 0 here) when `MISC = 1`, else 0 |
 
 ## Functional Description
 

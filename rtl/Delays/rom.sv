@@ -7,7 +7,17 @@
 // line ($readmemh format; use the .mem extension so the same file is also a
 // valid Xilinx XPM MEMORY_INIT_FILE). A relative path is resolved against the
 // simulator's / synthesis tool's working directory. "" = all words 0.
-// dout powers up to 0.
+// dout shows INIT_REG in the first cycle only: the output register itself
+// powers up to 0, so if the first edge is disabled dout reads 0 until the
+// first enabled read (as the built Simulink ROM does).
+//
+// Optional ports, as the Xilinx ROM's rst / en options (latency 1):
+//   en  (EN = 1): en = 0 freezes dout
+//   rst (RST = 1): dout <= INIT_REG instead of the read, whatever en is (the
+//                  built block resets on en = 0 too, unlike the literal
+//                  xlSPROM.sgm text)
+// INIT_REG is the raw output-register word (power-on and reset value).
+// The options and INIT_REG != 0 are GENERIC only.
 //
 // PLATFORM selects the implementation (same contract on every platform):
 //   "GENERIC" : behavioral description below ($readmemh). Default; the only
@@ -28,7 +38,8 @@
 // deviations = [
 //   'Contents: Simulink quantizes the real initVector to {arith_type, n_bits, bin_pt} with Round and Saturate (xlSPROM.sgm: data_xfix_cell); the HDL loads raw hex words from INIT_FILE, so the generator must apply that rounding/saturation; INIT_FILE = "" gives all zeros, whereas the mask default is sin(pi*(0:15)/16).',
 //   'Depth must be a power of two (2^ADDR_WIDTH); Simulink errors on addr > depth-1, the HDL wraps.',
-//   'Read latency is fixed at 1 and dout powers up to 0; latency 0 (distributed, asynchronous read), latency > 1, init_reg != 0 and the rst/en ports are not implemented.',
+//   'Read latency is fixed at 1; latency 0 (distributed, asynchronous read) and latency > 1 are not implemented.',
+//   'INIT_REG is the raw output-register word; Simulink quantizes the real init_reg to {arith_type, n_bits, bin_pt} with Round / Saturate (xlSPROM.sgm init_op_val_xfix). With the mapped arith_type Unsigned and bin_pt 0, init_reg = INIT_REG.',
 // ]
 //
 // [params.ADDR_WIDTH]
@@ -40,6 +51,25 @@
 // [params.DATA_WIDTH]
 // mask = 'n_bits'
 // type = 'edit'
+//
+// [params.RST]
+// mask = 'rst'
+// type = 'checkbox'
+// [params.RST.values]
+// 0 = 'off'
+// 1 = 'on'
+//
+// [params.EN]
+// mask = 'en'
+// type = 'checkbox'
+// [params.EN.values]
+// 0 = 'off'
+// 1 = 'on'
+//
+// [params.INIT_REG]
+// mask = 'init_reg'
+// type = 'edit'
+// note = 'raw output-register word; equals init_reg for the mapped Unsigned, bin_pt 0 data type'
 //
 // [mask_set.arith_type]
 // value = 'Unsigned'
@@ -59,9 +89,6 @@
 // [mask_missing]
 // initVector = 'given as INIT_FILE (raw words) instead'
 // distributed_mem = 'memory type is chosen by PLATFORM / synthesis'
-// rst = 'output-register reset port not implemented'
-// init_reg = 'output register powers up to 0; no reset value'
-// en = 'enable port not implemented'
 // latency = 'read latency fixed at 1'
 // gui_display_data_type = 'HDL stores raw bit patterns (no Boolean / Floating-point)'
 // arith_type = 'interpretation only; INIT_FILE holds the bit patterns'
@@ -73,11 +100,10 @@
 // use_rpm = 'implementation only'
 //
 // [ports]
+// order = 'Simulink: addr, rst, en -> dout (port_label of a built block with both options on); HDL: addr, rst, en -> dout'
 // note = 'addr / dout match the icon port_label'
 // [ports.renamed]
 // [ports.missing]
-// rst = 'rst option only (not implemented)'
-// en = 'en option only (not implemented)'
 // [ports.extra]
 // @simulink-mapping end
 
@@ -85,23 +111,40 @@ module rom #(
     parameter int    DATA_WIDTH = 8,
     parameter int    ADDR_WIDTH = 4,
     parameter string INIT_FILE  = "",
+    parameter int    RST        = 0,      // 1 = rst port enabled
+    parameter int    EN         = 0,      // 1 = en port enabled
+    parameter        INIT_REG   = 0,      // raw output-register word
     parameter string PLATFORM   = "GENERIC"
 )(
     input  logic                  clk,
     input  logic [ADDR_WIDTH-1:0] addr,
+    input  logic                  rst = 1'b0,
+    input  logic                  en  = 1'b1,
     output logic [DATA_WIDTH-1:0] dout
 );
+
+    localparam logic [DATA_WIDTH-1:0] INIT_REG_W = DATA_WIDTH'(INIT_REG);
 
     generate
         if (PLATFORM == "GENERIC") begin : GEN_GENERIC
             logic [DATA_WIDTH-1:0] mem [0:(1<<ADDR_WIDTH)-1];
+            // power-on: dout shows INIT_REG for the first cycle only; the
+            // output register itself starts at 0 (built Simulink ROM: a
+            // disabled first edge leaves 0, not INIT_REG)
             logic [DATA_WIDTH-1:0] dout_r = '0;
+            logic                  first  = 1'b1;
             initial begin
                 for (int i = 0; i < (1 << ADDR_WIDTH); i++) mem[i] = '0;
                 if (INIT_FILE != "") $readmemh(INIT_FILE, mem);
             end
-            always_ff @(posedge clk) dout_r <= mem[addr];
-            assign dout = dout_r;
+            always_ff @(posedge clk) begin
+                first <= 1'b0;
+                if (RST != 0 && rst)    dout_r <= INIT_REG_W;   // rst wins over en
+                else if (EN == 0 || en) dout_r <= mem[addr];
+            end
+            assign dout = first ? INIT_REG_W : dout_r;
+        end else if (RST != 0 || EN != 0 || INIT_REG_W != '0) begin : GEN_BAD_OPTIONS
+            $fatal(1, "rom: RST / EN / INIT_REG are implemented for PLATFORM \"GENERIC\" only");
         end else if (PLATFORM == "XILINX") begin : GEN_XILINX
             rom_xilinx #(
                 .DATA_WIDTH(DATA_WIDTH),

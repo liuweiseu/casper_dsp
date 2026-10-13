@@ -50,8 +50,8 @@ Names follow the `cmult` mask. Defaults are the values stored in the casper_libr
 | `PIPELINE_LATENCY` | 0 | See `PIPELINE_CMULT_EN` |
 | `FLOATING_POINT` | 0 | Must be 0 (floating point not implemented, `$fatal`) |
 | `FLOAT_TYPE` / `EXP_WIDTH` / `FRAC_WIDTH` | "single" / 8 / 24 | Floating-point only; declared, not implemented |
-| `ASYNC` | 0 | Must be 0 (`en` / `dvalid` ports not implemented, `$fatal`) |
-| `PIPELINED_ENABLE` | 1 | `ASYNC` only; declared, not implemented |
+| `ASYNC` | 0 | casper `async`: every Mult / AddSub / Convert latency chain only advances while its `en` is 1 (checked against Simulink, MATLAB R2021a); not with the embedded-multiplier pipeline (`$fatal`) |
+| `PIPELINED_ENABLE` | 1 | `ASYNC` only. `1`: each stage is gated by `en` delayed to its input and `dvalid` = `en` delayed `IN + MULT + ADD + CONV` latency, aligned with `ab`. Simulink delays it by `IN + MULT + 2·ADD` instead (casper's `den` takes the add latency, mlib_devel bug 13); the HDL implements the intended behaviour, so `dvalid` differs from Simulink when `CONV_LATENCY != ADD_LATENCY`. `0`: every stage is gated by the raw `en`, `IN_LATENCY` is forced to 0, `dvalid` = 0 |
 
 ## Ports
 
@@ -60,4 +60,6 @@ Names follow the `cmult` mask. Defaults are the values stored in the casper_libr
 | `clk` | input | 1 | Clock |
 | `a` | input | `2*N_BITS_A` | `{a_re, a_im}`, real part in the MSBs |
 | `b` | input | `2*N_BITS_B` | `{b_re, b_im}`, real part in the MSBs |
+| `en` | input | 1 | Async enable (used when `ASYNC = 1`; default 1) |
 | `ab` | output | `2*N_BITS_AB` | `{ab_re, ab_im}`, real part in the MSBs |
+| `dvalid` | output | 1 | See `PIPELINED_ENABLE`; 0 when `ASYNC = 0` |

@@ -8,7 +8,8 @@ barrel_switcher_init.m, square_transposer_init.m), not from the RTL:
   reorder           a read-before-write buffer addressed, in the f-th frame
                     after a sync, with map^f(k) (closed form, computed with
                     rtl/Reorder/scripts/gen_reorder_map.py), plus a check that
-                    whole frames come out as out[k] = previous frame[map[k]]
+                    whole frames come out as out[k] = previous frame[map[k]];
+                    with en, frames are counted in enabled samples
   barrel_switcher   dout[k] = din[(k + sel) mod N], N_INPUTS cycles later
   square_transposer lane delays + barrel switcher driven by the sync-reset
                     down counter, plus a check that sync-aligned N x N
@@ -39,6 +40,29 @@ TEST_DATA = TEST_DATA_ROOT / CATEGORY
 MAP_REL = "../../../test_data/Reorder/reorder/simdata{n}/map.mem"
 
 
+def sync_train_en(rng, en, period, first=3):
+    """sync every `period` enabled samples from `first`, plus one early re-sync.
+
+    A sync goes on the cycle of the last sample of a period, or on a later
+    en = 0 cycle before the next sample (both close the period).
+    """
+    cycles = len(en)
+    s, t, done = [0] * cycles, first, False
+    while t < cycles:
+        s[t] = 1
+        want = max(2, period // 3 + 1) if not done and t > cycles // 2 else period
+        done = done or want != period
+        n = 0
+        while t + 1 < cycles and n < want:
+            t += 1
+            n += en[t]
+        while t + 1 < cycles and not en[t + 1] and rng.random() < 0.5:
+            t += 1
+        if t + 1 >= cycles:
+            break
+    return s
+
+
 def sync_train(rng, cycles, frame, first=3, early=True):
     """sync every `frame` cycles from `first`, plus one early re-sync."""
     s = [0] * cycles
@@ -58,7 +82,9 @@ def sync_train(rng, cycles, frame, first=3, early=True):
 RO = ["N_INPUTS", "N_BITS", "MAP_LEN", "ORDER", "MAP_LATENCY", "BRAM_LATENCY",
       "FANOUT_LATENCY"]
 
-# (map name, map, N_INPUTS, N_BITS, MAP_LATENCY, BRAM_LATENCY, FANOUT_LATENCY, description)
+# (map name, map, N_INPUTS, N_BITS, MAP_LATENCY, BRAM_LATENCY, FANOUT_LATENCY,
+#  description[, probability of en = 1]); without the last field en = 1 and no
+# sim_en.csv is written
 REORDER_TESTS = [
     ("default", [0, 7, 1, 3, 2, 5, 6, 4], 1, 8, 2, 1, 0, "casper's default map (order 4)"),
     ("bi_real even F5", bi_real_map("even", 5), 1, 36, 1, 2, 0,
@@ -73,6 +99,14 @@ REORDER_TESTS = [
      "fft_unscrambler map FFTSize 7, 2 groups (order 6)"),
     ("identity 8", list(range(8)), 1, 8, 1, 2, 1, "identity map: plain delay (order 1)"),
     ("bi_real even F2", bi_real_map("even", 2), 2, 8, 2, 1, 0, "2-point map (order 1)"),
+    # random en; N_BITS differs from the en = 1 sets (the testbench picks the
+    # set by its integer parameters)
+    ("default", [0, 7, 1, 3, 2, 5, 6, 4], 1, 10, 2, 1, 0, "casper's default map (order 4), random en", 0.7),
+    ("unscrambler F5 n1", unscrambler_map(5, 1), 2, 14, 2, 2, 2,
+     "fft_unscrambler map FFTSize 5, 2 groups (order 4), random en", 0.6),
+    ("bi_real out F4", bi_real_map("out", 4), 4, 20, 3, 2, 1,
+     "index-reversal map of reorder_out, 4 streams (order 2), random en", 0.7),
+    ("identity 8", list(range(8)), 1, 6, 1, 2, 1, "identity map: plain delay (order 1), random en", 0.5),
 ]
 
 
@@ -82,25 +116,41 @@ def reorder_latencies(p):
     return pre + rep, p["BRAM_LATENCY"] + p["FANOUT_LATENCY"]
 
 
+def m_sync_delay_en(din, en, delay_len):
+    """casper sync_delay_en: down counter loaded on din, decremented on en; dout = (cnt == 1)."""
+    cnt, out = 0, []
+    for x, e in zip(din, en):
+        out.append(1 if cnt == 1 else 0)
+        cnt = delay_len if x else (cnt - 1 if e and cnt else cnt)
+    return out
+
+
 def m_reorder(p, perm, st):
-    """Reference model of reorder (single buffered, en = 1)."""
+    """Reference model of reorder (single buffered).
+
+    en (default all 1) gates the step counter and the RAM write; the RAM is
+    read every cycle. The counter is cleared by sync (sync wins over en),
+    except for ORDER = 1 (delay_bram_en_plus), whose counter ignores sync.
+    The delays in front of the RAM are the same for address, data and write
+    enable, so the RAM is modelled in input time and its output delayed.
+    """
     cycles, n, map_len, order = len(st["sync"]), p["N_INPUTS"], p["MAP_LEN"], p["ORDER"]
+    en = st.get("en", [1] * cycles)
     din_dly, out_dly = reorder_latencies(p)
     zero = [0] * n
-    sync_out = delay(m_sync_delay(delay(st["sync"], din_dly, 0), map_len), out_dly, 0)
-    valid = [1 if t >= din_dly + out_dly else 0 for t in range(cycles)]
-    if order == 1:
-        return {"dout": delay(st["din"], din_dly + map_len + out_dly, zero),
-                "sync_out": sync_out, "valid": valid}
+    en_d = delay(en, din_dly, 0)
+    sync_out = delay(m_sync_delay_en(delay(st["sync"], din_dly, 0), en_d, map_len), out_dly, 0)
+    valid = delay(en_d, out_dly, 0)
     _, powers = map_powers(perm)
     ram, k, f, ram_out = [zero] * map_len, 0, 0, []
     for t in range(cycles):
-        addr = powers[(f % order) * map_len + k]
+        addr = k if order == 1 else powers[(f % order) * map_len + k]
         ram_out.append(ram[addr])                  # read before write
-        ram[addr] = st["din"][t]
-        if st["sync"][t]:
+        if en[t]:
+            ram[addr] = st["din"][t]
+        if st["sync"][t] and order != 1:
             k, f = 0, 0
-        else:
+        elif en[t]:
             k, f = (k + 1) % map_len, f + (1 if k == map_len - 1 else 0)
     return {"dout": delay(ram_out, din_dly + out_dly, zero), "sync_out": sync_out, "valid": valid}
 
@@ -115,9 +165,21 @@ def check_reorder_semantics(p, perm, st, out):
     """
     map_len, period = p["MAP_LEN"], p["ORDER"] * p["MAP_LEN"]
     lat = sum(reorder_latencies(p))
-    syncs = [t for t, s in enumerate(st["sync"]) if s]
+    cycles = len(st["sync"])
+    en = st.get("en", [1] * cycles)
+    # enabled samples only: sample i was taken in cycle when[i] and leaves in
+    # cycle when[i] + lat; a sync in cycle t closes the frame after the
+    # samples taken up to t, so it sits at index (samples in cycles <= t) - 1
+    when = [t for t in range(cycles) if en[t] and t + lat < cycles]
+    din = [st["din"][t] for t in when]
+    dout = [out["dout"][t + lat] for t in when]
+    assert all(out["valid"][t + lat] for t in when), "valid does not mark the samples"
+    taken = [0]
+    for e in en:
+        taken.append(taken[-1] + e)
+    syncs = [taken[t + 1] - 1 for t, s in enumerate(st["sync"]) if s]
     checked = 0
-    for a, b, c in zip(syncs, syncs[1:], syncs[2:] + [len(st["sync"])]):
+    for a, b, c in zip(syncs, syncs[1:], syncs[2:] + [len(din)]):
         if b - a != period:
             continue
         # frames whose previous frame lies inside this regular period,
@@ -125,11 +187,11 @@ def check_reorder_semantics(p, perm, st, out):
         # the next sync c
         last = b + 1 if c - b >= map_len else b + 1 - map_len
         for start in range(a + 1 + map_len, last + 1, map_len):
-            if start + map_len + lat > len(st["sync"]):
+            if start + map_len > len(din):
                 break
-            prev = st["din"][start - map_len: start]
+            prev = din[start - map_len: start]
             for k in range(map_len):
-                assert out["dout"][start + k + lat] == prev[perm[k]], "reorder model is not a permutation"
+                assert dout[start + k] == prev[perm[k]], "reorder model is not a permutation"
             checked += 1
     assert checked >= 3
     return checked
@@ -137,13 +199,19 @@ def check_reorder_semantics(p, perm, st, out):
 
 def gen_reorder():
     name, mdir, sets = "reorder", TEST_DATA / "reorder", []
-    for n, (mname, perm, ns, dw, ml, bl, fl, desc) in enumerate(REORDER_TESTS):
+    for n, (mname, perm, ns, dw, ml, bl, fl, desc, *en_p) in enumerate(REORDER_TESTS):
         rng = random.Random(f"{name}-{n}")
         p = P(RO, [ns, dw, len(perm), compute_order(perm), ml, bl, fl])
         period = p["ORDER"] * p["MAP_LEN"]          # syncs must be ORDER·MAP_LEN apart
         cycles = max(256, 4 * period + 4 * len(perm))
-        st = {"din": [[rng.randrange(1 << dw) for _ in range(ns)] for _ in range(cycles)],
-              "sync": sync_train(rng, cycles, period)}
+        if en_p:
+            cycles = -(-int(cycles / en_p[0]) // 64) * 64
+        st = {"din": [[rng.randrange(1 << dw) for _ in range(ns)] for _ in range(cycles)]}
+        if en_p:
+            st["en"] = [1 if rng.random() < en_p[0] else 0 for _ in range(cycles)]
+            st["sync"] = sync_train_en(rng, st["en"], period)
+        else:
+            st["sync"] = sync_train(rng, cycles, period)
         out = m_reorder(p, perm, st)
         frames = check_reorder_semantics(p, perm, st, out)
         d = mdir / f"simdata{n}"
@@ -154,6 +222,8 @@ def gen_reorder():
         (d / "params.json").write_text(json.dumps(dict(full, MAP=perm), indent=2) + "\n")
         write_csv(d / "sim_din.csv", st["din"])
         write_csv(d / "sim_sync.csv", st["sync"])
+        if en_p:
+            write_csv(d / "sim_en.csv", st["en"])
         for k in ("dout", "sync_out", "valid"):
             write_csv(d / f"sim_{k}.csv", out[k])
         sets.append((full, desc, mname, cycles, frames))
@@ -166,13 +236,18 @@ def gen_reorder():
         "k / map[k] select, > 2 = incrementally updated map copy. The frame "
         "counter restarts at every sync, so (as in casper designs) `sync` "
         "pulses every `ORDER·MAP_LEN` cycles, plus one early re-sync mid-run; "
-        "`din` is random.", "",
+        "`din` is random. Sets with a random `en` (`sim_en.csv`; the other sets "
+        "have none, and the testbench drives `en` = 1) count frames and sync "
+        "periods in enabled samples; a sync falls on the last sample of a "
+        "period or on an `en` = 0 cycle after it.", "",
         "Generated by `test_data/scripts/gen_reorder_test_data.py`: the "
         "expected outputs model a read-before-write buffer addressed with "
         "map^f(k) in the f-th frame after a sync (closed form, independent of "
-        "the RTL's incremental mechanism); the script also checks that the "
-        "model outputs every regular frame as the previous frame permuted "
-        "(column *Frames checked*). `map.mem` comes from "
+        "the RTL's incremental mechanism); `en` gates the step counter, the RAM "
+        "write and (delayed) `valid`, and `sync_out` comes from a model of "
+        "casper's `sync_delay_en` (`reorder_init.m:151-187`). The script also "
+        "checks that the model outputs every regular frame as the previous "
+        "frame permuted (column *Frames checked*). `map.mem` comes from "
         "`rtl/Reorder/scripts/gen_reorder_map.py`; `MAP_INIT_FILE` is "
         "relative to the simulator's working directory "
         "`tests/sim_build/Reorder/reorder/`. Not exported from MATLAB: "
@@ -241,7 +316,9 @@ def check_transpose(log2n, din, sync, out):
 
 ST = ["N_INPUTS", "DATA_WIDTH"]
 TRANSPOSER_TESTS = [(1, 8, "2 lanes"), (2, 36, "4 lanes, 36-bit words"), (3, 12, "8 lanes")]
-BARREL_TESTS = [(1, 8, "2 lanes"), (2, 16, "4 lanes"), (3, 6, "8 lanes")]
+# (log2 lanes, width, description[, ASYNC])
+BARREL_TESTS = [(1, 8, "2 lanes"), (2, 16, "4 lanes"), (3, 6, "8 lanes"),
+                (2, 16, "4 lanes, async: dvalid = en delayed N_INPUTS", 1)]
 
 
 def gen_square_transposer():
@@ -288,7 +365,7 @@ def gen_square_transposer():
 
 def gen_barrel_switcher():
     name, mdir, sets = "barrel_switcher", TEST_DATA / "barrel_switcher", []
-    for n, (log2n, dw, desc) in enumerate(BARREL_TESTS):
+    for n, (log2n, dw, desc, *asy) in enumerate(BARREL_TESTS):
         rng = random.Random(f"{name}-{n}")
         lanes, cycles = 1 << log2n, 128
         din = [[rng.randrange(1 << dw) for _ in range(lanes)] for _ in range(cycles)]
@@ -296,6 +373,12 @@ def gen_barrel_switcher():
         sync = [1 if rng.random() < 0.05 else 0 for _ in range(cycles)]
         out = m_barrel(log2n, din, sel, sync)
         p = P(ST, [log2n, dw])
+        if asy:
+            # async: en only qualifies the data; dvalid = en through a free
+            # Delay of N_INPUTS (barrel_switcher_init.m:64-73, 152-161)
+            p["ASYNC"] = 1
+            out["en"] = [1 if rng.random() < 0.75 else 0 for _ in range(cycles)]
+            out["dvalid"] = delay(out["en"], log2n, 0)
         d = mdir / f"simdata{n}"
         d.mkdir(parents=True, exist_ok=True)
         (d / "params.json").write_text(json.dumps(p, indent=2) + "\n")
@@ -304,20 +387,26 @@ def gen_barrel_switcher():
         write_csv(d / "sim_sync_in.csv", sync)
         write_csv(d / "sim_dout.csv", out["dout"])
         write_csv(d / "sim_sync_out.csv", out["sync_out"])
+        for k in ("en", "dvalid"):
+            if k in out:
+                write_csv(d / f"sim_{k}.csv", out[k])
         sets.append((p, desc, cycles))
     lines = [
         "# barrel_switcher test data", "",
         "`barrel_switcher` rotates its lanes by `sel`: `dout[k] = din[(k + sel) "
         "mod N]`, `N_INPUTS` cycles later (`sync_out` likewise). `din`, a "
-        "new random `sel` every cycle and sparse `sync_in` pulses.", "",
+        "new random `sel` every cycle and sparse `sync_in` pulses. The `ASYNC` "
+        "= 1 set also drives a random `sim_en.csv` and expects `sim_dvalid.csv` "
+        "= `en` delayed `N_INPUTS` (casper async; the data is not gated).", "",
         "Generated by `test_data/scripts/gen_reorder_test_data.py` (reference "
         "model of `barrel_switcher_init.m`, not exported from MATLAB). CSV rows "
         "are cycles; `sim_din<j>.csv` / `sim_dout<j>.csv` hold lane j.", "",
-        "| Test # | Directory | N_INPUTS | DATA_WIDTH | Cycles | Description |",
-        "|---|---|---|---|---|---|",
+        "| Test # | Directory | N_INPUTS | DATA_WIDTH | ASYNC | Cycles | Description |",
+        "|---|---|---|---|---|---|---|",
     ]
     for n, (p, desc, cycles) in enumerate(sets):
-        lines.append(f"| {n} | `simdata{n}` | {p['N_INPUTS']} | {p['DATA_WIDTH']} | {cycles} | {desc} |")
+        lines.append(f"| {n} | `simdata{n}` | {p['N_INPUTS']} | {p['DATA_WIDTH']} | "
+                     f"{p.get('ASYNC', 0)} | {cycles} | {desc} |")
     (mdir / "test_data.md").write_text("\n".join(lines) + "\n")
     return toml(CATEGORY, name, [(p, desc) for p, desc, _ in sets], SCRIPT)
 

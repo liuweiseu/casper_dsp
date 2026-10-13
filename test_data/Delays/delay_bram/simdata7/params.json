@@ -1,0 +1,6 @@
+{
+  "BITWIDTH": 8,
+  "DELAY_LEN": 16,
+  "BRAM_LATENCY": 2,
+  "ASYNC": 1
+}

@@ -15,7 +15,7 @@ testdatadir = module_data_dir(__file__)
 PARAMS = ['N_INPUTS', 'N_BITS', 'MAP_LEN', 'ORDER', 'MAP_LATENCY', 'BRAM_LATENCY', 'FANOUT_LATENCY']
 # sim_<name>.csv -> DUT port; LANE ports are arrays of N_INPUTS words
 LANE_IN = ['din']
-SCALAR_IN = ['sync']
+SCALAR_IN = ['sync', 'en']               # sim_en.csv is optional: en = 1 without it
 LANE_OUT = {'dout': 'dout'}
 SCALAR_OUT = {'sync_out': 'sync_out', 'valid': 'valid'}
 
@@ -53,9 +53,10 @@ async def module_test(dut):
         return
 
     lanes = int(dut.N_INPUTS.value)
-    stim = {k: load(datadir, k) for k in LANE_IN + SCALAR_IN}
+    stim = {k: load(datadir, k) for k in LANE_IN + SCALAR_IN if k != 'en'}
     expected = {k: load(datadir, k) for k in list(LANE_OUT) + list(SCALAR_OUT)}
     cycles = len(next(iter(expected.values())))
+    stim['en'] = load(datadir, 'en') if (datadir / "sim_en.csv").exists() else [[1]] * cycles
     cocotb.log.info(f"Loaded {cycles} cycles from {datadir.name}")
 
     for i in range(cycles):

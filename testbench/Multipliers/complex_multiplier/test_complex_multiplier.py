@@ -49,6 +49,11 @@ async def module_test(dut):
         return
 
     ports = ["a_re", "a_im", "b_re", "b_im"]
+    # AXI4-Stream valids: only sets with sim_a_tvalid.csv drive them (else 1)
+    tvalid = (datadir / "sim_a_tvalid.csv").exists()
+    if tvalid:
+        ports += ["a_tvalid", "b_tvalid"]
+        exp_tv = np.loadtxt(datadir / "sim_dout_tvalid.csv", dtype=int).tolist()
     stim = {p: np.loadtxt(datadir / f"sim_{p}.csv", dtype=int).tolist() for p in ports}
     exp_re = np.loadtxt(datadir / "sim_dout_re.csv", dtype=int).tolist()
     exp_im = np.loadtxt(datadir / "sim_dout_im.csv", dtype=int).tolist()
@@ -65,5 +70,8 @@ async def module_test(dut):
             f"Index {i}: {inputs} → expected (re, im)=({exp_re[i]}, {exp_im[i]}), "
             f"got ({actual_re}, {actual_im})"
         )
+        if tvalid:
+            actual = int(dut.dout_tvalid.value)
+            assert actual == exp_tv[i], f"Index {i}: expected dout_tvalid={exp_tv[i]}, got {actual}"
 
     cocotb.log.info(f"module_test PASSED — {len(exp_re)} cycles verified")

@@ -4,8 +4,8 @@
 
 Permutes every frame of `MAP_LEN` samples by a fixed map: output step `k` of
 a frame is input sample `map[k]` of the previous frame. It corresponds to
-casper_library's `reorder` with `double_buffer = 0` and `en` always 1, as
-casper's FFT blocks use it. All `N_INPUTS` streams share the addresses and
+casper_library's `reorder` with `double_buffer = 0`, as casper's FFT blocks
+use it. All `N_INPUTS` streams share the addresses and
 are stored side by side in one read-before-write
 [`single_port_ram`](../Delays/single_port_ram.md).
 
@@ -17,7 +17,7 @@ was written to that address one frame earlier. `map^f` repeats with period
 
 | `ORDER` | Implementation |
 |---------|----------------|
-| 1 | identity map: a [`delay_bram`](../Delays/delay_bram.md) of `MAP_LEN + BRAM_LATENCY + FANOUT_LATENCY` |
+| 1 | identity map: address = step counter (casper's `delay_bram_en_plus`, a delay of `MAP_LEN` enabled samples plus `BRAM_LATENCY + FANOUT_LATENCY`); the counter is not cleared by `sync` |
 | 2 | `(MAP_BITS+1)`-bit frame counter; address = MSB ? `map[k]` : `k` |
 | > 2 | `current_map` [`dual_port_ram`](../Delays/dual_port_ram.md) holding `map^f`: identity in the first frame after a sync, then updated in place with `p_{f+1}[k] = map[p_f[k]]` |
 
@@ -50,15 +50,31 @@ PRE = MAP_LATENCY + 2    (ORDER = 1 or > 2)
 
 the data reach the RAM `PRE + REP` cycles after `din` and leave it
 `BRAM_LATENCY + FANOUT_LATENCY` cycles later. `sync_out` is `sync` delayed by
-`PRE + REP`, then by a [`sync_delay`](../Delays/sync_delay.md) of `MAP_LEN`,
+`PRE + REP`, then by casper's `sync_delay_en` of `MAP_LEN` (a
+[`sync_delay`](../Delays/sync_delay.md) that counts enabled samples only),
 then by `BRAM_LATENCY + FANOUT_LATENCY`, so it marks the first sample of the
-first reordered frame. `valid` rises `PRE + REP + BRAM_LATENCY +
-FANOUT_LATENCY` cycles after power-up and stays high (en = 1).
+first reordered frame. `valid` is `en` delayed by `PRE + REP + BRAM_LATENCY +
+FANOUT_LATENCY` (power-on 0).
+
+### Enable
+
+`en` (casper input port 2; defaults to 1 when left unconnected) marks the
+cycles that carry a sample (`reorder_init.m:151-187, 257-259`):
+
+- it gates the step counter (`sync` still clears it, whatever `en` is);
+- delayed by `PRE + REP`, it is the RAM write enable and the enable of
+  `sync_delay_en`, and delayed further it is `valid`;
+- for `ORDER > 2` it also gates the `current_map` update.
+
+The data RAM is read every cycle, so while `en = 0` `dout` repeats the word at
+the frozen address; `sync_out` stays high while `en = 0` holds the
+`sync_delay_en` count at 1. Frames and sync periods are counted in enabled
+samples.
 
 ### Sync
 
 The frame counter is cleared by `sync`, so syncs must come every
-`ORDER · MAP_LEN` cycles (or a multiple), as casper designs guarantee: then
+`ORDER · MAP_LEN` enabled samples (or a multiple), as casper designs guarantee: then
 the frame after a sync (identity addresses) follows a frame addressed with
 `map^(ORDER-1)`. Syncs closer together than two cycles are not supported for
 `ORDER > 2`.
@@ -92,7 +108,8 @@ ignored.
 |------|-----------|-------|-------------|
 | `clk` | input | 1 | Clock |
 | `sync` | input | 1 | Frame sync; clears the frame counter |
+| `en` | input | 1 | Sample enable (default 1) |
 | `din` | input | `N_BITS` × `N_INPUTS` | Input streams |
 | `sync_out` | output | 1 | Marks the first sample of the first reordered frame |
-| `valid` | output | 1 | High once the pipeline has filled |
+| `valid` | output | 1 | `en` delayed by the pipeline latency |
 | `dout` | output | `N_BITS` × `N_INPUTS` | Reordered streams |

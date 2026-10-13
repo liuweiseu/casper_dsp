@@ -1,0 +1,8 @@
+{
+  "DATA_WIDTH": 8,
+  "ADDR_WIDTH": 4,
+  "RST": 1,
+  "EN": 1,
+  "INIT_REG": 60,
+  "INIT_FILE": "../../../test_data/Delays/rom/simdata4/rom_init.mem"
+}

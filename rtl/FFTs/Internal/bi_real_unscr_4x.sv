@@ -239,7 +239,7 @@ module bi_real_unscr_4x #(
         ) u_hilbert (
             .clk(clk),
             .a_re(m_re[2*h]), .a_im(m_im[2*h]), .b_re(m_re[2*h+1]), .b_im(m_im[2*h+1]),
-            .even_re(h_re[h][0]), .even_im(h_im[h][0]), .odd_re(h_re[h][1]), .odd_im(h_im[h][1]));
+            .even_re(h_re[h][0]), .even_im(h_im[h][0]), .odd_re(h_re[h][1]), .odd_im(h_im[h][1]), .misco());
     end
 
     // ── half-frame delays of hilbert0 and of the sync ───────────────────────

@@ -35,7 +35,16 @@
 // [mask_set.floating_point]
 // value = 'off'
 //
+// [params.MISC]
+// mask = 'misc'
+// type = 'checkbox'
+// note = 'misci -> misco (bus_negate_init.m:226-230: dmisc latency = csp_latency); the HDL ports always exist, misco = 0 when MISC = 0'
+// [params.MISC.values]
+// 0 = 'off'
+// 1 = 'on'
+//
 // [hdl_only]
+// MISC_WIDTH = 'inherited width: Simulink takes the misci width from the input signal'
 // TYPE_IN = 'bus_negate always reinterprets the input as signed (bus_expand outputArithmeticType=ones, bus_negate_init.m:155)'
 // N_BITS_OUT = "bus_negate's output width is always n_bits_in (bus_negate_init.m:201,212)"
 // BIN_PT_OUT = "bus_negate's output binary point is always bin_pt_in (bus_negate_init.m:201,212)"
@@ -44,7 +53,6 @@
 //
 // [mask_missing]
 // cmplx = 'single real lane: complex lanes are not modelled'
-// misc = 'misc pass-through (misci/misco ports) is not implemented'
 // float_type = 'floating point is not implemented'
 // exp_width = 'floating point is not implemented'
 // frac_width = 'floating point is not implemented'
@@ -53,8 +61,6 @@
 // [ports]
 // [ports.renamed]
 // [ports.missing]
-// misci = 'misc=on only (not implemented)'
-// misco = 'misc=on only (not implemented)'
 // [ports.extra]
 // @simulink-mapping end
 
@@ -67,11 +73,15 @@ module negate #(
     parameter int TYPE_OUT     = 1,
     parameter int QUANTIZATION = 0,
     parameter int OVERFLOW     = 0,
-    parameter int CSP_LATENCY  = 1
+    parameter int CSP_LATENCY  = 1,
+    parameter int MISC         = 0,     // casper misc: 1 = misci -> misco pass-through
+    parameter int MISC_WIDTH   = 1
 )(
     input  logic                  clk,
     input  logic [N_BITS_IN-1:0]  din,
-    output logic [N_BITS_OUT-1:0] dout
+    input  logic [MISC_WIDTH-1:0] misci = '0,
+    output logic [N_BITS_OUT-1:0] dout,
+    output logic [MISC_WIDTH-1:0] misco
 );
 
     localparam int N_BITS_FULL = N_BITS_IN + 1;
@@ -89,7 +99,20 @@ module negate #(
     ) u_convert (
         .clk (clk),
         .din (neg),
-        .dout(dout)
+        .dout(dout),
+        .overflow(),
+        .misco()
     );
+
+    // misc pass-through (bus_negate_init.m:226-230: dmisc latency = csp_latency);
+    // misco = 0 when MISC = 0
+    generate
+        if (MISC != 0) begin : GEN_MISC
+            delay #(.LATENCY(CSP_LATENCY), .BITWIDTH(MISC_WIDTH)) u_misc (
+                .clk(clk), .din(misci), .dout(misco));
+        end else begin : GEN_NO_MISC
+            assign misco = '0;
+        end
+    endgenerate
 
 endmodule

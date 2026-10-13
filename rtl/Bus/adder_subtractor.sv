@@ -40,9 +40,6 @@
 // [mask_set.cmplx]
 // value = 'off'
 //
-// [mask_set.misc]
-// value = 'off'
-//
 // [[unsupported]]
 // when = 'QUANTIZATION == 2'
 // reason = "bus_addsub_init.m:333-338 maps only quantization 0 and 1, so quant is undefined for 2: Unrecognized function or variable 'quant'"
@@ -50,10 +47,26 @@
 // [mask_set.floating_point]
 // value = 'off'
 //
+// [params.ASYNC]
+// mask = 'async'
+// type = 'checkbox'
+// note = 'async = on: en stalls the AddSub latency chain, dvalid = en delayed CSP_LATENCY by a free Delay (bus_addsub_init.m:374-377, 451-455); the HDL ports always exist, dvalid = 0 when ASYNC = 0'
+// [params.ASYNC.values]
+// 0 = 'off'
+// 1 = 'on'
+//
+// [params.MISC]
+// mask = 'misc'
+// type = 'checkbox'
+// note = 'misci -> misco (bus_addsub_init.m:443-447: dmisc latency = csp_latency); the HDL ports always exist, misco = 0 when MISC = 0'
+// [params.MISC.values]
+// 0 = 'off'
+// 1 = 'on'
+//
 // [hdl_only]
+// MISC_WIDTH = 'inherited width: Simulink takes the misci width from the input signal'
 //
 // [mask_missing]
-// async = 'async mode (en/dvalid ports) is not implemented'
 // float_type = 'floating point is not implemented'
 // exp_width = 'floating point is not implemented'
 // frac_width = 'floating point is not implemented'
@@ -62,12 +75,9 @@
 // pipeline_latency = 'input pipeline not implemented (only used when pipeline_en=on)'
 //
 // [ports]
+// order = 'Simulink: a, b, misci (misc only), en (async only) -> dout, misco (misc only), dvalid (async only) (bus_addsub_init.m:230-244, 532-545; checked on a built block); HDL: the same order, with all ports always present'
 // [ports.renamed]
 // [ports.missing]
-// misci = 'misc=on only (not implemented)'
-// misco = 'misc=on only (not implemented)'
-// en = 'async=on only (not implemented)'
-// dvalid = 'async=on only (not implemented)'
 // [ports.extra]
 // @simulink-mapping end
 
@@ -84,12 +94,19 @@ module adder_subtractor #(
     parameter int OPMODE       = 0,
     parameter int QUANTIZATION = 0,
     parameter int OVERFLOW     = 0,
-    parameter int CSP_LATENCY  = 1
+    parameter int CSP_LATENCY  = 1,
+    parameter int ASYNC        = 0,     // casper async: 1 = en / dvalid
+    parameter int MISC         = 0,     // casper misc: 1 = misci -> misco pass-through
+    parameter int MISC_WIDTH   = 1
 )(
     input  logic                  clk,
     input  logic [N_BITS_A-1:0]   a,
     input  logic [N_BITS_B-1:0]   b,
-    output logic [N_BITS_OUT-1:0] dout
+    input  logic [MISC_WIDTH-1:0] misci = '0,
+    input  logic                  en = 1'b1,
+    output logic [N_BITS_OUT-1:0] dout,
+    output logic [MISC_WIDTH-1:0] misco,
+    output logic                  dvalid
 );
 
     localparam int INT_A       = N_BITS_A - BIN_PT_A;
@@ -110,7 +127,9 @@ module adder_subtractor #(
     ) u_align_a (
         .clk (clk),
         .din (a),
-        .dout(a_full)
+        .dout(a_full),
+        .overflow(),
+        .misco()
     );
 
     convert #(
@@ -120,7 +139,9 @@ module adder_subtractor #(
     ) u_align_b (
         .clk (clk),
         .din (b),
-        .dout(b_full)
+        .dout(b_full),
+        .overflow(),
+        .misco()
     );
 
     // ── full-precision add / subtract (cannot overflow N_BITS_FULL) ──────────
@@ -133,14 +154,46 @@ module adder_subtractor #(
     endgenerate
 
     // ── requantize to the output format + pipeline ───────────────────────────
+    // ASYNC = 1: the Xilinx AddSub latency chain only advances while en = 1
+    // (bus_addsub_init.m:374-377, xlAddsub.sgm), while dvalid is en through a
+    // free Delay of CSP_LATENCY (den, :451-455). For CSP_LATENCY >= 2 and gaps
+    // in en the two disagree, exactly as in Simulink.
+    logic [N_BITS_OUT-1:0] q;
+
     convert #(
         .N_BITS_IN (N_BITS_FULL), .BIN_PT_IN (BIN_PT_FULL), .TYPE_IN (1),
         .N_BITS_OUT(N_BITS_OUT),  .BIN_PT_OUT(BIN_PT_OUT),  .TYPE_OUT(TYPE_OUT),
-        .QUANTIZATION(QUANTIZATION), .OVERFLOW(OVERFLOW), .CSP_LATENCY(CSP_LATENCY)
+        .QUANTIZATION(QUANTIZATION), .OVERFLOW(OVERFLOW),
+        .CSP_LATENCY(ASYNC != 0 ? 0 : CSP_LATENCY)
     ) u_convert (
         .clk (clk),
         .din (full),
-        .dout(dout)
+        .dout(q),
+        .overflow(),
+        .misco()
     );
+
+    generate
+        if (ASYNC != 0) begin : GEN_ASYNC
+            delay #(.LATENCY(CSP_LATENCY), .BITWIDTH(N_BITS_OUT), .USE_ENABLE(1)) u_stall (
+                .clk(clk), .din(q), .en(en), .dout(dout));
+            delay #(.LATENCY(CSP_LATENCY), .BITWIDTH(1)) u_dvalid (
+                .clk(clk), .din(en), .dout(dvalid));
+        end else begin : GEN_SYNC
+            assign dout   = q;
+            assign dvalid = 1'b0;
+        end
+    endgenerate
+
+    // misc pass-through (bus_addsub_init.m:443-447: dmisc latency = csp_latency);
+    // misco = 0 when MISC = 0
+    generate
+        if (MISC != 0) begin : GEN_MISC
+            delay #(.LATENCY(CSP_LATENCY), .BITWIDTH(MISC_WIDTH)) u_misc (
+                .clk(clk), .din(misci), .dout(misco));
+        end else begin : GEN_NO_MISC
+            assign misco = '0;
+        end
+    endgenerate
 
 endmodule

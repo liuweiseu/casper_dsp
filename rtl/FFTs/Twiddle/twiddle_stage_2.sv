@@ -28,8 +28,12 @@
 // (BRAM_LATENCY is used here, unlike twiddle_coeff_0/1 which use a fixed 1).
 // bwo keeps the input width and binary point. FFT_SIZE >= 2.
 //
-// Declared for traceability only: ASYNC and FLOATING_POINT must be 0;
-// FLOAT_TYPE, EXP_WIDTH and FRAC_WIDTH are ignored.
+// ASYNC = 1 (casper async, dvi / dvo): dvi delayed BRAM_LATENCY enables the
+// select counter, so w changes every 2^(FFT_SIZE-2) valid samples; the data
+// path is not gated; dvo = dvi delayed LATENCY.
+//
+// Declared for traceability only: FLOATING_POINT must be 0; FLOAT_TYPE,
+// EXP_WIDTH and FRAC_WIDTH are ignored.
 //
 // ── HDL-Simulink Mapping ─────────────────────────────────────────────────────
 // Differences between this HDL and its Simulink block (casper_library
@@ -51,8 +55,7 @@
 // [params.ASYNC]
 // mask = 'async'
 // type = 'checkbox'
-// hdl_unsupported = [1]
-// note = 'async=on (dvi/dvo) is not implemented: elaboration stops with $fatal'
+// note = 'async = on: dvi delayed bram_latency enables the select counter; dvo = dvi delayed bram + mult + add + conv latency; the data path is not gated. The HDL ports always exist, dvo = 0 when ASYNC = 0'
 // [params.ASYNC.values]
 // 0 = 'off'
 // 1 = 'on'
@@ -88,11 +91,10 @@
 // [mask_missing]
 //
 // [ports]
+// order = 'Simulink: ai, bi, sync_in, dvi (async only) -> ao, bwo, sync_out, dvo (async only) (checked on a built block); HDL: the same order with ai / bi / ao / bwo split into re / im lanes'
 // note = 'each Simulink complex port x is split into x_re / x_im'
 // [ports.renamed]
 // [ports.missing]
-// dvi = 'async=on only (not implemented)'
-// dvo = 'async=on only (not implemented)'
 // [ports.extra]
 // @simulink-mapping end
 
@@ -117,18 +119,19 @@ module twiddle_stage_2 #(
     input  logic [INPUT_BIT_WIDTH-1:0] bi_re  [N_INPUTS],
     input  logic [INPUT_BIT_WIDTH-1:0] bi_im  [N_INPUTS],
     input  logic                       sync_in,
+    input  logic                       dvi = 1'b1,
     output logic [INPUT_BIT_WIDTH-1:0] ao_re  [N_INPUTS],
     output logic [INPUT_BIT_WIDTH-1:0] ao_im  [N_INPUTS],
     output logic [INPUT_BIT_WIDTH-1:0] bwo_re [N_INPUTS],
     output logic [INPUT_BIT_WIDTH-1:0] bwo_im [N_INPUTS],
-    output logic                       sync_out
+    output logic                       sync_out,
+    output logic                       dvo
 );
 
     localparam int MUX_LATENCY = MULT_LATENCY + CONV_LATENCY + ADD_LATENCY;
     localparam int LATENCY     = BRAM_LATENCY + MUX_LATENCY;
     localparam int CNT_BITS    = FFT_SIZE - 1;
 
-    if (ASYNC != 0)          $fatal(1, "twiddle_stage_2: ASYNC is not implemented");
     if (FLOATING_POINT != 0) $fatal(1, "twiddle_stage_2: FLOATING_POINT is not implemented");
     if (FFT_SIZE < 2)        $fatal(1, "twiddle_stage_2: FFT_SIZE must be >= 2");
 
@@ -140,6 +143,15 @@ module twiddle_stage_2 #(
     pipeline #(.BITWIDTH(1), .CSP_LATENCY(BRAM_LATENCY)) u_sync_d (
         .clk(clk), .din(sync_in), .dout(sync_d));
 
+    // ASYNC = 1: dvi delayed BRAM_LATENCY (free, delay1) enables the counter,
+    // so the coefficient select steps over valid samples only; sync still
+    // clears it (rst wins over en). dvo = that delayed dvi, delayed
+    // MUX_LATENCY more (delay9): twiddle_stage_2_init.m:118-123, 263, 283-303
+    logic dvi_d;
+
+    pipeline #(.BITWIDTH(1), .CSP_LATENCY(BRAM_LATENCY)) u_dvi_d (
+        .clk(clk), .din(dvi), .dout(dvi_d));
+
     counter #(
         .COUNTER_TYPE   (0),              // free running, cleared by rst
         .NBITS          (CNT_BITS),
@@ -147,11 +159,11 @@ module twiddle_stage_2 #(
         .INIT_VAL       (0),
         .STEP           (1),
         .ENABLE_SYNC_RST(1),
-        .ENABLE_ENABLE  (0)
+        .ENABLE_ENABLE  (int'(ASYNC != 0))
     ) u_counter (
         .clk   (clk),
         .rst   (sync_d),
-        .enable(1'b1),
+        .enable(dvi_d),
         .dout  (cnt)
     );
 
@@ -169,7 +181,7 @@ module twiddle_stage_2 #(
             .N_BITS_IN (INPUT_BIT_WIDTH), .BIN_PT_IN (BIN_PT_IN), .TYPE_IN (1),
             .N_BITS_OUT(INPUT_BIT_WIDTH), .BIN_PT_OUT(BIN_PT_IN), .TYPE_OUT(1),
             .QUANTIZATION(0), .OVERFLOW(1), .CSP_LATENCY(0)
-        ) u_neg_re (.clk(clk), .din(b_re_d), .dout(b_re_neg));
+        ) u_neg_re (.clk(clk), .din(b_re_d), .dout(b_re_neg), .misco());
 
         // mux0: real part of bwo = sel ? im : re
         multiplexer #(.NBITS(INPUT_BIT_WIDTH), .NINPUTS(2), .LATENCY(MUX_LATENCY)) u_mux_re (
@@ -196,5 +208,12 @@ module twiddle_stage_2 #(
 
     pipeline #(.BITWIDTH(1), .CSP_LATENCY(MUX_LATENCY)) u_sync_out (
         .clk(clk), .din(sync_d), .dout(sync_out));
+
+    if (ASYNC != 0) begin : GEN_DVO
+        pipeline #(.BITWIDTH(1), .CSP_LATENCY(MUX_LATENCY)) u_dvo (
+            .clk(clk), .din(dvi_d), .dout(dvo));
+    end else begin : GEN_NO_DVO
+        assign dvo = 1'b0;
+    end
 
 endmodule

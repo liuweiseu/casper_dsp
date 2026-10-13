@@ -12,7 +12,19 @@
 // as they are for vendor block RAMs; callers must avoid them. (The GENERIC
 // model happens to return the old data and let port B's write win, but other
 // platforms need not match.)
-// Memory contents and both outputs power up to 0.
+// Memory contents power up to 0. dout_a / dout_b show INIT_A / INIT_B in the
+// first cycle only; the output registers power up to 0, so a port whose first
+// edge is disabled reads 0 until its first enabled read (as the built
+// Simulink block does).
+//
+// Optional ports per port x = a / b, as the Xilinx Dual Port RAM's
+// en_a/en_b and rst_a/rst_b options (xlDPBRAMXPM.sgm, latency 1):
+//   enx  (EN_X = 1): enx = 0 disables port x: no read, no write, dout_x holds
+//   rstx (RST_X = 1): dout_x <= INIT_X instead of the read, whether or not
+//                     the port is enabled; a write of an enabled port still
+//                     happens
+// INIT_A / INIT_B are raw output-register words (power-on and reset values).
+// The options and non-zero INIT_A / INIT_B are GENERIC only.
 //
 // PLATFORM selects the implementation (same contract on every platform):
 //   "GENERIC" : behavioral description below (inferred RAM). Default; the
@@ -36,7 +48,8 @@
 //   "Cross-port collisions: Simulink (xlDPBRAMXPM.sgm) outputs NaN on a port whose address the other port writes (AinvalidatesB/BinvalidatesA), stores NaN on a write-write collision and errors for Boolean data; the HDL GENERIC model returns the old word and lets port B's write win (dual_port_ram.sv:9-13).",
 //   'Asymmetric ports are not supported: Sysgen allows port B to be form_factor times wider than A (xlDPBRAMXPM.sgm: form_factor), the HDL uses one DATA_WIDTH for both ports.',
 //   'Depth must be a power of two (2^ADDR_WIDTH); Simulink errors on addresses >= depth, the HDL wraps them.',
-//   'initVector, init_a/init_b, latency != 1, rst/en ports are not implemented; memory and outputs power up to 0 (Simulink power-on: initVector rounded/saturated to the dina type, outputs = init_a/init_b).',
+//   'Latency != 1 is not implemented. Memory powers up to 0; the mapping sets initVector to zeros so Simulink does too. Other initVector contents are not supported.',
+//   'INIT_A / INIT_B are raw output-register words; Simulink quantizes the real init_a / init_b to the dina / dinb type with Round / Saturate (xlDPBRAMXPM.sgm xtype(const_prec, inita)), so the exporter must convert them; for UFix_N_0 data the two are equal.',
 // ]
 //
 // [params.ADDR_WIDTH]
@@ -44,6 +57,47 @@
 // type = 'edit'
 // expr = '2**ADDR_WIDTH'
 // note = 'depth = 2^ADDR_WIDTH; non-power-of-two depths are not supported'
+//
+// [params.RST_A]
+// mask = 'rst_a'
+// type = 'checkbox'
+// [params.RST_A.values]
+// 0 = 'off'
+// 1 = 'on'
+//
+// [params.RST_B]
+// mask = 'rst_b'
+// type = 'checkbox'
+// [params.RST_B.values]
+// 0 = 'off'
+// 1 = 'on'
+//
+// [params.EN_A]
+// mask = 'en_a'
+// type = 'checkbox'
+// [params.EN_A.values]
+// 0 = 'off'
+// 1 = 'on'
+//
+// [params.EN_B]
+// mask = 'en_b'
+// type = 'checkbox'
+// [params.EN_B.values]
+// 0 = 'off'
+// 1 = 'on'
+//
+// [params.INIT_A]
+// mask = 'init_a'
+// type = 'edit'
+// note = 'raw output-register word of port A (see deviations)'
+//
+// [params.INIT_B]
+// mask = 'init_b'
+// type = 'edit'
+// note = 'raw output-register word of port B (see deviations)'
+//
+// [mask_set.initVector]
+// template = 'zeros(1,{2**ADDR_WIDTH})'
 //
 // [mask_set.write_mode_A]
 // value = 'Read Before Write'
@@ -56,20 +110,13 @@
 // PLATFORM = 'implementation: memory / primitive vendor (GENERIC, XILINX, ALTERA)'
 //
 // [mask_missing]
-// initVector = 'memory always powers up to 0'
 // distributed_mem = 'memory type is chosen by PLATFORM / synthesis'
-// init_a = 'output register A powers up to 0; no reset value'
-// init_b = 'output register B powers up to 0; no reset value'
-// rst_a = 'output-register reset port not implemented'
-// rst_b = 'output-register reset port not implemented'
-// en_a = 'port enable not implemented'
-// en_b = 'port enable not implemented'
 // latency = 'read latency fixed at 1'
 // optimize = 'implementation only'
 //
 // [ports]
-// order = 'Simulink: addra, dina, wea, addrb, dinb, web -> A, B (icon port_label); HDL: we_a, addr_a, din_a, dout_a, we_b, addr_b, din_b, dout_b'
-// note = 'optional port names rsta/rstb/ena/enb from xlDPBRAMXPM.sgm'
+// order = 'Simulink: addra, dina, wea, addrb, dinb, web, rsta, rstb, ena, enb -> A, B (port_label of a built block with all options on: both rsts before both ens); HDL: we_a, addr_a, din_a, dout_a, we_b, addr_b, din_b, dout_b, rsta, rstb, ena, enb'
+// note = 'optional port names rsta, rstb, ena, enb from the block port_label (mask options rst_a, rst_b, en_a, en_b)'
 // [ports.renamed]
 // we_a = 'wea'
 // addr_a = 'addra'
@@ -80,16 +127,18 @@
 // din_b = 'dinb'
 // dout_b = 'B'
 // [ports.missing]
-// rsta = 'rst_a option only (not implemented)'
-// rstb = 'rst_b option only (not implemented)'
-// ena = 'en_a option only (not implemented)'
-// enb = 'en_b option only (not implemented)'
 // [ports.extra]
 // @simulink-mapping end
 
 module dual_port_ram #(
     parameter int    DATA_WIDTH = 8,
     parameter int    ADDR_WIDTH = 4,
+    parameter int    RST_A      = 0,      // 1 = rsta port enabled
+    parameter int    RST_B      = 0,      // 1 = rstb port enabled
+    parameter int    EN_A       = 0,      // 1 = ena port enabled
+    parameter int    EN_B       = 0,      // 1 = enb port enabled
+    parameter        INIT_A     = 0,      // raw output-register word
+    parameter        INIT_B     = 0,      // raw output-register word
     parameter string PLATFORM   = "GENERIC"
 )(
     input  logic                  clk,
@@ -100,23 +149,43 @@ module dual_port_ram #(
     input  logic                  we_b,
     input  logic [ADDR_WIDTH-1:0] addr_b,
     input  logic [DATA_WIDTH-1:0] din_b,
-    output logic [DATA_WIDTH-1:0] dout_b
+    output logic [DATA_WIDTH-1:0] dout_b,
+    input  logic                  rsta = 1'b0,
+    input  logic                  rstb = 1'b0,
+    input  logic                  ena  = 1'b1,
+    input  logic                  enb  = 1'b1
 );
+
+    localparam logic [DATA_WIDTH-1:0] INIT_A_W = DATA_WIDTH'(INIT_A);
+    localparam logic [DATA_WIDTH-1:0] INIT_B_W = DATA_WIDTH'(INIT_B);
 
     generate
         if (PLATFORM == "GENERIC") begin : GEN_GENERIC
             logic [DATA_WIDTH-1:0] mem [0:(1<<ADDR_WIDTH)-1] = '{default: '0};
+            // power-on: dout_x shows INIT_X for the first cycle only; the
+            // output registers start at 0 (built Simulink Dual Port RAM: a
+            // disabled first edge leaves 0, not INIT_X)
             logic [DATA_WIDTH-1:0] dout_a_r = '0;
             logic [DATA_WIDTH-1:0] dout_b_r = '0;
+            logic                  first    = 1'b1;
+            logic                  a_en, b_en;
+            assign a_en = (EN_A == 0) || ena;
+            assign b_en = (EN_B == 0) || enb;
             // One process for both ports, so the memory has a single driver.
             always_ff @(posedge clk) begin
-                dout_a_r <= mem[addr_a];
-                dout_b_r <= mem[addr_b];
-                if (we_a) mem[addr_a] <= din_a;
-                if (we_b) mem[addr_b] <= din_b;
+                first <= 1'b0;
+                if (RST_A != 0 && rsta) dout_a_r <= INIT_A_W;
+                else if (a_en)          dout_a_r <= mem[addr_a];
+                if (RST_B != 0 && rstb) dout_b_r <= INIT_B_W;
+                else if (b_en)          dout_b_r <= mem[addr_b];
+                if (a_en && we_a) mem[addr_a] <= din_a;
+                if (b_en && we_b) mem[addr_b] <= din_b;
             end
-            assign dout_a = dout_a_r;
-            assign dout_b = dout_b_r;
+            assign dout_a = first ? INIT_A_W : dout_a_r;
+            assign dout_b = first ? INIT_B_W : dout_b_r;
+        end else if (RST_A != 0 || RST_B != 0 || EN_A != 0 || EN_B != 0
+                     || INIT_A_W != '0 || INIT_B_W != '0) begin : GEN_BAD_OPTIONS
+            $fatal(1, "dual_port_ram: RST_x / EN_x / INIT_x are implemented for PLATFORM \"GENERIC\" only");
         end else if (PLATFORM == "XILINX") begin : GEN_XILINX
             dual_port_ram_xilinx #(
                 .DATA_WIDTH(DATA_WIDTH),

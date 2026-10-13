@@ -22,6 +22,8 @@ MATLAB R2021a Update 8; Vivado / Model Composer 2021.1.
 | 10 | `auto_tap` / `baseline_tap` library blocks hold stale internals that the init skips | `auto_tap` / `baseline_tap` whose mask values equal the stored library values | Confirmed in MATLAB R2021a (`auto_tap`; `baseline_tap` inferred) |
 | 11 | `xeng_descramble_4ant`'s `x_cast` overrides parameters inside a library link | `xeng_descramble_4ant` (verified with sets 0, 1 and 2, at simulation time) | Confirmed in MATLAB R2021a |
 | 12 | `auto_tap` / `baseline_tap` replace their delay with a portless stored `delay_slr` and lose its lines | `auto_tap`, `baseline_tap` and `xeng` with `use_bram_delay` off | Confirmed in MATLAB R2021a |
+| 13 | `cmult_init` delays `dvalid` by the add latency where the convert latency belongs | `cmult` with `async` and `pipelined_enable` on, `conv_latency ≠ add_latency` | Confirmed in MATLAB R2021a |
+| 14 | `delay_bram_init` never creates `dout` with `async` on and `bram_latency = 1` | `delay_bram` with `async` on and `bram_latency = 1` | Confirmed in MATLAB R2021a |
 
 **Environment note:** `pfb_coeff_gen_calc.m:57, 72` computes the PFB
 window through MATLAB's Python interface (`casper_library/python/window.py`).
@@ -59,6 +61,9 @@ Callers produce this only in these cases:
 - `fft_direct` with `map_tail = 'on'`, `LargerFFTSize = FFTSize` and
   `StartStage = 1`, whose one-element coefficient lists are the same as
   with `map_tail` off.
+
+**HDL trigger:** `FFTs/butterfly_direct`: `N_COEFFS == 1 && COEFF_0 == 1`;
+`FFTs/fft_direct`: `FFT_SIZE >= 2 && (MAP_TAIL == 0 || (LARGER_FFT_SIZE == FFT_SIZE && START_STAGE == 1))`
 
 **Root cause:** when `twiddle_type` is `'twiddle_coeff_1'`, the parameter
 list includes `floating_point`, `float_type`, `exp_width` and
@@ -113,6 +118,10 @@ raised at `twiddle_coeff_1_init.m:74` (from `reuse_block.m:51`).
 parameter values. It is the first error of a standalone `twiddle_coeff_1`;
 through `butterfly_direct`, bug 1 fails first.
 
+**HDL trigger:** `FFTs/Twiddle/twiddle_coeff_1`: `N_INPUTS != 0`;
+`FFTs/butterfly_direct`: `N_COEFFS == 1 && COEFF_0 == 1`;
+`FFTs/fft_direct`: `FFT_SIZE >= 2 && (MAP_TAIL == 0 || (LARGER_FFT_SIZE == FFT_SIZE && START_STAGE == 1))`
+
 **Root cause:** `negate_real` is a link to `casper_library_bus/bus_negate`.
 The library stores `twiddle_coeff_1` empty (its default `n_inputs = 0`
 makes the init call `clean_blocks`), so the init creates `negate_real`
@@ -145,6 +154,10 @@ call. Once bug 2 is fixed, `negate_real` would be built as a
 floating-point negate inside a fixed-point twiddle.
 
 **Trigger:** any `twiddle_coeff_1`.
+
+**HDL trigger:** `FFTs/Twiddle/twiddle_coeff_1`: `N_INPUTS != 0`;
+`FFTs/butterfly_direct`: `N_COEFFS == 1 && COEFF_0 == 1`;
+`FFTs/fft_direct`: `FFT_SIZE >= 2 && (MAP_TAIL == 0 || (LARGER_FFT_SIZE == FFT_SIZE && START_STAGE == 1))`
 
 **Root cause:** the call does not pass `floating_point`, and the
 `bus_negate` library default is `floating_point = 'on'`
@@ -179,6 +192,9 @@ the outputs are `2·min(21, 48) = 42` bits wide, against
 also happen inside `fft` and `fft_wideband_real`, which pass `bitgrowth`
 and `max_bits` to their `fft_direct` (`fft_init.m:293-294`,
 `fft_wideband_real_init.m:419-420`).
+
+**HDL trigger:** `FFTs/fft_direct`: `BITGROWTH != 0 && (INPUT_BIT_WIDTH * FFT_SIZE < MAX_BITS ? INPUT_BIT_WIDTH * FFT_SIZE : MAX_BITS) != (INPUT_BIT_WIDTH + FFT_SIZE < MAX_BITS ? INPUT_BIT_WIDTH + FFT_SIZE : MAX_BITS)`;
+`FFTs/fft_wideband_real`: `BITGROWTH != 0 && ((INPUT_BIT_WIDTH + FFT_SIZE - N_INPUTS < MAX_BITS ? INPUT_BIT_WIDTH + FFT_SIZE - N_INPUTS : MAX_BITS) * N_INPUTS < MAX_BITS ? (INPUT_BIT_WIDTH + FFT_SIZE - N_INPUTS < MAX_BITS ? INPUT_BIT_WIDTH + FFT_SIZE - N_INPUTS : MAX_BITS) * N_INPUTS : MAX_BITS) != ((INPUT_BIT_WIDTH + FFT_SIZE - N_INPUTS < MAX_BITS ? INPUT_BIT_WIDTH + FFT_SIZE - N_INPUTS : MAX_BITS) + N_INPUTS < MAX_BITS ? (INPUT_BIT_WIDTH + FFT_SIZE - N_INPUTS < MAX_BITS ? INPUT_BIT_WIDTH + FFT_SIZE - N_INPUTS : MAX_BITS) + N_INPUTS : MAX_BITS)`
 
 **Root cause:** each stage grows by one bit, so the final width is
 `min(max_bits, input_bit_width + FFTSize)`. The stage splits use that
@@ -234,6 +250,8 @@ fails exactly when the requested values differ from the stored ones. For
 `cmult` inside `cmac` the stored copy has `outputWidth [4 4 4 4]` and
 `outputBinaryPt [3 3 3 3]`, so any data width other than 4 (binary point
 other than 3) fails.
+
+**HDL trigger:** none (library save issue: the Simulink builds use the no-op `bus_expand_callback` workaround, so no HDL parameter set is affected).
 
 **Root cause:** `f994adffb` (amartens, 2022-08-31, "removed
 bus_expand_callback") deleted `casper_library/bus_expand_callback.m` and
@@ -324,6 +342,10 @@ when `full_cycle_bits < 3`. For in-order coefficients `0 … N−1` this is
 `FFTSize − StepPeriod < 3`. Example: `twiddle_general` with
 `Coeffs = [0 1 2 3]`, `FFTSize = 4`, `StepPeriod = 2`.
 
+**HDL trigger:** `FFTs/Twiddle/twiddle_general`: `N_COEFFS > 1 && FFT_SIZE - STEP_PERIOD < 3`;
+`FFTs/butterfly_direct`: `N_COEFFS > 1 && FFT_SIZE - STEP_PERIOD < 3 && !(N_COEFFS == 2 && COEFF_0 == 0 && COEFF_1 == 1 && STEP_PERIOD == FFT_SIZE - 2)`;
+`FFTs/fft_direct`: `MAP_TAIL != 0 && LARGER_FFT_SIZE == FFT_SIZE + 1 && FFT_SIZE >= 2`
+
 **Root cause:** for `full_cycle_bits < 3`, `cosin_init.m:184-190` switches
 to full storage, and `draw_basic_partial_cycle` returns early
 (`cosin_init.m:660-663`, "parameters not sensible so returning") without
@@ -370,6 +392,15 @@ and `delay_bram_init.m:40-43` (minimum delay check).
   default `bram_latency = 2`. `DelayLen = 1` fails for any `bram_latency`.
 - `DelayLen = 0`.
 
+**HDL trigger:** `Delays/delay_bram`: `DELAY_LEN <= BRAM_LATENCY + 1`;
+`Correlator/auto_tap`: `USE_BRAM_DELAY != 0 && ACC_LEN * ((N_ANTS + 1) / 2) - N_ANTS / 2 <= (BRAM_LATENCY > 2 ? BRAM_LATENCY : 2) + 1`;
+`Correlator/xeng`: `USE_BRAM_DELAY != 0 && ACC_LEN * ((N_ANTS + 1) / 2) - N_ANTS / 2 <= (BRAM_LATENCY > 2 ? BRAM_LATENCY : 2) + 1`;
+`Correlator/baseline_tap`: `USE_BRAM_DELAY != 0 && ACC_LEN <= (BRAM_LATENCY > 2 ? BRAM_LATENCY : 2) + 1`;
+`PFBs/tap_real`: `DELAY <= BRAM_LATENCY + 1`;
+`PFBs/first_tap_real`: `2 ** (PFB_SIZE - N_INPUTS) * N_POL_BLOCKS <= BRAM_LATENCY + 1`;
+`PFBs/pfb_fir_real`: `2 ** (PFB_SIZE - N_INPUTS) * N_POL_BLOCKS <= BRAM_LATENCY + 1`;
+`FFTs/Internal/bi_real_unscr_4x`: `BRAM_DELAYS != 0 && 2 ** (FFT_SIZE - 1) <= BRAM_LATENCY + 1`
+
 **Root cause:**
 - `delay_bram` is a counter-addressed RAM. With `DelayLen = bram_latency + 1`
   the counter would drive the RAM with a maximum value of 0 (comment at
@@ -411,6 +442,8 @@ Invalid setting in Xilinx Multiplier Block 'mult1' for parameter 'quantization'
 
 **Trigger:** `bus_mult` with real lanes (`cmplx_a` / `cmplx_b` off) and
 `quantization = 2` (round half to even).
+
+**HDL trigger:** `Bus/multiplier`: `QUANTIZATION == 2`
 
 **Root cause:** `bus_mult_init.m:640` maps quantization 2 to
 `'Round  (unbiased: Even Values)'` and passes it to `xbsIndex_r4/Mult` with
@@ -466,6 +499,8 @@ error above. The real error is an incorrect slice end point in
 **Trigger:** a freshly added `complex_conj` whose `floating_point` is not
 set.
 
+**HDL trigger:** none (library save issue: the mapping sets `floating_point = 'off'` explicitly, so no export reaches it).
+
 **Root cause:** the saved mask value is `floating_point = 'on'`, while
 the defaults listed in `complex_conj_init.m` are `'off'`. The block
 therefore builds in single-precision float: `complex_conj_init.m` sets
@@ -496,6 +531,8 @@ slice end point in `dual_pol_cmac/Slice11`.
 
 **Trigger:** the mask values of the added block equal the values stored
 in the library. `auto_tap` set 0 and `baseline_tap` set 0 failed.
+
+**HDL trigger:** none (stale library state: the mapping writes `acc_len` as `'<ACC_LEN>*1'`, so the init always runs).
 
 **Root cause (verified for `auto_tap` in MATLAB):**
 - The saved mask values of the library `auto_tap` are `n_ants` 4,
@@ -552,6 +589,8 @@ Caused by: Attempting to override parameters of '<model>/xeng_descramble_4ant/x_
 **Trigger:** simulating any `xeng_descramble_4ant` whose block is still a
 resolved library link.
 
+**HDL trigger:** none (library link issue: the mapping places the block with `break_link`).
+
 **Root cause:** the `x_cast` mask initialization sets parameters of blocks
 inside itself while the enclosing `xeng_descramble_4ant` is still a
 resolved library link. The init code was not analysed further.
@@ -586,6 +625,10 @@ error is "Undriven input port" at `<model>/auto_tap/delay/dly`
 passes its `use_bram_delay` to its `auto_tap` and `baseline_tap` blocks
 (`xeng_init.m:84-104`).
 
+**HDL trigger:** `Correlator/auto_tap`: `USE_BRAM_DELAY == 0`;
+`Correlator/baseline_tap`: `USE_BRAM_DELAY == 0`;
+`Correlator/xeng`: `USE_BRAM_DELAY == 0`
+
 **Root cause:** the init swaps the block named `delay` with
 `replace_block(blk, 'Name', 'delay', 'casper_library_delays/delay_slr',
 'noprompt')`. The library copy of `delay_slr` is stored with
@@ -610,6 +653,69 @@ built with `use_bram_delay` off (SRL delays instead of BRAM).
 has ports (`DelayLen ≥ 1`), or, in the init scripts, set `DelayLen` and
 reconnect the delay's lines after `replace_block` (or use `reuse_block`
 with explicit `add_line` calls).
+
+## 13. cmult: dvalid uses the add latency instead of the convert latency
+
+**Affected code:** `casper_library/cmult_init.m:522-547` and `:615-627`
+(the `async`, `pipelined_enable` on branch).
+
+**Symptom:** with `async` on, `dvalid` does not line up with `ab`: it comes
+`conv_latency − add_latency` cycles off.
+
+**Trigger:** `async = 'on'`, `pipelined_enable = 'on'` (the mask default)
+and `conv_latency ≠ add_latency`.
+
+**HDL trigger:** `Multipliers/cmult`: `ASYNC != 0 && PIPELINED_ENABLE != 0 && CONV_LATENCY != ADD_LATENCY`
+
+**Root cause:** the init creates the last `dvalid` Delay `den` with
+`'latency', num2str(latency)` while `latency` still holds `add_latency`
+(set at `:522-523` for `en_replicate2`); it only assigns
+`latency = conv_latency` after the block is created (`:623-627`). So
+`dvalid` = `en` delayed `in_latency + mult_latency + 2·add_latency`,
+while the data takes `in_latency + mult_latency + add_latency +
+conv_latency`.
+
+**Impact on casper designs:** no casper_library block triggers it
+(checked in all `*_init.m` and the stored `.slx` blocks). `bus_mult` does
+not pass `async` (default off), `feedback_osc` sets `async` off, and the 5
+`cmult` instances in `casper_library_correlator` `cmac` have `async` off
+(add latency 1, conv latency 0). Only user designs that place `cmult`
+directly with `async` on and `conv_latency ≠ add_latency` are affected.
+
+**Confirmed in MATLAB R2021a:** async batch 1, `cmult` set 0
+(`in_latency 1`, `mult_latency 2`, `add_latency 1`, `conv_latency 2`):
+`dvalid` = `en` delayed 5, not 6.
+
+**Suggested fix:** set `latency = conv_latency` before creating `den`.
+
+**HDL:** implements the intended behaviour (`dvalid` aligned with `ab`);
+sets that trigger the bug are excluded from the Simulink comparison.
+
+## 14. delay_bram: no output port with async on and bram_latency = 1
+
+**Affected code:** `casper_library/delay_bram_init.m:104-158` (the
+`async` branch).
+
+**Symptom:** the block has no output port, so the model cannot be built:
+`delay_bram/1: block 'delay_bram' has 0 output port(s), not 1`.
+
+**Trigger:** `async = 'on'` with `bram_latency = 1`.
+
+**HDL trigger:** `Delays/delay_bram`: `ASYNC != 0 && BRAM_LATENCY == 1`
+
+**Root cause:** in the async branch the RAM has latency 1, followed by
+`bram_latency − 1` gated Delays. The loop that creates those Delays also
+creates and wires the `dout` port (`:131-157`); for `bram_latency = 1` it
+runs zero times, so `dout` is never created.
+
+**Impact on casper designs:** `delay_bram` with `async` on and
+`bram_latency = 1`.
+
+**Confirmed in MATLAB R2021a:** async batch 1, `delay_bram` set 2
+(`DelayLen 16`, `bram_latency 1`).
+
+**Suggested fix:** create `dout` outside the loop and wire it to the RAM
+output when `bram_latency = 1`.
 
 ## How casper_dsp handles these bugs
 
@@ -678,6 +784,12 @@ with explicit `add_line` calls).
 - **Bug 11:** `rtl/Correlator/xeng_descramble_4ant.sv` has a top-level
   `break_link` entry; exporters then place the block with `LinkStatus`
   `'inactive'`. Verified with `xeng_descramble_4ant` sets 0, 1 and 2.
+- **Bug 13:** not reproduced: `rtl/Multipliers/cmult.sv` delays `dvalid` by
+  `IN_LATENCY + MULT_LATENCY + ADD_LATENCY + CONV_LATENCY`, aligned with
+  `ab`. `cmult` set 10 (`ADD_LATENCY 1`, `CONV_LATENCY 2`) exercises the
+  fix and is excluded from the Simulink comparison by its **HDL trigger**.
+- **Bug 14:** an `unsupported` entry `ASYNC != 0 && BRAM_LATENCY == 1` on
+  `rtl/Delays/delay_bram.sv`.
 - **Bug 12:** `unsupported` entries `USE_BRAM_DELAY == 0` on
   `rtl/Correlator/auto_tap.sv`, `baseline_tap.sv` and `xeng.sv`. They skip
   `auto_tap` set 1, `baseline_tap` set 2 and `xeng` set 1.

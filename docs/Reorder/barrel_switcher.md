@@ -21,6 +21,7 @@ so that it meets the data it belongs to, so `sel` is sampled together with
 |-----------|---------|-------------|
 | `N_INPUTS` | 1 | log2 of the number of lanes (≥ 1) |
 | `DATA_WIDTH` | 8 | Bits per lane |
+| `ASYNC` | 0 | casper `async`: `1` adds `dvalid` = `en` delayed `N_INPUTS` cycles; the data is not gated |
 
 ## Ports
 
@@ -30,5 +31,7 @@ so that it meets the data it belongs to, so `sel` is sampled together with
 | `sel` | input | `N_INPUTS` | Rotation amount, aligned with `din` |
 | `sync_in` | input | 1 | Sync in |
 | `din` | input | `DATA_WIDTH` × 2^`N_INPUTS` | Input lanes |
+| `en` | input | 1 | Async enable (used when `ASYNC = 1`; default 1) |
 | `dout` | output | `DATA_WIDTH` × 2^`N_INPUTS` | Rotated lanes |
 | `sync_out` | output | 1 | `sync_in` delayed `N_INPUTS` cycles |
+| `dvalid` | output | 1 | `en` delayed `N_INPUTS` cycles when `ASYNC = 1`, else 0 |

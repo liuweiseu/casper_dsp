@@ -30,6 +30,8 @@ same format as the input).
 | `QUANTIZATION` | 0       | `0`=truncate, `1`=round half away from zero, `2`=round half to even |
 | `OVERFLOW`     | 0       | `0`=wrap, `1`=saturate, `2`=flag as error (treated as wrap) |
 | `LATENCY`      | 1       | Pipeline stages on the output; `0` = combinational |
+| `MISC` | 0 | casper `misc`: `1` passes `misci` to `misco` (bus_scale_init.m:159-164); `0` ties `misco` to 0 |
+| `MISC_WIDTH` | 1 | `misci` / `misco` width (inherited from the signal in Simulink) |
 
 ## Ports
 
@@ -37,7 +39,9 @@ same format as the input).
 |--------|-----------|--------------|-------------|
 | `clk`  | input     | 1            | Clock (unused when `LATENCY = 0`) |
 | `din`  | input     | `N_BITS_IN`  | Input word |
+| `misci` | input | `MISC_WIDTH` | Side-channel word (e.g. sync), used when `MISC = 1`; defaults to 0 |
 | `dout` | output    | `N_BITS_OUT` | `convert(din · 2^SCALE_FACTOR)`, delayed by `LATENCY` cycles |
+| `misco` | output | `MISC_WIDTH` | `misci` undelayed when `MISC = 1` (casper's `bus_scale` wires `misci` straight to `misco`, unlike `dout`), else 0 |
 
 ## Functional Description
 

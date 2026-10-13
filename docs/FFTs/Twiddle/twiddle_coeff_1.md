@@ -46,7 +46,7 @@ This matches [`twiddle_coeff_0`](twiddle_coeff_0.md), and matches
 | `ADD_LATENCY`     | 1       | Enters `LATENCY` |
 | `BRAM_LATENCY`    | 1       | Accepted for traceability; unused |
 | `CONV_LATENCY`    | 1       | Enters `LATENCY` |
-| `ASYNC`           | 0       | Declared for traceability; must be 0 |
+| `ASYNC`           | 0       | casper `async`: `1` adds `dvalid` = `en` delayed by the latency; the data is not gated |
 
 ## Ports
 

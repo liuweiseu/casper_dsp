@@ -74,9 +74,10 @@ free-runs from 0.
 | `OVERFLOW`        | 0           | `bwo` overflow: `0`=wrap, `1`=saturate |
 | `INIT_FILE`       | `""`        | Coefficient table (`.mem`) from `gen_twiddle_coeffs.py` |
 | `PLATFORM`        | `"GENERIC"` | Passed to `rom` (`"GENERIC"`, `"XILINX"`, `"ALTERA"`) |
+| `ASYNC`           | 0           | casper `async`: `1` = `en` enables the coefficient address counter (sync still clears it) and `dvalid` = `en` delayed `LATENCY`; the data is not gated. Simulink's latency differs (see the mapping deviations), so the async sets are not in the test list yet |
 
 **Declared but not implemented** (kept for parameter traceability):
-- `ASYNC` and `FLOATING_POINT` must be 0. Other values stop elaboration.
+- `FLOATING_POINT` must be 0. Other values stop elaboration.
 - These are ignored: `FLOAT_TYPE`, `EXP_WIDTH`, `FRAC_WIDTH`, `COEFF_SHARING`,
   `COEFF_DECIMATION`, `COEFF_GENERATION`, `CAL_BITS`, `N_BITS_ROTATION`,
   `MAX_FANOUT`, `USE_HDL`, `USE_EMBEDDED`, `COEFFS_BIT_LIMIT`. casper_library's
@@ -93,9 +94,11 @@ All lane ports are unpacked arrays of `N_INPUTS` words, like `din` in
 | `ai_re`, `ai_im`   | input  | `INPUT_BIT_WIDTH` × `N_INPUTS` | a leg input |
 | `bi_re`, `bi_im`   | input  | `INPUT_BIT_WIDTH` × `N_INPUTS` | b leg input |
 | `sync_in`  | input     | 1                         | Frame sync; clears the coefficient schedule |
+| `en`       | input     | 1                         | Async enable (used when `ASYNC = 1`; default 1) |
 | `ao_re`, `ao_im`   | output | `INPUT_BIT_WIDTH` × `N_INPUTS` | `ai` delayed by `LATENCY` |
 | `bwo_re`, `bwo_im` | output | `INPUT_BIT_WIDTH+1` × `N_INPUTS` | `bi · w`, delayed by `LATENCY` |
 | `sync_out` | output    | 1                         | `sync_in` delayed by `LATENCY` |
+| `dvalid`   | output    | 1                         | `en` delayed by `LATENCY` when `ASYNC = 1`, else 0 |
 
 `bwo` has one more integer bit than `bi`, as in casper_library, because the
 components of `b · w` can exceed those of `b`. This is why `butterfly_direct`

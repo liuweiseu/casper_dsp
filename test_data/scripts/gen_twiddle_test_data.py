@@ -177,6 +177,8 @@ def m_twiddle_stage_2(p, st):
     re_d = lanes_delayed(st["bi_re"], b, n)
     im_d = lanes_delayed(st["bi_im"], b, n)
 
+    # async: dvi delayed BRAM_LATENCY enables the counter (sync still clears it)
+    en_d = delayed(st["dvi"], b, 0) if p.get("ASYNC") else [1] * cycles
     cnt, pre_re, pre_im = 0, [], []
     for t in range(cycles):
         sel = (cnt >> msb) & 1
@@ -186,7 +188,7 @@ def m_twiddle_stage_2(p, st):
         else:
             pre_re.append(list(re_d[t]))
             pre_im.append(list(im_d[t]))
-        cnt = 0 if sync_d[t] else (cnt + 1) % cnt_mod
+        cnt = 0 if sync_d[t] else ((cnt + 1) % cnt_mod if en_d[t] else cnt)
 
     return {
         "ao_re": lanes_delayed(st["ai_re"], lat, n),
@@ -245,14 +247,17 @@ MODULES = {
     "twiddle_pass_through": dict(
         prose="`twiddle_pass_through` wires every leg straight through (zero latency).",
         tests=[(P(PASS, [1, 18]), 128, "1 lane, 18-bit", None),
-               (P(PASS, [3, 8]), 128, "3 lanes, 8-bit", None)],
+               (P(PASS, [3, 8]), 128, "3 lanes, 8-bit", None),
+               (dict(P(PASS, [3, 8]), ASYNC=1), 128, "set 1 async: dvo = dvi", None)],
         frame=lambda p: 16),
     "twiddle_coeff_0": dict(
         prose="`twiddle_coeff_0` delays every leg by `1 + MULT_LATENCY + "
               "ADD_LATENCY + CONV_LATENCY` cycles (w = 1).",
         tests=[(P(C0, [1, 18, 2, 1, 1, 1]), 256, "casper-style latencies (total 5)", None),
                (P(C0, [2, 12, 3, 2, 2, 2]), 256, "2 lanes, total latency 8 (BRAM_LATENCY unused)", None),
-               (P(C0, [1, 8, 0, 0, 1, 0]), 256, "minimum latency 1", None)],
+               (P(C0, [1, 8, 0, 0, 1, 0]), 256, "minimum latency 1", None),
+               (dict(P(C0, [2, 12, 3, 2, 2, 2]), ASYNC=1), 256,
+                "set 1 async: dvalid = en delayed the latency (8)", None)],
         frame=lambda p: 16),
     "twiddle_coeff_1": dict(
         prose="`twiddle_coeff_1` multiplies `bi` by w = −j: `bwo_re = bi_im`, "
@@ -274,8 +279,20 @@ MODULES = {
         tests=[(P(S2, [1, 5, 18, 17, 1, 2, 2, 2]), 512, "casper defaults (FFTSize 5, total latency 7)", None),
                (P(S2, [2, 3, 12, 11, 1, 1, 1, 1]), 256, "2 lanes, FFTSize 3 (w switches every 2 samples)", None),
                (P(S2, [1, 2, 8, 7, 0, 0, 1, 0]), 256, "FFTSize 2 (w switches every sample), latency 1", None),
-               (P(S2, [4, 6, 16, 15, 2, 3, 3, 1]), 512, "4 lanes, FFTSize 6, total latency 9", None)],
+               (P(S2, [4, 6, 16, 15, 2, 3, 3, 1]), 512, "4 lanes, FFTSize 6, total latency 9", None),
+               (dict(P(S2, [1, 5, 18, 17, 1, 2, 2, 2]), ASYNC=1), 1024,
+                "set 0 async: the w select counter steps on valid samples only", None),
+               (dict(P(S2, [2, 3, 12, 11, 1, 1, 1, 1]), ASYNC=1), 1024, "set 1 async", None)],
         frame=lambda p: 1 << (p["FFT_SIZE"] - 1)),
+}
+
+# async (ASYNC = 1): (enable input, valid output, valid latency); the valid
+# output is the enable delayed with the data (checked against Simulink)
+ASYNC_PORTS = {
+    "twiddle_pass_through": ("dvi", "dvo", lambda p: 0),
+    "twiddle_coeff_0": ("en", "dvalid", coeff01_latency),
+    "twiddle_stage_2": ("dvi", "dvo", lambda p: p["BRAM_LATENCY"] + p["MULT_LATENCY"]
+                        + p["ADD_LATENCY"] + p["CONV_LATENCY"]),
 }
 
 MODELS = {
@@ -318,6 +335,12 @@ def write_module(name, spec):
             for p in LANE_IN:
                 st[p][t + 1] = [x] * lanes
         st["sync_in"] = sync_pulses(cycles, spec["frame"](params))
+        if params.get("ASYNC"):
+            en_name, dv_name, dv_lat = ASYNC_PORTS[name]
+            erng = random.Random(f"{name}-{n}-en")
+            st[en_name] = [1 if erng.random() < 0.75 else 0 for _ in range(cycles)]
+            for start in (cycles // 4, cycles // 2):
+                st[en_name][start:start + 6] = [0] * 6
 
         d = mdir / f"simdata{n}"
         d.mkdir(parents=True, exist_ok=True)
@@ -335,11 +358,14 @@ def write_module(name, spec):
             write_csv(d / f"sim_{port}.csv", st[port])
         for port in LANE_OUT + ["sync_out"]:
             write_csv(d / f"sim_{port}.csv", out[port])
+        if params.get("ASYNC"):
+            write_csv(d / f"sim_{en_name}.csv", st[en_name])
+            write_csv(d / f"sim_{dv_name}.csv", delayed(st[en_name], dv_lat(params), 0))
     (mdir / "test_data.md").write_text(test_data_md(name, spec))
 
 
 def test_data_md(name, spec):
-    keys = list(spec["tests"][0][0].keys())
+    keys = list(dict.fromkeys(k for t in spec["tests"] for k in t[0]))
     has_coeffs = name == "twiddle_general"
     extra = " | COEFFS" if has_coeffs else ""
     lines = [
@@ -357,13 +383,19 @@ def test_data_md(name, spec):
         "patterns. Expected outputs follow the pre-edge read convention, so "
         "the first latency cycles show the zero power-on state. Cycles 1–4 "
         "drive the extreme words (most negative, most positive, −1, 0) on "
-        "every lane; the rest are seeded uniform-random words.",
+        "every lane; the rest are seeded uniform-random words."
+        + (" Sets with `ASYNC` = 1 drive a random enable (`sim_en.csv` / "
+           "`sim_dvi.csv`, about 75 % high plus two 6-cycle gaps) and expect "
+           "the valid output (`sim_dvalid.csv` / `sim_dvo.csv`) = the enable "
+           "delayed with the data; only the twiddle_stage_2 select counter is "
+           "gated (casper async, checked against Simulink, MATLAB R2021a)."
+           if any(t[0].get("ASYNC") for t in spec["tests"]) else ""),
         "",
         "| Test # | Directory | " + " | ".join(keys) + extra + " | Cycles | Description |",
         "|" + "---|" * (len(keys) + 4 + (1 if has_coeffs else 0)),
     ]
     for n, (params, cycles, desc, coeffs) in enumerate(spec["tests"]):
-        vals = " | ".join(str(params[k]) for k in keys)
+        vals = " | ".join(str(params.get(k, 0)) for k in keys)
         c = f" | {coeffs}" if has_coeffs else ""
         lines.append(f"| {n} | `simdata{n}` | {vals}{c} | {cycles} | {desc} |")
     return "\n".join(lines) + "\n"

@@ -7,7 +7,7 @@
 // twiddle_general grows bwo by one bit).
 //
 // INPUT_BIT_WIDTH is added for the HDL port widths (the Simulink block is
-// width-agnostic). ASYNC is declared for traceability; must be 0.
+// width-agnostic). ASYNC = 1 (casper async): dvo = dvi.
 //
 // ── HDL-Simulink Mapping ─────────────────────────────────────────────────────
 // Differences between this HDL and its Simulink block (casper_library
@@ -24,8 +24,7 @@
 // [params.ASYNC]
 // mask = 'async'
 // type = 'checkbox'
-// hdl_unsupported = [1]
-// note = 'async=on (dvi/dvo pass-through ports) is not implemented: elaboration stops with $fatal'
+// note = 'async = on: dvo = dvi (a wire); the HDL ports always exist, dvo = 0 when ASYNC = 0'
 // [params.ASYNC.values]
 // 0 = 'off'
 // 1 = 'on'
@@ -36,11 +35,10 @@
 // [mask_missing]
 //
 // [ports]
+// order = 'Simulink: ai, bi, sync_in, dvi (async only) -> ao, bwo, sync_out, dvo (async only) (checked on a built block); HDL: the same order with ai / bi / ao / bwo split into re / im lanes'
 // note = 'each Simulink complex port x is split into x_re / x_im'
 // [ports.renamed]
 // [ports.missing]
-// dvi = 'async=on only (not implemented)'
-// dvo = 'async=on only (not implemented)'
 // [ports.extra]
 // @simulink-mapping end
 
@@ -59,10 +57,13 @@ module twiddle_pass_through #(
     output logic [INPUT_BIT_WIDTH-1:0] ao_im  [N_INPUTS],
     output logic [INPUT_BIT_WIDTH-1:0] bwo_re [N_INPUTS],
     output logic [INPUT_BIT_WIDTH-1:0] bwo_im [N_INPUTS],
-    output logic                       sync_out
+    input  logic                       dvi = 1'b1,
+    output logic                       sync_out,
+    output logic                       dvo
 );
 
-    if (ASYNC != 0) $fatal(1, "twiddle_pass_through: ASYNC is not implemented");
+    // ASYNC = 1: dvo = dvi (twiddle_pass_through_init.m:23-66); 0 when ASYNC = 0
+    assign dvo = (ASYNC != 0) ? dvi : 1'b0;
 
     assign ao_re    = ai_re;
     assign ao_im    = ai_im;

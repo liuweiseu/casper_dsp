@@ -27,6 +27,15 @@
 // CSP_LATENCY: 0 = combinational, N > 0 = N pipeline stages built from
 // BasicModules/register. Pipeline stages power up to 0.
 //
+// OF = 1 (casper bus_convert of = 'on', which builds casper convert_of per
+// lane, bus_convert_init.m:226-247): overflow flags, CSP_LATENCY cycles later,
+// that the integer part of din does not fit the output, by convert_of's rule
+// (rtl/Misc/convert_of.sv): with wb_lost = (N_BITS_IN - BIN_PT_IN) -
+// (N_BITS_OUT - BIN_PT_OUT), overflow = 1 when the top wb_lost+1 bits of din
+// are not all equal; 0 when wb_lost <= 0. The rule treats the MSB as a sign
+// bit whatever TYPE_IN / TYPE_OUT are, as casper does. overflow = 0 when
+// OF = 0.
+//
 // ── HDL-Simulink Mapping ─────────────────────────────────────────────────────
 // Differences between this HDL and its Simulink block (casper_library
 // or Xilinx blockset). Machine-readable: the lines between the
@@ -43,17 +52,32 @@
 //   "OVERFLOW=2 means 'Flag as error' (bus_convert_init.m:211): with of=off, Simulink stops with an overflow error; with of=on, convert_of's popup has 'Error', not 'Flag as error', so set_param fails. The HDL wraps.",
 // ]
 //
-// [mask_set.of]
-// value = 'off'
+// [params.OF]
+// mask = 'of'
+// type = 'checkbox'
+// note = 'overflow by casper convert_of rule (see header); with of = on bus_convert builds casper_library_misc/convert_of per lane'
+// [params.OF.values]
+// 0 = 'off'
+// 1 = 'on'
 //
-// [mask_set.misc]
-// value = 'off'
+// [[unsupported]]
+// when = 'OF != 0 && OVERFLOW == 2'
+// reason = "bus_convert_init.m:211 passes overflow 'Flag as error' to casper_library_misc/convert_of when of = on, whose overflow popup offers Wrap / Saturate / Error, so set_param fails (not built in MATLAB; from the popup options)"
 //
 // [[unsupported]]
 // when = 'BIN_PT_IN < 0 || BIN_PT_OUT < 0'
 // reason = 'System Generator fixed-point types need bin_pt >= 0: Invalid output binary point detected: binary point must be greater than or equal to 0 (bus_convert_init.m:169 bus_expand reinterpret, confirmed in MATLAB R2021a); the HDL only uses BIN_PT_IN - BIN_PT_OUT, so shift both binary points up by the same amount for an equivalent buildable set (convert set 7 is set 6 shifted by 2)'
 //
+// [params.MISC]
+// mask = 'misc'
+// type = 'checkbox'
+// note = 'misci -> misco (bus_convert_init.m:281-285: dmisc latency = csp_latency); the HDL ports always exist, misco = 0 when MISC = 0'
+// [params.MISC.values]
+// 0 = 'off'
+// 1 = 'on'
+//
 // [hdl_only]
+// MISC_WIDTH = 'inherited width: Simulink takes the misci width from the input signal'
 // TYPE_IN = 'bus_convert_init.m default type_in=1, not a mask parameter: Simulink always reinterprets each input lane as signed (bus_convert_init.m:13,167)'
 // TYPE_OUT = "bus_convert_init.m default type_out=1, not a mask parameter: the Convert / convert_of output is always 'Signed  (2''s comp)' (bus_convert_init.m:247, convert_of_init.m:120)"
 //
@@ -63,9 +87,6 @@
 // [ports]
 // [ports.renamed]
 // [ports.missing]
-// overflow = 'of=on only (not implemented)'
-// misci = 'misc=on only (not implemented)'
-// misco = 'misc=on only (not implemented)'
 // [ports.extra]
 // @simulink-mapping end
 
@@ -78,11 +99,17 @@ module convert #(
     parameter int TYPE_OUT     = 1,
     parameter int QUANTIZATION = 0,
     parameter int OVERFLOW     = 0,
-    parameter int CSP_LATENCY  = 0
+    parameter int CSP_LATENCY  = 0,
+    parameter int OF           = 0,     // casper of: 1 = overflow output
+    parameter int MISC         = 0,     // casper misc: 1 = misci -> misco pass-through
+    parameter int MISC_WIDTH   = 1
 )(
     input  logic                  clk,
     input  logic [N_BITS_IN-1:0]  din,
-    output logic [N_BITS_OUT-1:0] dout
+    input  logic [MISC_WIDTH-1:0] misci = '0,
+    output logic [N_BITS_OUT-1:0] dout,
+    output logic                  overflow,
+    output logic [MISC_WIDTH-1:0] misco
 );
 
     // SHIFT > 0: drop SHIFT fractional LSBs (quantize)
@@ -175,6 +202,32 @@ module convert #(
                 );
             end
             assign dout = stage[CSP_LATENCY];
+        end
+    endgenerate
+
+    // overflow (casper convert_of rule, see header)
+    localparam int WB_LOST = (N_BITS_IN - BIN_PT_IN) - (N_BITS_OUT - BIN_PT_OUT);
+    localparam int N_TOP   = (WB_LOST + 1 > N_BITS_IN) ? N_BITS_IN : WB_LOST + 1;
+
+    generate
+        if (OF != 0 && WB_LOST > 0) begin : GEN_OF
+            logic [N_TOP-1:0] top;
+            assign top = din[N_BITS_IN-1 -: N_TOP];
+            pipeline #(.BITWIDTH(1), .CSP_LATENCY(CSP_LATENCY)) u_of_dly (
+                .clk(clk), .din(!((&top) || !(|top))), .dout(overflow));
+        end else begin : GEN_NO_OF
+            assign overflow = 1'b0;
+        end
+    endgenerate
+
+    // misc pass-through (bus_convert_init.m:281-285: dmisc latency = csp_latency);
+    // misco = 0 when MISC = 0
+    generate
+        if (MISC != 0) begin : GEN_MISC
+            delay #(.LATENCY(CSP_LATENCY), .BITWIDTH(MISC_WIDTH)) u_misc (
+                .clk(clk), .din(misci), .dout(misco));
+        end else begin : GEN_NO_MISC
+            assign misco = '0;
         end
     endgenerate
 

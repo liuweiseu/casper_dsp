@@ -365,8 +365,8 @@ def declared(text):
     t = re.sub(r"/\*.*?\*/", "", text, flags=re.S)
     t = re.sub(r"//.*", "", t)
     m = re.search(r"\bmodule\s+\w+\s*(#\s*\((.*?)\))?\s*\((.*?)\);", t, re.S)
-    decls = re.findall(r"parameter\s+(int\s+|string\s+|integer\s+|real\s+)?(\w+)\s*=",
-                       m.group(2) or "") if m else []
+    decls = re.findall(r"parameter\s+(int\s+|string\s+|integer\s+|real\s+|bit\s*|logic\s*)?"
+                       r"(?:\[[^\]]*\]\s*)?(\w+)\s*=", m.group(2) or "") if m else []
     params = {n for _, n in decls}
     strings = {n for t, n in decls if t.strip() == "string"}
     ports = set()

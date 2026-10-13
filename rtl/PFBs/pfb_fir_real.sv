@@ -334,13 +334,13 @@ module pfb_fir_real #(
                 .SCALE_FACTOR(SCALE_FACTOR),
                 .N_BITS_OUT(ADDER_N_BITS_OUT), .BIN_PT_OUT(ADDER_BIN_PT_OUT - SCALE_FACTOR),
                 .TYPE_OUT(1), .QUANTIZATION(0), .OVERFLOW(0), .LATENCY(0)
-            ) u_scale (.clk(clk), .din(sum), .dout(scaled));
+            ) u_scale (.clk(clk), .din(sum), .dout(scaled), .misco());
 
             convert #(
                 .N_BITS_IN(ADDER_N_BITS_OUT), .BIN_PT_IN(ADDER_BIN_PT_OUT - SCALE_FACTOR), .TYPE_IN(1),
                 .N_BITS_OUT(N_BITS_OUT), .BIN_PT_OUT(N_BITS_OUT - 1), .TYPE_OUT(1),
                 .QUANTIZATION(OUT_QUANT), .OVERFLOW(0), .CSP_LATENCY(CONV_LATENCY)
-            ) u_convert (.clk(clk), .din(scaled), .dout(dout[K]));
+            ) u_convert (.clk(clk), .din(scaled), .dout(dout[K]), .overflow(), .misco());
 
             if (p == 0 && n == 0) begin : GEN_SYNC_OUT
                 pipeline #(.BITWIDTH(1), .CSP_LATENCY(CONV_LATENCY)) u_delay1 (

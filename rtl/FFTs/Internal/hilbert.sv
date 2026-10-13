@@ -28,7 +28,6 @@
 // @simulink-mapping begin
 // block = 'casper_library_ffts_internal.slx/hilbert'
 // deviations = [
-//   "misc='on' (misci/misco, delayed by add_latency+conv_latency in hilbert_init.m) is not implemented: the HDL has no MISC parameter",
 //   "floating_point='on' builds a different datapath in Simulink (no bus_scale/bus_convert, hilbert_init.m floating branch); the HDL implements only the fixed-point path (full-precision BIT_WIDTH+1 add/sub, /2 by binary-point shift, convert to BIT_WIDTH with Round (unbiased: Even Values) + Wrap, as hilbert_init.m bus_convert 'quantization','2','overflow','0')",
 //   'test vectors in casper_dsp/test_data/FFTs/Internal/hilbert/test_data.md come from a Python reference model (not exported from MATLAB), so cycle/bit equivalence with the Simulink block is unverified',
 // ]
@@ -41,10 +40,18 @@
 // [mask_set.floating_point]
 // value = 'off'
 //
+// [params.MISC]
+// mask = 'misc'
+// type = 'checkbox'
+// note = 'misci -> misco delayed ADD_LATENCY + CONV_LATENCY (hilbert_init.m:250-264, fixed point); the HDL ports always exist, misco = 0 when MISC = 0'
+// [params.MISC.values]
+// 0 = 'off'
+// 1 = 'on'
+//
 // [hdl_only]
+// MISC_WIDTH = 'inherited width: Simulink takes the misci width from the input signal'
 //
 // [mask_missing]
-// misc = 'misc pass-through (misci/misco ports) is not implemented'
 // float_type = 'floating point is not implemented'
 // exp_width = 'floating point is not implemented'
 // frac_width = 'floating point is not implemented'
@@ -53,8 +60,6 @@
 // note = 'each Simulink complex port x is split into x_re / x_im'
 // [ports.renamed]
 // [ports.missing]
-// misci = 'misc=on only (not implemented)'
-// misco = 'misc=on only (not implemented)'
 // [ports.extra]
 // @simulink-mapping end
 
@@ -63,17 +68,21 @@ module hilbert #(
     parameter int BIT_WIDTH    = 18,
     parameter int BIN_PT_IN    = 17,
     parameter int ADD_LATENCY  = 1,
-    parameter int CONV_LATENCY = 1
+    parameter int CONV_LATENCY = 1,
+    parameter int MISC         = 0,     // casper misc: 1 = misci -> misco pass-through
+    parameter int MISC_WIDTH   = 1
 )(
     input  logic                 clk,
     input  logic [BIT_WIDTH-1:0] a_re    [N_INPUTS],
     input  logic [BIT_WIDTH-1:0] a_im    [N_INPUTS],
     input  logic [BIT_WIDTH-1:0] b_re    [N_INPUTS],
     input  logic [BIT_WIDTH-1:0] b_im    [N_INPUTS],
+    input  logic [MISC_WIDTH-1:0] misci = '0,
     output logic [BIT_WIDTH-1:0] even_re [N_INPUTS],
     output logic [BIT_WIDTH-1:0] even_im [N_INPUTS],
     output logic [BIT_WIDTH-1:0] odd_re  [N_INPUTS],
-    output logic [BIT_WIDTH-1:0] odd_im  [N_INPUTS]
+    output logic [BIT_WIDTH-1:0] odd_im  [N_INPUTS],
+    output logic [MISC_WIDTH-1:0] misco
 );
 
     localparam int BW = BIT_WIDTH;
@@ -93,14 +102,14 @@ module hilbert #(
                 .N_BITS_OUT(BW + 1), .BIN_PT_OUT(BIN_PT_IN), .TYPE_OUT(1),
                 .OPMODE((i == 1 || i == 2) ? 1 : 0), .QUANTIZATION(0), .OVERFLOW(0),
                 .CSP_LATENCY(ADD_LATENCY)
-            ) u_addsub (.clk(clk), .a(op_a[i]), .b(op_b[i]), .dout(sum[i]));
+            ) u_addsub (.clk(clk), .a(op_a[i]), .b(op_b[i]), .dout(sum[i]), .misco(), .dvalid());
 
             // bus_scale(-1) reinterprets sum with BIN_PT_IN+1, then bus_convert
             convert #(
                 .N_BITS_IN(BW + 1), .BIN_PT_IN(BIN_PT_IN + 1), .TYPE_IN(1),
                 .N_BITS_OUT(BW), .BIN_PT_OUT(BIN_PT_IN), .TYPE_OUT(1),
                 .QUANTIZATION(2), .OVERFLOW(0), .CSP_LATENCY(CONV_LATENCY)
-            ) u_convert (.clk(clk), .din(sum[i]), .dout(res[i]));
+            ) u_convert (.clk(clk), .din(sum[i]), .dout(res[i]), .overflow(), .misco());
         end
 
         // ri_to_c: even = (res0, res2), odd = (res3, res1)
@@ -109,5 +118,16 @@ module hilbert #(
         assign odd_re[n]  = res[3];
         assign odd_im[n]  = res[1];
     end
+
+    // misc pass-through (hilbert_init.m:250-264: dmisc latency =
+    // add_latency + conv_latency); misco = 0 when MISC = 0
+    generate
+        if (MISC != 0) begin : GEN_MISC
+            delay #(.LATENCY(ADD_LATENCY + CONV_LATENCY), .BITWIDTH(MISC_WIDTH)) u_misc (
+                .clk(clk), .din(misci), .dout(misco));
+        end else begin : GEN_NO_MISC
+            assign misco = '0;
+        end
+    endgenerate
 
 endmodule

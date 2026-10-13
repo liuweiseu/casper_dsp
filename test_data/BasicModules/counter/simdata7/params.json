@@ -7,5 +7,5 @@
   "STEP": 1,
   "ENABLE_SYNC_RST": 1,
   "ENABLE_ENABLE": 0,
-  "RST_VAL": 5
+  "RST_VAL": 12
 }

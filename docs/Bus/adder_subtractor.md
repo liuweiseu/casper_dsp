@@ -33,6 +33,9 @@ format and adds the `CSP_LATENCY` pipeline.
 | `QUANTIZATION` | 0       | `0`=truncate, `1`=round half away from zero, `2`=round half to even |
 | `OVERFLOW`     | 0       | `0`=wrap, `1`=saturate, `2`=flag as error (treated as wrap) |
 | `CSP_LATENCY`      | 1       | Pipeline stages on the output; `0` = combinational |
+| `ASYNC` | 0 | casper `async`: `1` = the output pipeline only advances while `en` = 1 (the Xilinx AddSub stalls) and `dvalid` = `en` delayed `CSP_LATENCY` by a free delay; for `CSP_LATENCY` ≥ 2 and gaps in `en` the two disagree, as in Simulink (checked against Simulink, MATLAB R2021a) |
+| `MISC` | 0 | casper `misc`: `1` passes `misci` to `misco` (bus_addsub_init.m:443-447); `0` ties `misco` to 0 |
+| `MISC_WIDTH` | 1 | `misci` / `misco` width (inherited from the signal in Simulink) |
 
 ## Ports
 
@@ -41,7 +44,11 @@ format and adds the `CSP_LATENCY` pipeline.
 | `clk`  | input     | 1            | Clock (unused when `CSP_LATENCY = 0`) |
 | `a`    | input     | `N_BITS_A`   | First operand |
 | `b`    | input     | `N_BITS_B`   | Second operand |
+| `misci` | input | `MISC_WIDTH` | Side-channel word (e.g. sync), used when `MISC = 1`; defaults to 0 |
+| `en` | input | 1 | Async enable (used when `ASYNC = 1`; default 1) |
 | `dout` | output    | `N_BITS_OUT` | `convert(a ± b)`, delayed by `CSP_LATENCY` cycles |
+| `misco` | output | `MISC_WIDTH` | `misci` delayed by `CSP_LATENCY` cycles when `MISC = 1`, else 0 |
+| `dvalid` | output | 1 | `en` delayed `CSP_LATENCY` cycles when `ASYNC = 1`, else 0 |
 
 ## Functional Description
 

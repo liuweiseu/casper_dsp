@@ -355,7 +355,7 @@ module butterfly_direct #(
             ) u_twiddle (
                 .clk(clk), .ai_re(a_re), .ai_im(a_im), .bi_re(b_re), .bi_im(b_im),
                 .sync_in(sync_in), .ao_re(ao_re), .ao_im(ao_im),
-                .bwo_re(bwo_re), .bwo_im(bwo_im), .sync_out(tw_sync));
+                .bwo_re(bwo_re), .bwo_im(bwo_im), .sync_out(tw_sync), .dvo());
         end else if (TWIDDLE_TYPE == TW_COEFF_0) begin : GEN_TW_COEFF_0
             twiddle_coeff_0 #(
                 .N_INPUTS(N_INPUTS), .INPUT_BIT_WIDTH(IW),
@@ -364,7 +364,7 @@ module butterfly_direct #(
             ) u_twiddle (
                 .clk(clk), .ai_re(a_re), .ai_im(a_im), .bi_re(b_re), .bi_im(b_im),
                 .sync_in(sync_in), .ao_re(ao_re), .ao_im(ao_im),
-                .bwo_re(bwo_re), .bwo_im(bwo_im), .sync_out(tw_sync));
+                .bwo_re(bwo_re), .bwo_im(bwo_im), .sync_out(tw_sync), .dvalid());
         end else if (TWIDDLE_TYPE == TW_COEFF_1) begin : GEN_TW_COEFF_1
             twiddle_coeff_1 #(
                 .N_INPUTS(N_INPUTS), .INPUT_BIT_WIDTH(IW), .BIN_PT_IN(BP),
@@ -373,7 +373,7 @@ module butterfly_direct #(
             ) u_twiddle (
                 .clk(clk), .ai_re(a_re), .ai_im(a_im), .bi_re(b_re), .bi_im(b_im),
                 .sync_in(sync_in), .ao_re(ao_re), .ao_im(ao_im),
-                .bwo_re(bwo_re), .bwo_im(bwo_im), .sync_out(tw_sync));
+                .bwo_re(bwo_re), .bwo_im(bwo_im), .sync_out(tw_sync), .dvalid());
         end else if (TWIDDLE_TYPE == TW_STAGE_2) begin : GEN_TW_STAGE_2
             twiddle_stage_2 #(
                 .N_INPUTS(N_INPUTS), .FFT_SIZE(FFT_SIZE), .INPUT_BIT_WIDTH(IW),
@@ -382,7 +382,7 @@ module butterfly_direct #(
             ) u_twiddle (
                 .clk(clk), .ai_re(a_re), .ai_im(a_im), .bi_re(b_re), .bi_im(b_im),
                 .sync_in(sync_in), .ao_re(ao_re), .ao_im(ao_im),
-                .bwo_re(bwo_re), .bwo_im(bwo_im), .sync_out(tw_sync));
+                .bwo_re(bwo_re), .bwo_im(bwo_im), .sync_out(tw_sync), .dvo());
         end else begin : GEN_TW_GENERAL
             twiddle_general #(
                 .N_INPUTS(N_INPUTS), .FFT_SIZE(FFT_SIZE), .N_COEFFS(N_COEFFS),
@@ -394,7 +394,7 @@ module butterfly_direct #(
             ) u_twiddle (
                 .clk(clk), .ai_re(a_re), .ai_im(a_im), .bi_re(b_re), .bi_im(b_im),
                 .sync_in(sync_in), .ao_re(ao_re), .ao_im(ao_im),
-                .bwo_re(bwo_re), .bwo_im(bwo_im), .sync_out(tw_sync));
+                .bwo_re(bwo_re), .bwo_im(bwo_im), .sync_out(tw_sync), .dvalid());
         end
     endgenerate
 
@@ -426,7 +426,7 @@ module butterfly_direct #(
                 .N_BITS_B(BW_W),  .BIN_PT_B(BP), .TYPE_B(1),
                 .N_BITS_OUT(SUM_W), .BIN_PT_OUT(BP), .TYPE_OUT(1),
                 .OPMODE(c / 2), .QUANTIZATION(0), .OVERFLOW(0), .CSP_LATENCY(ADD_LATENCY)
-            ) u_addsub (.clk(clk), .a(a_c[c]), .b(b_c[c]), .dout(sum_c));
+            ) u_addsub (.clk(clk), .a(a_c[c]), .b(b_c[c]), .dout(sum_c), .misco(), .dvalid());
 
             if (DYNAMIC != 0) begin : GEN_DYNAMIC
                 // unscaled (bus_norm0) and halved (bus_scale + bus_norm1), both
@@ -436,12 +436,12 @@ module butterfly_direct #(
                     .N_BITS_IN(SUM_W), .BIN_PT_IN(BP), .TYPE_IN(1),
                     .N_BITS_OUT(CONV_IN_W), .BIN_PT_OUT(BP + 1), .TYPE_OUT(1),
                     .QUANTIZATION(0), .OVERFLOW(0), .CSP_LATENCY(0)
-                ) u_norm0 (.clk(clk), .din(sum_c), .dout(norm0));
+                ) u_norm0 (.clk(clk), .din(sum_c), .dout(norm0), .overflow(), .misco());
                 scale #(
                     .N_BITS_IN(SUM_W), .BIN_PT_IN(BP), .TYPE_IN(1), .SCALE_FACTOR(-1),
                     .N_BITS_OUT(CONV_IN_W), .BIN_PT_OUT(BP + 1), .TYPE_OUT(1),
                     .QUANTIZATION(0), .OVERFLOW(0), .LATENCY(0)
-                ) u_norm1 (.clk(clk), .din(sum_c), .dout(norm1));
+                ) u_norm1 (.clk(clk), .din(sum_c), .dout(norm1), .misco());
                 multiplexer #(.NBITS(CONV_IN_W), .NINPUTS(2), .LATENCY(MUX_LATENCY)) u_mux (
                     .clk(clk), .din('{norm0, norm1}), .sel(shift_d), .dout(cin_c));
             end else begin : GEN_STATIC

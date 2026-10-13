@@ -12,15 +12,19 @@ testdatadir = module_data_dir(__file__)
 PARAMS = ['DATA_WIDTH', 'ADDR_WIDTH']
 # CSV name (sim_<name>.csv) -> DUT port
 INPUTS = {'addr': 'addr'}
+# optional rst / en options: parameters (default when missing from
+# params.json) and input ports (sim_<name>.csv only in sets that use them)
+OPTION_DEFAULTS = {'RST': 0, 'EN': 0, 'INIT_REG': 0}
+OPTIONAL_INPUTS = {'rst': 'rst', 'en': 'en'}
 OUTPUTS = {'dout': 'dout'}
 
 
 def find_datadir(dut):
     """Return the simdataN directory whose integer parameters match the DUT."""
-    dut_params = {name: int(getattr(dut, name).value) for name in PARAMS}
+    dut_params = {name: int(getattr(dut, name).value) for name in PARAMS + list(OPTION_DEFAULTS)}
     for d in sorted(testdatadir.glob("simdata*")):
-        p = json.loads((d / "params.json").read_text())
-        if {k: p[k] for k in PARAMS} == dut_params:
+        p = dict(OPTION_DEFAULTS, **json.loads((d / "params.json").read_text()))
+        if {k: p[k] for k in dut_params} == dut_params:
             return d, dut_params
     return None, dut_params
 
@@ -42,19 +46,20 @@ async def module_test(dut):
         cocotb.log.warning(f"No test data for {dut_params}. Skipping.")
         return
 
-    stim = {k: np.loadtxt(datadir / f"sim_{k}.csv", dtype=int).tolist() for k in INPUTS}
+    inputs = dict(INPUTS, **{k: v for k, v in OPTIONAL_INPUTS.items() if (datadir / f"sim_{k}.csv").exists()})
+    stim = {k: np.loadtxt(datadir / f"sim_{k}.csv", dtype=int).tolist() for k in inputs}
     expected = {k: np.loadtxt(datadir / f"sim_{k}.csv", dtype=int).tolist() for k in OUTPUTS}
     cycles = len(next(iter(expected.values())))
     cocotb.log.info(f"Loaded {cycles} cycles from {datadir.name}")
 
     for i in range(cycles):
-        for k, port in INPUTS.items():
+        for k, port in inputs.items():
             getattr(dut, port).value = stim[k][i]
         await RisingEdge(dut.clk)
         for k, port in OUTPUTS.items():
             actual = int(getattr(dut, port).value)
             assert actual == expected[k][i], (
-                f"Index {i}: inputs={ {k: stim[k][i] for k in INPUTS} } "
+                f"Index {i}: inputs={ {k: stim[k][i] for k in inputs} } "
                 f"→ expected {port}={expected[k][i]}, got {actual}"
             )
 

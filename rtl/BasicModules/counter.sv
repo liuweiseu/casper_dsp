@@ -103,7 +103,7 @@
 // 1 = 'on'
 //
 // [hdl_only]
-// RST_VAL = 'HDL extension: reset value separate from start_count (defaults to INIT_VAL, which is what Sysgen does)'
+// RST_VAL = 'HDL extension: reset value separate from start_count. Simulink has no separate reset value (the Xilinx Counter resets to start_count, xlCounter.sgm), so only RST_VAL = INIT_VAL (the default) is Simulink-equivalent; counter sets 6-8 were changed to RST_VAL = INIT_VAL for that reason'
 //
 // [mask_missing]
 // arith_type = 'signedness only changes how the bits are read; counting is bit-identical'
@@ -113,7 +113,7 @@
 // implementation = 'Fabric / DSP48 resource choice only'
 //
 // [ports]
-// order = 'HDL: rst, enable, load, din, up. Simulink shows only the enabled optional ports; casper sync_delay (system_237.xml, Counter 237:6 with load_pin+en) wires load=in1, din=in2, en=in3'
+// order = 'HDL: rst, enable, load, din, up. Simulink shows only the enabled optional ports, in the order (up, load, din, rst, en) for a Free Running counter (all options on) and (up, rst, en) for a Count Limited one, which has no load / din ports (port_label of built blocks, read by plugins-demo2; up / rst / en also confirmed with counter sets 10 and 11). The xlCounter.sgm signature order (load, din, rst, en, up) is not the port order'
 // note = 'Output port 1 is unlabelled in the Sysgen icon; maps to dout. HDL rst/enable have no default and must be tied off when the option is off'
 // [ports.renamed]
 // enable = 'en'
@@ -145,7 +145,8 @@ module counter #(
     parameter int ENABLE_ENABLE = 0,
     /* RST_VAL: value loaded by the synchronous reset. The Xilinx Counter
        resets to start_count (xlCounter.sgm), so the default is INIT_VAL;
-       set it only to model a reset value that differs from start_count. */
+       set it only to model a reset value that differs from start_count
+       (HDL-only: only RST_VAL = INIT_VAL is Simulink-equivalent). */
     parameter int RST_VAL = INIT_VAL
 )(
     input              clk,

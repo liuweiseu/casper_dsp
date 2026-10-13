@@ -1,12 +1,13 @@
-// delay — Xilinx System Generator Delay block (xbsIndex_r4 "Delay";
-// behaviour per the Sysgen block model data/sysgen/block_models/xlDelay.sgm)
+// delay — Xilinx System Generator Delay block (xbsIndex_r4 "Delay")
 //
 // A LATENCY-stage shift register; LATENCY = 0 is a wire (rst and en are
 // then ignored, as in the block model). Per clock edge:
-//   rst (USE_RST)               every stage <= 0
-//   en  (USE_ENABLE; else on)   shift: stage 0 <= din, stage k <= stage k-1
-// Both apply in that order, so with rst and en high together stage 0
-// takes din and the other stages clear. Power-on value 0.
+//   rst (USE_RST)               every stage <= 0, including stage 0; nothing
+//                               is shifted in, whatever en is
+//   else en (USE_ENABLE; else on)  shift: stage 0 <= din, stage k <= stage k-1
+// Power-on value 0. This follows the built Simulink block (MATLAB R2021a,
+// delay sets 2 and 4), not the literal xlDelay.sgm text, which clears and
+// then still pushes din when en = 1.
 //
 // Mask mapping: latency -> LATENCY, rst -> USE_RST, en -> USE_ENABLE
 // (reg_retiming only selects the HDL style). Ports whose option is off are
@@ -46,7 +47,8 @@
 // reg_retiming = 'HDL style only (behavioural vs SRL), no behavioural effect'
 //
 // [ports]
-// note = 'The Sysgen block icon carries no port labels, so ports map by position (no rename recorded); xlDelay.sgm signature delay(d, en, rst) -> q'
+// order = 'Simulink: d, rst, en (port_label of a built block with both options on, read by plugins-demo2; confirmed with delay set 2); HDL: din, rst, en. The xlDelay.sgm signature order delay(d, en, rst) is not the port order'
+// note = 'ports map by name: din -> d, dout -> q'
 // [ports.renamed]
 // [ports.missing]
 // [ports.extra]
@@ -90,9 +92,8 @@ generate
             begin
                 if (do_rst)
                     begin
-                        for(i=1; i<LATENCY; i=i+1)
+                        for(i=0; i<LATENCY; i=i+1)
                             shift_reg[i] <= {BITWIDTH{1'b0}};
-                        shift_reg[0] <= do_shift ? din : {BITWIDTH{1'b0}};
                     end
                 else if (do_shift)
                     begin

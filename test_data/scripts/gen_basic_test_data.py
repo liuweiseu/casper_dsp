@@ -121,15 +121,17 @@ COUNTER_SETS = [
     (5, "count_limit(1), up(0), INIT_VAL=RST_VAL=9, to 17 — Xilinx start_count on power-on/reset/wrap",
      dict(COUNTER_TYPE=1, NBITS=6, COUNT_TO_VAL=17, COUNT_DIR=0, INIT_VAL=9, STEP=1,
           ENABLE_SYNC_RST=1, ENABLE_ENABLE=1, RST_VAL=9)),
-    (6, "free_running(0), up(0), RST_VAL=15 — reset to a nonzero value, power-on 0",
-     dict(COUNTER_TYPE=0, NBITS=4, COUNT_TO_VAL=0, COUNT_DIR=0, INIT_VAL=0, STEP=1,
-          ENABLE_SYNC_RST=1, ENABLE_ENABLE=1, RST_VAL=15)),
-    (7, "free_running(0), down(1), RST_VAL=5, no enable port — reset only",
+    # Sets 6-8 keep RST_VAL = INIT_VAL: the Xilinx Counter resets to
+    # start_count, so only that is Simulink-equivalent (RST_VAL is HDL-only)
+    (6, "free_running(0), up(0), INIT_VAL=RST_VAL=11 — nonzero power-on and reset value",
+     dict(COUNTER_TYPE=0, NBITS=4, COUNT_TO_VAL=0, COUNT_DIR=0, INIT_VAL=11, STEP=1,
+          ENABLE_SYNC_RST=1, ENABLE_ENABLE=1, RST_VAL=11)),
+    (7, "free_running(0), down(1), INIT_VAL=RST_VAL=12, no enable port — reset only",
      dict(COUNTER_TYPE=0, NBITS=4, COUNT_TO_VAL=0, COUNT_DIR=1, INIT_VAL=12, STEP=1,
-          ENABLE_SYNC_RST=1, ENABLE_ENABLE=0, RST_VAL=5)),
-    (8, "count_limit(1), down(1), INIT_VAL=20, RST_VAL=3, to 0 — reset value differs from wrap value",
+          ENABLE_SYNC_RST=1, ENABLE_ENABLE=0, RST_VAL=12)),
+    (8, "count_limit(1), down(1), INIT_VAL=RST_VAL=20, to 0 — reset and wrap both go to 20",
      dict(COUNTER_TYPE=1, NBITS=5, COUNT_TO_VAL=0, COUNT_DIR=1, INIT_VAL=20, STEP=1,
-          ENABLE_SYNC_RST=1, ENABLE_ENABLE=1, RST_VAL=3)),
+          ENABLE_SYNC_RST=1, ENABLE_ENABLE=1, RST_VAL=20)),
     (9, "free_running(0), up(0), step=3, RST_VAL=0 (default) — clear-to-zero reset with enable",
      dict(COUNTER_TYPE=0, NBITS=8, COUNT_TO_VAL=0, COUNT_DIR=0, INIT_VAL=0, STEP=3,
           ENABLE_SYNC_RST=1, ENABLE_ENABLE=1, RST_VAL=0)),
@@ -257,7 +259,11 @@ def gen_relational():
 
 # ----------------------------------------------------------------- delay
 def m_delay(p, din, rst, en):
-    """xlDelay.sgm: rst clears every stage, then en shifts (stage 0 <- din)."""
+    """Simulink Delay block: rst clears every stage and wins over en; else en shifts (stage 0 <- din).
+
+    The built block (MATLAB R2021a, delay sets 2 and 4) pushes nothing on rst,
+    unlike the literal xlDelay.sgm text (clear, then push din when en = 1).
+    """
     lat = p["LATENCY"]
     if lat == 0:
         return list(din)
@@ -268,7 +274,7 @@ def m_delay(p, din, rst, en):
         out.append(regs[-1])
         if r:
             regs = [0] * lat
-        if e:
+        elif e:
             regs = [d] + regs[:-1]
     return out
 

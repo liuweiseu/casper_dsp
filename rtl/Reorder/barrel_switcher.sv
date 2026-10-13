@@ -27,38 +27,54 @@
 //   'Power-on: the mux output registers and the sel/sync delays start at 0 in both models (xlMux/xlDelay init 0; multiplexer/pipeline power up to 0), so the first N_INPUTS outputs and sync_out are 0, as in Simulink.',
 // ]
 //
+// [params.ASYNC]
+// mask = 'async'
+// type = 'checkbox'
+// note = 'async = on: dvalid = en delayed N_INPUTS (free Delay); the data path is not gated. The HDL ports always exist, dvalid = 0 when ASYNC = 0'
+// [params.ASYNC.values]
+// 0 = 'off'
+// 1 = 'on'
+//
 // [hdl_only]
 // DATA_WIDTH = 'inherited width: Simulink takes it from the input signal'
 //
 // [mask_missing]
-// async = 'async mode (en input / dvalid output) is not implemented; the HDL behaves as async = off'
 //
 // [ports]
-// order = 'Simulink inputs sel, sync_in, In1..In<N> match the HDL; Simulink outputs are sync_out (port 1) then Out1..Out<N>, the HDL declares dout before sync_out'
+// order = 'Simulink inputs sel, sync_in, In1..In<N>, en (async only) match the HDL; Simulink outputs are sync_out (port 1), Out1..Out<N>, dvalid (async only); the HDL declares dout before sync_out'
 // [ports.renamed]
 // din = 'In1..In<2^N_INPUTS>'
 // dout = 'Out1..Out<2^N_INPUTS>'
 // [ports.missing]
-// en = 'async=on only (not implemented)'
-// dvalid = 'async=on only (not implemented)'
 // [ports.extra]
 // @simulink-mapping end
 
 module barrel_switcher #(
     parameter int N_INPUTS     = 1,
-    parameter int DATA_WIDTH   = 8
+    parameter int DATA_WIDTH   = 8,
+    parameter int ASYNC        = 0      // casper async: 1 = en / dvalid
 )(
     input  logic                    clk,
     input  logic [N_INPUTS-1:0] sel,
     input  logic                    sync_in,
     input  logic [DATA_WIDTH-1:0]   din  [1 << N_INPUTS],
+    input  logic                    en = 1'b1,
     output logic [DATA_WIDTH-1:0]   dout [1 << N_INPUTS],
-    output logic                    sync_out
+    output logic                    sync_out,
+    output logic                    dvalid
 );
 
     localparam int N = 1 << N_INPUTS;
 
     if (N_INPUTS < 1) $fatal(1, "barrel_switcher: N_INPUTS must be >= 1");
+
+    // ASYNC = 1: en only qualifies the data; dvalid = en through a free Delay
+    // of N_INPUTS, the mux latency (den, barrel_switcher_init.m:64-73, 152-161)
+    if (ASYNC != 0) begin : GEN_DVALID
+        delay #(.LATENCY(N_INPUTS), .BITWIDTH(1)) u_dvalid (.clk(clk), .din(en), .dout(dvalid));
+    end else begin : GEN_NO_DVALID
+        assign dvalid = 1'b0;
+    end
 
     // stage boundaries: lanes[0] = inputs, lanes[j] = output of stage j
     logic [DATA_WIDTH-1:0] lanes [N_INPUTS+1][N];

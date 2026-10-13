@@ -11,7 +11,9 @@ For every module this writes, under test_data/<Category>/<module>/:
   simdataN/params.json   DUT parameters of test N (the testbench uses it to
                          find the data set matching the DUT it is running)
   simdataN/sim_*.csv     raw (unsigned bit-pattern) input / expected output
-                         words, one value per clock cycle
+                         words, one value per clock cycle; sets with MISC = 1
+                         add sim_misci.csv (random MISC_WIDTH-bit words) and
+                         sim_misco.csv (misci delayed by the casper misc latency)
   test_data.md           table of all test configurations
 
 and prints the matching [[simulations]] blocks for tests/simulation.toml.
@@ -120,6 +122,18 @@ def m_convert(p, v):
                      p["QUANTIZATION"], p["OVERFLOW"])]
 
 
+def convert_overflow(p, din):
+    """casper convert_of overflow rule (bus_convert of = on): the top
+    wb_lost+1 bits of din are not all equal; never when wb_lost <= 0."""
+    n_in = p["N_BITS_IN"]
+    wb_lost = (n_in - p["BIN_PT_IN"]) - (p["N_BITS_OUT"] - p["BIN_PT_OUT"])
+    if wb_lost <= 0:
+        return 0
+    n_top = min(wb_lost + 1, n_in)
+    top = din >> (n_in - n_top)
+    return int(top not in (0, (1 << n_top) - 1))
+
+
 def m_adder_subtractor(p, v):
     a = to_value(v[0], p["N_BITS_A"], p["BIN_PT_A"], p["TYPE_A"])
     b = to_value(v[1], p["N_BITS_B"], p["BIN_PT_B"], p["TYPE_B"])
@@ -209,6 +223,65 @@ def P(names, values):
     return dict(zip(names, values))
 
 
+def en_stream(rng, n):
+    """Random enable for async sets: ~70 % high, with a few longer en = 0 runs."""
+    en = [1 if rng.random() < 0.75 else 0 for _ in range(n)]
+    for start in (n // 4, n // 2, 3 * n // 4):
+        en[start:start + 6] = [0] * 6
+    return en
+
+
+def gated(values, en, latency, zero):
+    """Xilinx latency chain with an en port: it only advances while en = 1.
+
+    Pre-edge read convention as delayed(); latency 0 is combinational.
+    """
+    if latency == 0:
+        return delayed(values, 0, zero)
+    chain, out = [zero] * latency, []
+    for v, e in zip(values, en):
+        out.append(chain[-1])
+        if e:
+            chain = [v] + chain[:-1]
+    return out
+
+
+def m_cmult_async(p, a, b, en):
+    """cmult with async = on (cmult_init.m): every Mult / AddSub / Convert is
+    gated by the en aligned to its input when pipelined_enable is on (en
+    delayed in, mult, add latency), by the raw en otherwise (in_latency forced
+    to 0, no dvalid). dvalid = en delayed in + mult + add + conv, aligned with
+    ab: the intended behaviour. casper's den Delay takes the add latency
+    instead (cmult_init.m:532-535, 623-627; mlib_devel bug 13)."""
+    na, nb, nab = p["N_BITS_A"], p["N_BITS_B"], p["N_BITS_AB"]
+    pe = p["PIPELINED_ENABLE"]
+    il = p["IN_LATENCY"] if pe else 0
+    ml, al, cl = p["MULT_LATENCY"], p["ADD_LATENCY"], p["CONV_LATENCY"]
+    a_d, b_d = delayed(a, il, 0), delayed(b, il, 0)
+    e1 = delayed(en, il, 0) if pe else en
+    e2 = delayed(e1, ml, 0) if pe else en
+    e3 = delayed(e2, al, 0) if pe else en
+    prods = []
+    for x, y in zip(a_d, b_d):
+        ar, ai = (to_value(t, na, p["BIN_PT_A"], 1) for t in unpack(x, na))
+        br, bi = (to_value(t, nb, p["BIN_PT_B"], 1) for t in unpack(y, nb))
+        prods.append((ar * br, ai * bi, ai * br, ar * bi))
+    m = gated(prods, e1, ml, (0, 0, 0, 0))
+    sums = [((rr + ii, ir - ri) if p["CONJUGATED"] else (rr - ii, ir + ri)) for rr, ii, ir, ri in m]
+    s = gated(sums, e2, al, (0, 0))
+    q = (nab, p["BIN_PT_AB"], 1, p["QUANTIZATION"], p["OVERFLOW"])
+    conv = [(quantize(re, *q) << nab) | quantize(im, *q) for re, im in s]
+    out = {"ab": gated(conv, e3, cl, 0)}
+    if pe:
+        out["dvalid"] = delayed(e3, cl, 0)
+    return out
+
+
+def with_misc(params, width):
+    """params plus the casper misc pass-through (MISC = 1, MISC_WIDTH = width)."""
+    return dict(params, MISC=1, MISC_WIDTH=width)
+
+
 # Parameter names follow the casper_library masks (upper case): the Bus
 # blocks' latency is csp_latency (bus_mult: mult_latency); scale keeps the
 # Xilinx Convert-style LATENCY of its HDL-only requantizer.
@@ -238,6 +311,7 @@ MODULES = {
         model=m_convert, inputs=["din"], outputs=["dout"],
         widths=lambda p: [p["N_BITS_IN"]],
         latency=lambda p: p["CSP_LATENCY"], latency_name="CSP_LATENCY",
+        misc_latency=lambda p: p["CSP_LATENCY"],          # bus_convert_init.m:281-285
         prose="`convert` requantizes `din` from the input fixed-point format "
               "to the output format.",
         tests=[
@@ -257,12 +331,19 @@ MODULES = {
              "Fix_8_-2 → Fix_12_0, negative input binary point (exact ×4)"),
             (P(CONV, [8, 0, 1, 12, 2, 1, 0, 0, 0]),
              "Fix_8_0 → Fix_12_2, same shift as set 6 (exact ×4), Simulink-buildable"),
+            (with_misc(P(CONV, [16, 8, 1, 8, 4, 1, 2, 1, 2]), 3),
+             "set 2 with misc: 3-bit misci → misco, delayed CSP_LATENCY"),
+            (dict(P(CONV, [16, 8, 1, 8, 4, 1, 1, 1, 1]), OF=1),
+             "set 1 with of: overflow flags 4 dropped integer bits (casper convert_of rule)"),
+            (dict(P(CONV, [8, 4, 0, 10, 6, 1, 0, 0, 0]), OF=1),
+             "set 3 with of, combinational: bit growth, overflow always 0"),
         ]),
     "adder_subtractor": dict(
         category="Bus",
         model=m_adder_subtractor, inputs=["a", "b"], outputs=["dout"],
         widths=lambda p: [p["N_BITS_A"], p["N_BITS_B"]],
         latency=lambda p: p["CSP_LATENCY"], latency_name="CSP_LATENCY",
+        misc_latency=lambda p: p["CSP_LATENCY"],          # bus_addsub_init.m:443-447
         prose="`adder_subtractor` computes `a + b` (`OPMODE`=0) or `a - b` "
               "(`OPMODE`=1) and requantizes to the output format.",
         tests=[
@@ -278,12 +359,19 @@ MODULES = {
              "Fix_16_15 + UFix_8_8 → Fix_12_10, signed + unsigned, round even + wrap"),
             (P(ADDSUB, [8, 4, 0, 8, 4, 0, 8, 4, 0, 1, 0, 1, 1]),
              "UFix_8_4 − UFix_8_4 → UFix_8_4, saturate (negatives clamp to 0)"),
+            (with_misc(P(ADDSUB, [8, 0, 0, 8, 0, 0, 9, 0, 1, 1, 0, 0, 2]), 4),
+             "set 3 with misc: 4-bit misci → misco, delayed CSP_LATENCY"),
+            (dict(P(ADDSUB, [8, 0, 0, 8, 0, 0, 9, 0, 1, 1, 0, 0, 2]), ASYNC=1),
+             "set 3 async: random en stalls the AddSub chain, dvalid = en delayed CSP_LATENCY"),
+            (dict(P(ADDSUB, [8, 4, 1, 8, 4, 1, 8, 4, 1, 0, 0, 1, 1]), ASYNC=1),
+             "set 1 async, CSP_LATENCY 1"),
         ]),
     "multiplier": dict(
         category="Bus",
         model=m_multiplier, inputs=["a", "b"], outputs=["dout"],
         widths=lambda p: [p["N_BITS_A"], p["N_BITS_B"]],
         latency=lambda p: p["MULT_LATENCY"], latency_name="MULT_LATENCY",
+        misc_latency=lambda p: p["MULT_LATENCY"],         # bus_mult_init.m:701-711 (fan_latency 0)
         prose="`multiplier` computes `a * b` and requantizes to the output format.",
         tests=[
             (P(MULT, [8, 7, 1, 8, 7, 1, 16, 14, 1, 0, 0, 0]),
@@ -296,6 +384,8 @@ MODULES = {
              "Fix_12_11 × UFix_6_6 → Fix_8_7, round + wrap, 2-stage pipeline"),
             (P(MULT, [8, 4, 1, 8, 4, 1, 8, 4, 1, 0, 1, 1]),
              "Fix_8_4 × Fix_8_4 → Fix_8_4, truncate + saturate"),
+            (with_misc(P(MULT, [12, 11, 1, 6, 6, 0, 8, 7, 1, 1, 0, 2]), 5),
+             "set 3 with misc: 5-bit misci → misco, delayed MULT_LATENCY"),
         ]),
     "complex_multiplier": dict(
         category="Multipliers",
@@ -307,7 +397,11 @@ MODULES = {
               "requantizes both output parts. Tests are paired so that each "
               "format is exercised with both `MULT_SPEC`=0 (4-multiply) and "
               "`MULT_SPEC`=1 (3-multiply); the expected values of a pair are "
-              "identical apart from the latency shift.",
+              "identical apart from the latency shift. Set 7 also drives random "
+              "`sim_a_tvalid.csv` / `sim_b_tvalid.csv` (80 % high) and expects "
+              "`sim_dout_tvalid.csv` = `a_tvalid & b_tvalid` delayed by the "
+              "latency; the data path ignores the valids (no AXI blocking). "
+              "The other sets leave both valids at 1.",
         tests=[
             (P(CMULT, [8, 7, 1, 8, 7, 1, 17, 14, 1, 0, 0, 0, 2, 1]),
              "Fix_8_7 × Fix_8_7 → Fix_17_14, exact, 4-mult"),
@@ -323,7 +417,12 @@ MODULES = {
              "UFix_8_4 × Fix_8_6 → Fix_14_8, round + wrap, 3-mult"),
             (P(CMULT, [8, 7, 1, 8, 7, 1, 10, 7, 1, 1, 1, 1, 0, 0]),
              "Fix_8_7 → Fix_10_7, round + saturate, 3-mult, fully combinational"),
-        ]),
+            (P(CMULT, [12, 11, 1, 10, 9, 1, 13, 10, 1, 0, 1, 0, 2, 1]),
+             "Fix_12_11 × Fix_10_9 → Fix_13_10, truncate + saturate, 4-mult, "
+             "random a_tvalid / b_tvalid (dout_tvalid = both, delayed)"),
+        ],
+        # sets that drive a_tvalid / b_tvalid and check dout_tvalid
+        tvalid_sets={7}),
     "cmult": dict(
         category="Multipliers",
         model=m_cmult, inputs=["a", "b"], outputs=["ab"],
@@ -363,12 +462,18 @@ MODULES = {
              "PIPELINE_CMULT_EN with behavioral HDL: no extra latency"),
             (P(CM, [18, 17, 18, 17, 18, 17, 2, 1, 3, 1, 1, 0, 1, 0, 0, 2]),
              "Fix_18_17 → Fix_18_17, round even + saturate, conjugated"),
+            (dict(P(CM, [8, 7, 12, 11, 10, 7, 1, 1, 2, 1, 2, 1, 1, 0, 0, 2]), ASYNC=1, PIPELINED_ENABLE=1),
+             "set 5 async, pipelined_enable on: each stage gated by its aligned en; "
+             "dvalid = en delayed in + mult + add + conv (bug 13 fixed: aligned with ab)"),
+            (dict(P(CM, [18, 17, 18, 17, 37, 14, 0, 0, 3, 1, 1, 0, 0, 0, 0, 2]), ASYNC=1, PIPELINED_ENABLE=0),
+             "set 0 async, pipelined_enable off: every stage gated by the raw en, no dvalid"),
         ]),
     "scale": dict(
         category="Bus",
         model=m_scale, inputs=["din"], outputs=["dout"],
         widths=lambda p: [p["N_BITS_IN"]],
         latency=lambda p: p["LATENCY"],
+        misc_latency=lambda p: 0,                         # bus_scale_init.m:159-164
         prose="`scale` computes `din · 2^SCALE_FACTOR` and requantizes to the "
               "output format.",
         tests=[
@@ -384,12 +489,16 @@ MODULES = {
              "Fix_8_2 × 32 → Fix_12_0 (intermediate binary point −3), exact"),
             (P(SCALE, [18, 17, 1, -1, 18, 17, 1, 2, 1, 1]),
              "Fix_18_17 ÷ 2, round even + saturate (FFT stage shift)"),
+            (with_misc(P(SCALE, [16, 8, 1, -3, 16, 11, 1, 0, 0, 0]), 4),
+             "Fix_16_8 ÷ 8 as a pure reinterpretation to Fix_16_11 (the bus_scale-equivalent "
+             "format, LATENCY 0), with misc: 4-bit misci → misco undelayed"),
         ]),
     "negate": dict(
         category="Bus",
         model=m_negate, inputs=["din"], outputs=["dout"],
         widths=lambda p: [p["N_BITS_IN"]],
         latency=lambda p: p["CSP_LATENCY"], latency_name="CSP_LATENCY",
+        misc_latency=lambda p: p["CSP_LATENCY"],          # bus_negate_init.m:226-230
         prose="`negate` computes `-din` and requantizes to the output format.",
         tests=[
             (P(CONV, [8, 4, 1, 8, 4, 1, 0, 0, 0]),
@@ -404,6 +513,8 @@ MODULES = {
              "Fix_12_8 → Fix_8_4, round half away from zero + saturate"),
             (P(CONV, [12, 8, 1, 8, 4, 1, 2, 0, 1]),
              "Fix_12_8 → Fix_8_4, round half to even + wrap"),
+            (with_misc(P(CONV, [8, 4, 1, 8, 4, 1, 0, 1, 1]), 2),
+             "set 1 with misc (the bus_negate-equivalent format): 2-bit misci → misco, delayed CSP_LATENCY"),
         ]),
 }
 
@@ -425,15 +536,48 @@ def write_module(name, spec):
         (d / "params.json").write_text(json.dumps(params, indent=2) + "\n")
         for k, port in enumerate(spec["inputs"]):
             (d / f"sim_{port}.csv").write_text("".join(f"{v[k]}\n" for v in vecs))
+        en = en_stream(random.Random(f"{name}-{n}-en"), len(vecs)) if params.get("ASYNC") else None
+        if en is not None:
+            (d / "sim_en.csv").write_text("".join(f"{x}\n" for x in en))
+        if en is not None and name == "cmult":
+            outs = m_cmult_async(params, [v[0] for v in vecs], [v[1] for v in vecs], en)
+            for port, col in outs.items():
+                (d / f"sim_{port}.csv").write_text("".join(f"{x}\n" for x in col))
         for k, port in enumerate(spec["outputs"]):
+            if en is not None and name == "cmult":
+                break
             zero = spec["model"](params, (0,) * len(spec["inputs"]))[k]
-            col = delayed([r[k] for r in results], lat, zero)
+            col = (gated([r[k] for r in results], en, lat, zero) if en is not None
+                   else delayed([r[k] for r in results], lat, zero))
             (d / f"sim_{port}.csv").write_text("".join(f"{x}\n" for x in col))
+        if en is not None and name != "cmult":
+            # dvalid = en through a free Delay of the latency (bus_addsub den)
+            (d / "sim_dvalid.csv").write_text("".join(f"{x}\n" for x in delayed(en, lat, 0)))
+        if n in spec.get("tvalid_sets", ()):
+            trng = random.Random(f"{name}-{n}-tvalid")
+            a_tv = [int(trng.random() < 0.8) for _ in vecs]
+            b_tv = [int(trng.random() < 0.8) for _ in vecs]
+            tv = delayed([a & b for a, b in zip(a_tv, b_tv)], lat, 0)
+            for port, col in (("a_tvalid", a_tv), ("b_tvalid", b_tv), ("dout_tvalid", tv)):
+                (d / f"sim_{port}.csv").write_text("".join(f"{x}\n" for x in col))
+        if params.get("OF"):
+            of = delayed([convert_overflow(params, v[0]) for v in vecs], lat,
+                         convert_overflow(params, 0))
+            (d / "sim_overflow.csv").write_text("".join(f"{x}\n" for x in of))
+        if params.get("MISC"):
+            mrng = random.Random(f"{name}-{n}-misc")
+            misci = [mrng.randrange(1 << params["MISC_WIDTH"]) for _ in vecs]
+            misco = delayed(misci, spec["misc_latency"](params), 0)
+            (d / "sim_misci.csv").write_text("".join(f"{x}\n" for x in misci))
+            (d / "sim_misco.csv").write_text("".join(f"{x}\n" for x in misco))
     (mdir / "test_data.md").write_text(test_data_md(name, spec))
 
 
+MISC_DEFAULTS = {"MISC": 0, "MISC_WIDTH": 1, "OF": 0, "ASYNC": 0, "PIPELINED_ENABLE": 1}
+
+
 def test_data_md(name, spec):
-    keys = list(spec["tests"][0][0].keys())
+    keys = list(dict.fromkeys(k for params, _ in spec["tests"] for k in params))
     ins = ", ".join(f"`sim_{p}.csv`" for p in spec["inputs"])
     outs = ", ".join(f"`sim_{p}.csv`" for p in spec["outputs"])
     lines = [
@@ -448,7 +592,21 @@ def test_data_md(name, spec):
         f"{ins} and expected output words {outs}. All words are raw unsigned "
         "bit patterns, one per clock cycle. Expected outputs already include "
         f"the pipeline latency (the first `{spec.get('latency_name', 'LATENCY')}` values are the zero "
-        "power-on state).",
+        "power-on state)."
+        + (" Sets with `MISC` = 1 also drive random `MISC_WIDTH`-bit words on "
+           "`sim_misci.csv` and expect them on `sim_misco.csv`, delayed by the "
+           "casper misc latency; the other sets leave `MISC` at its default 0 "
+           "(no misc files, not in `params.json`)."
+           if any(params.get("MISC") for params, _ in spec["tests"]) else "")
+        + (" Sets with `ASYNC` = 1 drive a random `sim_en.csv` (about 70 % "
+           "high, with a few 6-cycle gaps) and expect `sim_dvalid.csv`; they "
+           "follow casper's async mode, checked against Simulink (MATLAB "
+           "R2021a): see the module documentation."
+           if any(params.get("ASYNC") for params, _ in spec["tests"]) else "")
+        + (" Sets with `OF` = 1 also expect `sim_overflow.csv`: casper "
+           "`convert_of`'s flag (the top wb_lost+1 bits of `din` not all "
+           "equal, wb_lost = dropped integer bits), with the same latency."
+           if any(params.get("OF") for params, _ in spec["tests"]) else ""),
         "",
         spec.get("stimulus_note",
                  "The first cycles walk corner-case words (0, 1, all-ones, MSB only, "
@@ -463,7 +621,7 @@ def test_data_md(name, spec):
         "|" + "---|" * (len(keys) + 4),
     ]
     for n, (params, desc) in enumerate(spec["tests"]):
-        vals = " | ".join(str(params[k]) for k in keys)
+        vals = " | ".join(str(params.get(k, MISC_DEFAULTS.get(k))) for k in keys)
         lines.append(f"| {n} | `simdata{n}` | {vals} | {CYCLES} | {desc} |")
     return "\n".join(lines) + "\n"
 

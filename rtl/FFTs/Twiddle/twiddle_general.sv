@@ -36,8 +36,11 @@
 // 1+mult_latency+add_latency+conv_latency of twiddle_coeff_0 / twiddle_coeff_1,
 // so butterfly_direct can swap the variants without re-timing.
 //
+// ASYNC = 1 (casper async): en enables the coefficient address counter, so
+// the coefficients step over valid samples only; dvalid = en delayed LATENCY.
+//
 // Declared for parameter traceability only (casper_library options not
-// implemented in v1): ASYNC and FLOATING_POINT must be 0; FLOAT_TYPE,
+// implemented in v1): FLOATING_POINT must be 0; FLOAT_TYPE,
 // EXP_WIDTH, FRAC_WIDTH, COEFF_SHARING, COEFF_DECIMATION, COEFF_GENERATION,
 // CAL_BITS, N_BITS_ROTATION, MAX_FANOUT, USE_HDL, USE_EMBEDDED and
 // COEFFS_BIT_LIMIT are ignored. FFT_SIZE documents the table's FFT size; the
@@ -84,8 +87,7 @@
 // [params.ASYNC]
 // mask = 'async'
 // type = 'checkbox'
-// hdl_unsupported = [1]
-// note = 'async=on (en/dvalid ports) is not implemented: elaboration stops with $fatal'
+// note = 'async = on: en enables the coefficient address counter (sync still clears it); dvalid = en delayed with ai / sync_out; the data path is not gated. The HDL ports always exist, dvalid = 0 when ASYNC = 0'
 // [params.ASYNC.values]
 // 0 = 'off'
 // 1 = 'on'
@@ -180,11 +182,10 @@
 // mult_pipe_latency = 'not implemented'
 //
 // [ports]
+// order = 'Simulink: ai, bi, sync_in, en (async only) -> ao, bwo, sync_out, dvalid (async only) (checked on a built block); HDL: the same order with ai / bi / ao / bwo split into re / im lanes'
 // note = 'each Simulink complex port x is split into x_re / x_im'
 // [ports.renamed]
 // [ports.missing]
-// en = 'async=on only (not implemented)'
-// dvalid = 'async=on only (not implemented)'
 // [ports.extra]
 // @simulink-mapping end
 
@@ -204,8 +205,8 @@ module twiddle_general #(
     parameter int    OVERFLOW         = 0,
     parameter string INIT_FILE        = "",
     parameter string PLATFORM         = "GENERIC",
+    parameter int    ASYNC            = 0,    // casper async: 1 = en / dvalid
     // declared, not implemented (see header)
-    parameter int    ASYNC            = 0,
     parameter int    FLOATING_POINT   = 0,
     parameter int    FLOAT_TYPE       = 1,
     parameter int    EXP_WIDTH        = 8,
@@ -226,11 +227,13 @@ module twiddle_general #(
     input  logic [INPUT_BIT_WIDTH-1:0] bi_re  [N_INPUTS],
     input  logic [INPUT_BIT_WIDTH-1:0] bi_im  [N_INPUTS],
     input  logic                       sync_in,
+    input  logic                       en = 1'b1,
     output logic [INPUT_BIT_WIDTH-1:0] ao_re  [N_INPUTS],
     output logic [INPUT_BIT_WIDTH-1:0] ao_im  [N_INPUTS],
     output logic [INPUT_BIT_WIDTH:0]   bwo_re [N_INPUTS],
     output logic [INPUT_BIT_WIDTH:0]   bwo_im [N_INPUTS],
-    output logic                       sync_out
+    output logic                       sync_out,
+    output logic                       dvalid
 );
 
     localparam int LATENCY     = BRAM_LATENCY + MULT_LATENCY + ADD_LATENCY + CONV_LATENCY;
@@ -241,11 +244,12 @@ module twiddle_general #(
     localparam int N_BITS_PROD = INPUT_BIT_WIDTH + COEFF_BIT_WIDTH + 1;
     localparam int BIN_PT_PROD = BIN_PT_IN + COEFF_BIT_WIDTH - 1;
 
-    if (ASYNC != 0)          $fatal(1, "twiddle_general: ASYNC is not implemented");
     if (FLOATING_POINT != 0) $fatal(1, "twiddle_general: FLOATING_POINT is not implemented");
     if (BRAM_LATENCY < 1)    $fatal(1, "twiddle_general: BRAM_LATENCY must be >= 1 (rom read latency)");
 
     // ── coefficient address: counter cleared by sync_in ─────────────────────
+    // ASYNC = 1: the counter only advances on en = 1 (coeff_gen Counter en,
+    // coeff_gen_init.m:408-416); sync still clears it (rst wins over en)
     logic [CNT_BITS-1:0]   cnt;
     logic [ADDR_WIDTH-1:0] addr;
 
@@ -257,11 +261,11 @@ module twiddle_general #(
         .INIT_VAL       (0),
         .STEP           (1),
         .ENABLE_SYNC_RST(1),
-        .ENABLE_ENABLE  (0)
+        .ENABLE_ENABLE  (int'(ASYNC != 0))
     ) u_counter (
         .clk   (clk),
         .rst   (sync_in),
-        .enable(1'b1),
+        .enable(en),
         .dout  (cnt)
     );
 
@@ -311,20 +315,21 @@ module twiddle_general #(
             .b_re   (coeff[2*CW-1:CW]),
             .b_im   (coeff[CW-1:0]),
             .dout_re(p_re),
-            .dout_im(p_im)
+            .dout_im(p_im),
+            .dout_tvalid()
         );
 
         convert #(
             .N_BITS_IN (N_BITS_PROD),         .BIN_PT_IN (BIN_PT_PROD), .TYPE_IN (1),
             .N_BITS_OUT(INPUT_BIT_WIDTH + 1), .BIN_PT_OUT(BIN_PT_IN),   .TYPE_OUT(1),
             .QUANTIZATION(QUANTIZATION), .OVERFLOW(OVERFLOW), .CSP_LATENCY(CONV_LATENCY)
-        ) u_conv_re (.clk(clk), .din(p_re), .dout(bwo_re[n]));
+        ) u_conv_re (.clk(clk), .din(p_re), .dout(bwo_re[n]), .overflow(), .misco());
 
         convert #(
             .N_BITS_IN (N_BITS_PROD),         .BIN_PT_IN (BIN_PT_PROD), .TYPE_IN (1),
             .N_BITS_OUT(INPUT_BIT_WIDTH + 1), .BIN_PT_OUT(BIN_PT_IN),   .TYPE_OUT(1),
             .QUANTIZATION(QUANTIZATION), .OVERFLOW(OVERFLOW), .CSP_LATENCY(CONV_LATENCY)
-        ) u_conv_im (.clk(clk), .din(p_im), .dout(bwo_im[n]));
+        ) u_conv_im (.clk(clk), .din(p_im), .dout(bwo_im[n]), .overflow(), .misco());
 
         // ── a leg: delay-matched only ──────────────────────────────────────
         pipeline #(.BITWIDTH(INPUT_BIT_WIDTH), .CSP_LATENCY(LATENCY)) u_a_re_dly (
@@ -335,5 +340,14 @@ module twiddle_general #(
 
     pipeline #(.BITWIDTH(1), .CSP_LATENCY(LATENCY)) u_sync_dly (
         .clk(clk), .din(sync_in), .dout(sync_out));
+
+    // ASYNC = 1: dvalid = en, carried with sync / ai (casper: the en bit of the
+    // coeff_gen misc bus, twiddle_general_init.m:146-205); 0 when ASYNC = 0
+    if (ASYNC != 0) begin : GEN_DVALID
+        pipeline #(.BITWIDTH(1), .CSP_LATENCY(LATENCY)) u_dvalid (
+            .clk(clk), .din(en), .dout(dvalid));
+    end else begin : GEN_NO_DVALID
+        assign dvalid = 1'b0;
+    end
 
 endmodule

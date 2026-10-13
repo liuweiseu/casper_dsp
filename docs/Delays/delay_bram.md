@@ -20,6 +20,8 @@ din ─────────────────────────�
 |-------------|-------------|-------------|
 | `BITWIDTH`  | 8           | Data width |
 | `DELAY_LEN` | 16          | Delay in clock cycles |
+| `BRAM_LATENCY` | 2 | casper `bram_latency`; only moves registers inside Simulink's block (the HDL ignores it). Async with `BRAM_LATENCY = 1` cannot be built in Simulink |
+| `ASYNC` | 0 | casper `async`: `1` = `en` stalls the counter, the RAM and its output, a delay of `DELAY_LEN` enabled samples that holds while `en` = 0 (checked against Simulink, MATLAB R2021a); no `dvalid` |
 | `PLATFORM`  | `"GENERIC"` | Passed to `single_port_ram` (`"GENERIC"`, `"XILINX"`, `"ALTERA"`) |
 
 ## Ports
@@ -28,6 +30,7 @@ din ─────────────────────────�
 |--------|-----------|------------|-------------|
 | `clk`  | input     | 1          | Clock |
 | `din`  | input     | `BITWIDTH` | Input |
+| `en`   | input     | 1          | Async enable (used when `ASYNC = 1`; default 1) |
 | `dout` | output    | `BITWIDTH` | `din` delayed by `DELAY_LEN` cycles |
 
 ## Functional Description

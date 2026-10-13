@@ -41,7 +41,12 @@ AT_TESTS = [
      "6 inputs, every adder Fix_18_17 (output width = input width), truncate, wrap"),
     (P(AT, [9, 24, 20, 1, 2, 1, 22, 17, 2, 1]),
      "9 inputs (pfb-like), adders Fix_22_17, round even, saturate; carried input keeps Fix_24_20"),
+    (dict(P(AT, [3, 8, 0, 1, 2, 0, 8, 0, 0, 0]), DVALID_EN=1),
+     "set 2 with dvalid_en: random dv_in stalls the adders, the carried input is free"),
+    (dict(P(AT, [8, 16, 8, 1, 1, 0, 16, 0, 0, 0]), DVALID_EN=1),
+     "set 5 with dvalid_en: balanced tree, every adder stalled by dv_in"),
 ]
+AT_DEFAULTS = {"DVALID_EN": 0}
 
 
 def stages(n):
@@ -51,10 +56,28 @@ def stages(n):
     return s
 
 
+def gated(values, en, latency, zero):
+    """Xilinx AddSub latency chain with an en port: advances only while en = 1."""
+    if latency == 0:
+        return values
+    chain, out = [zero] * latency, []
+    for v, e in zip(values, en):
+        out.append(chain[-1])
+        if e:
+            chain = [v] + chain[:-1]
+    return out
+
+
 def m_adder_tree(p, st):
-    """Reference model: values are exact Fractions per node, quantized per adder."""
+    """Reference model: values are exact Fractions per node, quantized per adder.
+
+    DVALID_EN = 1 (adder_tree_init.m:113-125, 262-267): the raw dv_in gates
+    every adder's latency chain; the carried odd values and sync stay free
+    (checked against Simulink, MATLAB R2021a).
+    """
     w, bp, typ, lat = p["DATA_WIDTH"], p["BIN_PT"], p["TYPE"], p["CSP_LATENCY"]
     cycles = len(st["sync"])
+    dv = st["dv_in"] if p.get("DVALID_EN") else None
     # node = (values per cycle, n_bits, bin_pt, signed)
     nodes = [([to_value(row[j], w, bp, typ) for row in st["din"]], w, bp, typ)
              for j in range(p["N_INPUTS"])]
@@ -69,7 +92,7 @@ def m_adder_tree(p, st):
                 fmt = (p["N_BITS_OUT"], p["BIN_PT_OUT"], 1)
                 vals = [to_value(quantize(x + y, *fmt, p["QUANTIZATION"], p["OVERFLOW"]), *fmt)
                         for x, y in zip(va, vb)]
-            nxt.append((delay(vals, lat, Fraction(0)), *fmt))
+            nxt.append(((gated(vals, dv, lat, Fraction(0)) if dv else delay(vals, lat, Fraction(0))), *fmt))
         if len(nodes) % 2:
             v, wn, bn, tn = nodes[-1]
             nxt.append((delay(v, lat, Fraction(0)), wn, bn, tn))
@@ -102,13 +125,19 @@ def gen():
             din.append([rng.randrange(1 << w) for _ in range(ni)])
         sync = [0] + [1 if rng.random() < 0.05 else 0 for _ in range(cycles - 1)]
         st = {"din": din, "sync": sync}
+        if p.get("DVALID_EN"):
+            st["dv_in"] = [1 if rng.random() < 0.75 else 0 for _ in range(cycles)]
+            st["dv_in"][cycles // 2:cycles // 2 + 6] = [0] * 6
         out, w_out = m_adder_tree(p, st)
-        checked = check_exact_sum(p, st, out, w_out) if p["PRECISION"] == 0 else "n/a"
+        checked = (check_exact_sum(p, st, out, w_out)
+                   if p["PRECISION"] == 0 and not p.get("DVALID_EN") else "n/a")
         d = MDIR / f"simdata{n}"
         d.mkdir(parents=True, exist_ok=True)
         (d / "params.json").write_text(json.dumps(dict(p, N_BITS_OUT_EFF=w_out), indent=2) + "\n")
         write_csv(d / "sim_din.csv", din)
         write_csv(d / "sim_sync.csv", sync)
+        if p.get("DVALID_EN"):
+            write_csv(d / "sim_dv_in.csv", st["dv_in"])
         write_csv(d / "sim_dout.csv", out["dout"])
         write_csv(d / "sim_sync_out.csv", out["sync_out"])
         sets.append((p, desc, cycles, stages(ni), w_out, checked))
@@ -123,12 +152,16 @@ def gen():
         "(reference model, not exported from MATLAB). For full precision the "
         "script also checks that `dout` is the exact sum of the inputs "
         "STAGES·CSP_LATENCY cycles later (column *Exact-sum cycles checked*). CSV "
-        "rows are cycles; `sim_din<j>.csv` holds input `din[j]`.", "",
-        "| Test # | Directory | " + " | ".join(AT) + " | Stages | dout width | Exact-sum cycles checked | Cycles | Description |",
-        "|" + "---|" * (len(AT) + 7),
+        "rows are cycles; `sim_din<j>.csv` holds input `din[j]`. Sets with "
+        "`DVALID_EN` = 1 drive a random `sim_dv_in.csv`: casper stalls every "
+        "adder on the raw `dv_in` while the carried odd values and `sync` run "
+        "free (checked against Simulink, MATLAB R2021a); the exact-sum check "
+        "does not apply there.", "",
+        "| Test # | Directory | " + " | ".join(AT + list(AT_DEFAULTS)) + " | Stages | dout width | Exact-sum cycles checked | Cycles | Description |",
+        "|" + "---|" * (len(AT) + len(AT_DEFAULTS) + 7),
     ]
     for n, (p, desc, cycles, stg, w_out, checked) in enumerate(sets):
-        lines.append(f"| {n} | `simdata{n}` | " + " | ".join(str(p[k]) for k in AT)
+        lines.append(f"| {n} | `simdata{n}` | " + " | ".join(str(dict(AT_DEFAULTS, **p)[k]) for k in AT + list(AT_DEFAULTS))
                      + f" | {stg} | {w_out} | {checked} | {cycles} | {desc} |")
     (MDIR / "test_data.md").write_text("\n".join(lines) + "\n")
     return toml("Misc", "adder_tree", [(p, d) for p, d, *_ in sets], SCRIPT)

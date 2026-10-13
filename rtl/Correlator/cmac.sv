@@ -160,7 +160,7 @@ module cmac #(
         .MULT_LATENCY(MULT_LATENCY), .ADD_LATENCY(ADD_LATENCY), .CONV_LATENCY(0),
         .IN_LATENCY(0), .PIPELINE_CMULT_EN(0), .CONJUGATED(1),
         .MULTIPLIER_IMPLEMENTATION(MULTIPLIER_IMPLEMENTATION)
-    ) u_cmult (.clk(clk), .a(a), .b(b), .ab(prod));
+    ) u_cmult (.clk(clk), .a(a), .b(b), .ab(prod), .dvalid());
 
     logic [N_BITS_OUT-1:0] prod_re, prod_im, acc_in_re, acc_in_im, out_re, out_im;
 

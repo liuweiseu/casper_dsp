@@ -8,7 +8,9 @@ the output register and, if `we = 1`, writes `din` to `mem[addr]`.
 
 - **Read-during-write** (`we = 1`) is **READ_FIRST**: `dout` receives the *old*
   contents of `mem[addr]`.
-- The memory contents and `dout` power up to 0.
+- The memory contents power up to 0, `dout` to `INIT_REG`.
+- `RST` / `EN` / `INIT_REG` follow the built Xilinx block (latency 1, checked against Simulink: `rst` also acts while `en` = 0, unlike the literal `xlSPRAM.sgm`) and are GENERIC only
+  (`$fatal` on other platforms).
 
 ## Platform Implementations
 
@@ -31,6 +33,9 @@ sources).
 |--------------|-------------|-------------|
 | `DATA_WIDTH` | 8           | Word width |
 | `ADDR_WIDTH` | 4           | Address width; depth = `2^ADDR_WIDTH` |
+| `RST`        | 0           | `1` enables `rst` (Xilinx `rst` option): `dout` <= `INIT_REG` instead of the read, whatever `en` is; an enabled write still happens |
+| `EN`         | 0           | `1` enables `en` (Xilinx `en` option): `en` = 0 freezes the edge (no read, no write, `dout` holds) |
+| `INIT_REG`   | 0           | Output-register word at power-up and on `rst` (raw bits; Xilinx `init_reg`) |
 | `PLATFORM`   | `"GENERIC"` | `"GENERIC"`, `"XILINX"` or `"ALTERA"` (any other value stops elaboration with `$fatal`) |
 
 ## Ports
@@ -41,4 +46,6 @@ sources).
 | `we`   | input     | 1            | Write enable |
 | `addr` | input     | `ADDR_WIDTH` | Read/write address |
 | `din`  | input     | `DATA_WIDTH` | Write data |
+| `rst`  | input     | 1            | Output reset (used when `RST = 1`; defaults to 0) |
+| `en`   | input     | 1            | Enable (used when `EN = 1`; defaults to 1) |
 | `dout` | output    | `DATA_WIDTH` | Read data, 1 cycle after `addr` |
