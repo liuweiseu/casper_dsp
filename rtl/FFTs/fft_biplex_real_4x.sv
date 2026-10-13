@@ -28,7 +28,7 @@
 // "map_out.mem" (rtl/FFTs/Twiddle/scripts/gen_twiddle_coeffs.py,
 // rtl/Reorder/scripts/gen_reorder_map.py --bi-real).
 //
-// of[n] is lane n's overflow (biplex_core's convention). The inputs need a
+// of[N_INPUTS-1-n] is lane n's overflow (lane 0 in the MSB, as Simulink). The inputs need a
 // sync once per 2^FFT_SIZE-cycle frame (or a multiple), as bi_real_unscr_4x's
 // reorders require. Declared for traceability only: ASYNC must be 0;
 // COEFF_SHARING, COEFF_DECIMATION, MULT_SPEC, DSP48_ADDERS, ADD_PIPE_LATENCY
@@ -50,7 +50,6 @@
 //   "OVERFLOW = 2 ('Error') has no working Simulink counterpart: butterfly_direct_init.m:512-514 compares the option against 'Flag as error', so 'Error' leaves the bus_convert overflow argument undefined and the mask init fails, whereas the HDL silently wraps (rtl/Bus/convert.sv saturates only for OVERFLOW = 1).",
 //   "DSP48_ADDERS is ignored, but in Simulink dsp48_adders = 'on' forces add_latency = 2 in every butterfly_direct (butterfly_direct_init.m:194-197), so with the box ticked and ADD_LATENCY != 2 the Simulink data/sync latency differs from the HDL's.",
 //   "ADD_PIPE_LATENCY / MULT_PIPE_LATENCY are ignored: in Simulink a non-zero add_pipe_latency inserts pipeline blocks on the bus_addsub inputs (bus_addsub_init.m:250-275, enabled by butterfly_direct_init.m:156-160) and mult_pipe_latency pipelines twiddle_general's bus_mult (twiddle_general_init.m:250-251), so for non-zero values the HDL has less latency (note Simulink's own fixed-point sync delay, butterfly_direct_init.m:652, does not include add_pipe_latency); only 0 is equivalent.",
-//   "Bit order of of (biplex_core's of, passed straight through): the HDL puts lane 0 in bit 0 (of[n] = lane n), but Simulink packs the per-lane flags with bus_create/Concat, lane 0 in the MSB (butterfly_direct_init.m:625-643 munge + bus_relational -> bussify in1 = MSB, bus_relational_init.m:194); the vector is bit-reversed relative to Simulink when it has more than one bit (fft_wideband_real.sv:31-33 and its GEN_OF loop undo this for the top-level of).",
 //   "SHIFT_SCHEDULE is an integer bit mask (bit s-1 = stage s) instead of casper's shift_schedule vector, and MULT_SPEC is a single ignored integer instead of the per-stage vector.",
 // ]
 //

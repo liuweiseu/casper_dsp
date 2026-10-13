@@ -163,13 +163,15 @@ def m_fft_direct(p, st):
                 ofs = outs[(s, u)]["of"]
                 for t in range(cycles):
                     for l in range(nl):
-                        if (ofs[t] >> l) & 1:
+                        if (ofs[t] >> (nl - 1 - l)) & 1:       # butterfly of: lane 0 in the MSB
                             vec[t] |= 1 << (u * nl + l)
         vec = delay(vec, 2, 0)
         comb = [0] * cycles
         for t in range(cycles):
             for pt in range(half):
                 comb[t] |= (vec[t] >> (pt * ns)) & ((1 << ns) - 1)
+        # comb bit s = stream s; the port has stream 0 in the MSB
+        comb = [sum(((v >> s) & 1) << (ns - 1 - s) for s in range(ns)) for v in comb]
         out["of"] = delay(comb, 2, 0)
     return out
 
@@ -476,9 +478,9 @@ def m_fft_wideband_real(p, st):
         v = 0
         for b in range(of_w):
             bit = 0
-            if b < ns and (dr["of"][t] >> (ns - 1 - b)) & 1:
+            if b < ns and (dr["of"][t] >> b) & 1:       # both of vectors: lane 0 in the MSB
                 bit = 1
-            if b < nb and (b4["of"][t] >> (nb - 1 - b)) & 1:
+            if b < nb and (b4["of"][t] >> b) & 1:
                 bit = 1
             v |= bit << b
         comb.append(v)

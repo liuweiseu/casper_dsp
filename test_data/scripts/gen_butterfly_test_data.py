@@ -271,7 +271,8 @@ def m_butterfly(p, coeffs, st):
 
     result = {port: [[outs[t][k][c] for k in range(n)] for t in range(cycles)]
               for c, port in enumerate(LANE_OUT)}
-    result["of"] = [sum(b << k for k, b in enumerate(flags[t])) for t in range(cycles)]
+    # lane 0 in the MSB (casper bus_create / Concat)
+    result["of"] = [sum(b << (n - 1 - k) for k, b in enumerate(flags[t])) for t in range(cycles)]
     result["sync_out"] = sync_out
     return result
 
@@ -338,7 +339,7 @@ def gen_butterfly():
         "`twiddle.mem` (twiddle_general only) comes from "
         "`rtl/FFTs/Twiddle/scripts/gen_twiddle_coeffs.py`. CSV rows are cycles, lane ports have "
         "one file per lane (`sim_<port><j>.csv` = lane j), `sim_of.csv` holds the `of` bus as "
-        "an integer (bit n = lane n); all values are raw unsigned bit patterns "
+        "an integer (lane 0 in the MSB, as Simulink); all values are raw unsigned bit patterns "
         "with the pre-edge read convention.", "",
         "| Test # | Directory | " + " | ".join(keys)
         + " | COEFFS | Twiddle | Cycles | Description |",

@@ -36,9 +36,10 @@
 //   overflow (OVERFLOW) of the output format; outputs are INPUT_BIT_WIDTH
 //   bits unless BITGROWTH = 1.
 //
-// OVERFLOW FLAG: of[n] = 1 when any of lane n's four output components
-// (re / im of a+bw and a−bw) overflowed in convert_of; one cycle after the
-// data (casper's bus_relational, latency 1).
+// OVERFLOW FLAG: of[N_INPUTS-1-n] = 1 when any of lane n's four output
+// components (re / im of a+bw and a−bw) overflowed in convert_of (lane 0 in
+// the MSB, as casper's bus_create / Concat); one cycle after the data
+// (casper's bus_relational, latency 1).
 //
 // LATENCY (data and sync_out) = TWIDDLE_LATENCY + ADD_LATENCY + MUX_LATENCY +
 // CONV_LATENCY, MUX_LATENCY = 1 for dynamic shifting, 0 otherwise; of comes
@@ -73,7 +74,6 @@
 //   "COEFF_GENERATION / CAL_BITS / N_BITS_ROTATION are ignored and the twiddle is always a ROM table, but with coeff_generation = 'on' (mask default) casper's twiddle_general -> coeff_gen uses a feedback_osc oscillator instead of a table for a bit-reversed Coeffs list with log2(length(Coeffs)) > ceil(log2(mult_latency+add_latency+conv_latency+1)) + cal_bits (coeff_gen_init.m:260, 308, 497-530), whose values are not the exactly rounded table values (fft_stage_n passes coeff_generation = 'off', fft_stage_n_init.m:501, so biplex use is unaffected).",
 //   "A single-coefficient twiddle_general (coefficient index other than 0 or 1) is a constant in casper quantized to coeff_bit_width-2 fraction bits (coeff_gen_init.m:156-157, stored as Fix_<cbw>_<cbw-1>), while the HDL's table (rtl/FFTs/Twiddle/scripts/gen_twiddle_coeffs.py:52) uses coeff_bit_width-1 fraction bits, so that twiddle (and the products) can differ by one coefficient LSB; known and left unchanged (mlib_devel_notes/fft_wideband_real_hdl_plan.md Phase 6).",
 //   'The Coeffs vector is replaced by N_COEFFS / COEFF_0 / COEFF_1 (twiddle selection) plus an INIT_FILE table that must be generated separately for the same Coeffs; a wrong or missing file silently gives wrong twiddles (Simulink computes them from Coeffs at init). For export, mask_set.Coeffs takes the exact list from the COEFFS field of the test set params.json; without one, its else template rebuilds the vector as the arithmetic progression COEFF_0, COEFF_1, ... of N_COEFFS indices; that is exact for one or two coefficients and for the in-order lists fft_stage_n and the tests use (0 .. N_COEFFS-1), but not for other lists (e.g. bit-reversed ones, which the HDL takes only from INIT_FILE).',
-//   'Bit order of of: the HDL puts lane 0 in bit 0 (of[n] = lane n), but Simulink packs the per-lane flags with bus_create/Concat, lane 0 in the MSB (butterfly_direct_init.m:625-643 munge + bus_relational -> bussify in1 = MSB, bus_relational_init.m:194); the vector is bit-reversed relative to Simulink when it has more than one bit (fft_wideband_real.sv:31-33 and its GEN_OF loop undo this for the top-level of).',
 //   "Coeffs = [1] (N_COEFFS = 1, COEFF_0 = 1, twiddle_coeff_1, w = -j) cannot be built in Simulink with mlib_devel (checked at c914cf04e): butterfly_direct_init.m:297-304 passes floating_point / float_type / exp_width / frac_width to casper_library_ffts_twiddle/twiddle_coeff_1, whose mask has no such parameters, so reuse_block's add_block/set_param errors and the mask init fails (since 53ff4f39d, merged to the mainline in d3d63bb03; found from source, not run in MATLAB). Only a standalone fft_direct with map_tail = 'off' produces Coeffs = [1]; fft_stage_n / biplex and fft_direct with map_tail = 'on' (fft, fft_wideband_real) never do. The HDL implements this case; there is no Simulink reference to export or compare against.",
 // ]
 //
@@ -468,7 +468,7 @@ module butterfly_direct #(
 
         // any component overflowed (casper: munge + bus_relational a!=0, latency 1)
         logical #(.NBITS(1), .NINPUTS(4), .LATENCY(1), .FUNC(2)) u_of_or (
-            .clk(clk), .din('{of_c[0], of_c[1], of_c[2], of_c[3]}), .dout(of[n]));
+            .clk(clk), .din('{of_c[0], of_c[1], of_c[2], of_c[3]}), .dout(of[N_INPUTS-1-n]));
     end
 
     // ── sync ─────────────────────────────────────────────────────────────────

@@ -58,8 +58,9 @@ In dynamic mode:
 
 ### Overflow Flag
 
-`of[n] = 1` when any of lane `n`'s four output components (re/im of `a + bw`
-and `a − bw`) overflowed in `convert_of`. The flag comes one cycle after the
+`of[N_INPUTS−1−n] = 1` when any of lane `n`'s four output components (re/im of
+`a + bw` and `a − bw`) overflowed in `convert_of`. Lane 0 is in the MSB, as
+casper packs the flags (`bus_create` / Concat). The flag comes one cycle after the
 data, because casper's `munge` + `bus_relational (a != 0)` has latency 1.
 
 ### Latency
@@ -131,5 +132,5 @@ Lane ports are unpacked arrays of `N_INPUTS` words.
 | `shift` | input | 1 | Dynamic downshift select |
 | `apbw_re`, `apbw_im` | output | `N_BITS_OUT` × `N_INPUTS` | `a + b·w` |
 | `ambw_re`, `ambw_im` | output | `N_BITS_OUT` × `N_INPUTS` | `a − b·w` |
-| `of` | output | `N_INPUTS` | Per-lane overflow flag (bit `n` = lane `n`), one cycle after the data |
+| `of` | output | `N_INPUTS` | Per-lane overflow flag, lane 0 in the MSB (`of[N_INPUTS−1−n]` = lane `n`, as Simulink's Concat), one cycle after the data |
 | `sync_out` | output | 1 | `sync_in` delayed by the data latency |

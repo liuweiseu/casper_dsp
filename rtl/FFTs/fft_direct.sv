@@ -37,11 +37,13 @@
 // typo for '+', in the "for n=0:2^FFTSize-1" debus loop), which would slice
 // the outputs wrongly; this module uses the real output width instead.
 //
-// of: per stage, the butterflies' of are concatenated (positions u·L + l,
-// butterfly 0 lane 0 first); the stages are ORed bitwise (Logical, latency
-// 2), split into 2^(F-1) parts of N_STREAMS bits and ORed again (latency 2).
-// Position j of a part always belongs to stream j, so of[s] is stream s's
-// overflow, 4 cycles after the butterflies' of (F = 1: the butterfly's of).
+// of: per stage, the butterflies' of are concatenated (Concat, butterfly 0
+// lane 0 in the MSB); the stages are ORed bitwise (Logical, latency 2), split
+// into 2^(F-1) parts of N_STREAMS bits and ORed again (latency 2). Each part
+// holds the streams in the same order, so of[N_STREAMS-1-s] is stream s's
+// overflow (stream 0 in the MSB, as Simulink), 4 cycles after the
+// butterflies' of (F = 1: the butterfly's of). Below, the vectors are built
+// with position e = u·L + l counted from the LSB and reversed at the end.
 // Port order: element k of din / dout is in<s><n> / out<s><n> with
 // k = s·2^F + n (casper port order).
 //
@@ -67,7 +69,6 @@
 //   "OVERFLOW = 2 ('Error') has no working Simulink counterpart: butterfly_direct_init.m:512-514 compares the option against 'Flag as error', so 'Error' leaves the bus_convert overflow argument undefined and the mask init fails, whereas the HDL silently wraps (rtl/Bus/convert.sv saturates only for OVERFLOW = 1).",
 //   "DSP48_ADDERS is ignored, but in Simulink dsp48_adders = 'on' forces add_latency = 2 in every butterfly_direct (butterfly_direct_init.m:194-197), so with the box ticked and ADD_LATENCY != 2 the Simulink data/sync latency differs from the HDL's.",
 //   "ADD_PIPE_LATENCY / MULT_PIPE_LATENCY are ignored: in Simulink a non-zero add_pipe_latency inserts pipeline blocks on the bus_addsub inputs (bus_addsub_init.m:250-275, enabled by butterfly_direct_init.m:156-160) and mult_pipe_latency pipelines twiddle_general's bus_mult (twiddle_general_init.m:250-251), so for non-zero values the HDL has less latency (note Simulink's own fixed-point sync delay, butterfly_direct_init.m:652, does not include add_pipe_latency); only 0 is equivalent.",
-//   "Bit order of of: the HDL puts stream 0 in bit 0 (of[n] = stream n), but Simulink packs the per-stream flags with bus_create/Concat, stream 0 in the MSB (fft_direct_init.m:336 Concat of the butterflies' of buses, Concat input 1 = MSB, then of_expand / combine); the vector is bit-reversed relative to Simulink when it has more than one bit (fft_wideband_real.sv:31-33 and its GEN_OF loop undo this for the top-level of).",
 //   "SHIFT_SCHEDULE is an integer bit mask (bit s = stage s) instead of casper's shift_schedule vector, and MULT_SPEC is a single ignored integer instead of the per-stage vector.",
 // ]
 //
@@ -408,12 +409,13 @@ module fft_direct #(
         logic [L0-1:0] stage_vec [F];
         logic [L0-1:0] or_vec;
         logic [NS-1:0] parts [HALF];
+        logic [NS-1:0] of_lsb;            // bit s = stream s
 
         for (genvar s = 0; s < F; s++) begin : GEN_VEC
             localparam int L = NS << (F - s - 1);
             for (genvar u = 0; u < (1 << s); u++) begin : GEN_BF
                 for (genvar l = 0; l < L; l++) begin : GEN_LANE
-                    assign stage_vec[s][u * L + l] = bf_of[s][u][l];
+                    assign stage_vec[s][u * L + l] = bf_of[s][u][L - 1 - l];   // lane l
                 end
             end
         end
@@ -429,7 +431,10 @@ module fft_direct #(
 
         // combine: Logical OR of the parts, latency 2
         logical #(.NBITS(NS), .NINPUTS(HALF), .LATENCY(2), .FUNC(2)) u_combine (
-            .clk(clk), .din(parts), .dout(of));
+            .clk(clk), .din(parts), .dout(of_lsb));
+        for (genvar s = 0; s < NS; s++) begin : GEN_OF_BIT
+            assign of[NS - 1 - s] = of_lsb[s];
+        end
     end
 
 endmodule

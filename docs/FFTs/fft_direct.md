@@ -73,11 +73,13 @@ with binary point `BIN_PT_IN`.
 
 ### Overflow
 
-Per stage, the butterflies' `of` bits are concatenated (position `u·L + l`).
+Per stage, the butterflies' `of` bits are concatenated (Concat, butterfly 0
+lane 0 in the MSB).
 The stages are then ORed bitwise (casper `of_or`, Logical, latency 2). The
 result is split into `2^(F−1)` parts of `N_STREAMS` bits, which are ORed
-again (`combine`, latency 2). Position `j` of a part always belongs to
-stream `j`, so `of[s]` is stream `s`'s overflow. It comes 4 cycles after
+again (`combine`, latency 2). Each part holds the streams in the
+same order, so `of[N_STREAMS−1−s]` is stream `s`'s overflow (stream 0 in
+the MSB, as Simulink's Concat). It comes 4 cycles after
 the butterflies' `of`. For `F = 1`, `of` is the single butterfly's `of`.
 
 ### Ports
@@ -126,4 +128,4 @@ library.
 | `din_re`, `din_im` | input | `INPUT_BIT_WIDTH` × `N_STREAMS·2^FFT_SIZE` | Inputs, element `s·2^F + n` |
 | `sync_out` | output | 1 | Sync aligned with the outputs |
 | `dout_re`, `dout_im` | output | `N_BITS_OUT` × `N_STREAMS·2^FFT_SIZE` | FFT outputs in natural order |
-| `of` | output | `N_STREAMS` | Overflow per stream |
+| `of` | output | `N_STREAMS` | Overflow per stream, stream 0 in the MSB (`of[N_STREAMS−1−s]` = stream `s`) |

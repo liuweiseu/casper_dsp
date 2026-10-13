@@ -28,7 +28,8 @@
 // --step-period FFT_SIZE-FFT_STAGE --coeff-generation 0, plus this module's COEFFS_BIT_LIMIT /
 // COEFF_SHARING / COEFF_DECIMATION).
 // shift[FFT_STAGE-1] is this stage's dynamic downshift; of = butterfly of |
-// of_in, registered (1 cycle).
+// of_in, registered (1 cycle); of and of_in have lane 0 in the MSB
+// (of[N_INPUTS-1-n] = lane n), as Simulink.
 //
 // LATENCY (data, sync) = 2·P + MUX_LATENCY + ND + butterfly latency.
 //
@@ -52,7 +53,6 @@
 //   "OVERFLOW = 2 ('Error') has no working Simulink counterpart: butterfly_direct_init.m:512-514 compares the option against 'Flag as error', so 'Error' leaves the bus_convert overflow argument undefined and the mask init fails, whereas the HDL silently wraps (rtl/Bus/convert.sv saturates only for OVERFLOW = 1).",
 //   "DSP48_ADDERS is ignored, but in Simulink dsp48_adders = 'on' forces add_latency = 2 in every butterfly_direct (butterfly_direct_init.m:194-197), so with the box ticked and ADD_LATENCY != 2 the Simulink data/sync latency differs from the HDL's.",
 //   "ADD_PIPE_LATENCY / MULT_PIPE_LATENCY are ignored: in Simulink a non-zero add_pipe_latency inserts pipeline blocks on the bus_addsub inputs (bus_addsub_init.m:250-275, enabled by butterfly_direct_init.m:156-160) and mult_pipe_latency pipelines twiddle_general's bus_mult (twiddle_general_init.m:250-251), so for non-zero values the HDL has less latency (note Simulink's own fixed-point sync delay, butterfly_direct_init.m:652, does not include add_pipe_latency); only 0 is equivalent.",
-//   'Bit order of of and of_in: the HDL puts lane 0 in bit 0 (of[n] = lane n), but Simulink packs the per-lane flags with bus_create/Concat, lane 0 in the MSB (butterfly_direct_init.m:625-643 munge + bus_relational -> bussify in1 = MSB, bus_relational_init.m:194); the vector is bit-reversed relative to Simulink when it has more than one bit (fft_wideband_real.sv:31-33 and its GEN_OF loop undo this for the top-level of).',
 // ]
 //
 // [params.BITGROWTH]

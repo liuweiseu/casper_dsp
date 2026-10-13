@@ -31,7 +31,7 @@
 // of: casper's OR aligns its inputs at the LSB: fft_biplex_real_4x's of has
 // NB bits (lane 0 = MSB), fft_direct's N_STREAMS bits (stream 0 = MSB), so
 // of has max of the two widths, bit b = biplex lane NB-1-b | fft_direct
-// stream N_STREAMS-1-b (missing bits 0).
+// stream N_STREAMS-1-b (missing bits 0): the two vectors are ORed bit for bit.
 //
 // Memory files, all in MEM_DIR (rtl/FFTs/scripts/gen_fft_mem_files.py
 // wideband_real writes them): twiddle_stage<s>.mem (biplex_core),
@@ -375,8 +375,8 @@ module fft_wideband_real #(
     // ── overflow: LSB-aligned OR of the two blocks' of, latency 1 ───────────
     logic [OF_WIDTH-1:0] of_a, of_b;
     for (genvar b = 0; b < OF_WIDTH; b++) begin : GEN_OF
-        assign of_a[b] = (b < NS) ? fd_of[(b < NS) ? NS - 1 - b : 0] : 1'b0;
-        assign of_b[b] = (b < NB) ? bx_of[(b < NB) ? NB - 1 - b : 0] : 1'b0;
+        assign of_a[b] = (b < NS) ? fd_of[(b < NS) ? b : 0] : 1'b0;
+        assign of_b[b] = (b < NB) ? bx_of[(b < NB) ? b : 0] : 1'b0;
     end
     logical #(.NBITS(OF_WIDTH), .NINPUTS(2), .LATENCY(1), .FUNC(2)) u_of_or (
         .clk(clk), .din('{of_a, of_b}), .dout(of));

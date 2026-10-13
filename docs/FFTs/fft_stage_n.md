@@ -93,9 +93,9 @@ Lane ports are unpacked arrays of `N_INPUTS` words.
 |------|-----------|-------|-------------|
 | `clk` | input | 1 | Clock |
 | `in1_re`, `in1_im`, `in2_re`, `in2_im` | input | `INPUT_BIT_WIDTH` × `N_INPUTS` | The two input streams |
-| `of_in` | input | `N_INPUTS` | Overflow flags from the previous stage |
+| `of_in` | input | `N_INPUTS` | Overflow flags from the previous stage, lane 0 in the MSB |
 | `sync` | input | 1 | Frame sync |
 | `shift` | input | `FFT_SIZE` | Shift bus; bit `FFT_STAGE−1` is used |
 | `out1_re`, `out1_im`, `out2_re`, `out2_im` | output | `N_BITS_OUT` × `N_INPUTS` | Butterfly outputs `a + bw` / `a − bw` |
-| `of` | output | `N_INPUTS` | `butterfly of | of_in`, registered |
+| `of` | output | `N_INPUTS` | `butterfly of | of_in`, registered; lane 0 in the MSB (`of[N_INPUTS−1−n]` = lane `n`) |
 | `sync_out` | output | 1 | Sync aligned with the outputs |

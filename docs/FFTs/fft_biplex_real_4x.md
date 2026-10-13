@@ -54,7 +54,7 @@ Pass the module's coefficient options too (`--coeffs-bit-limit`, `--coeff-sharin
 
 - The inputs need a sync once per `2^FFT_SIZE`-cycle frame (or a multiple
   of that), as bi_real_unscr_4x's reorders require.
-- `of[n]` is lane `n`'s overflow, following biplex_core's convention.
+- `of[N_INPUTS−1−n]` is lane `n`'s overflow (lane 0 in the MSB, as Simulink).
 - `FFT_SIZE ≥ 3` is needed for the outputs to be FFTs (bi_real_unscr_4x's
   casper behaviour at `FFT_SIZE = 2`).
 - `ASYNC` must be 0. `COEFF_SHARING`, `COEFF_DECIMATION`, `MULT_SPEC`,
@@ -90,4 +90,4 @@ Pass the module's coefficient options too (`--coeffs-bit-limit`, `--coeff-sharin
 | `pol_in` | input | `INPUT_BIT_WIDTH` × `4·N_INPUTS` | Real inputs |
 | `sync_out` | output | 1 | Sync, one cycle before bin 0 |
 | `pol_out_re`, `pol_out_im` | output | `N_BITS_OUT` × `4·N_INPUTS` | Spectrum of each input, bins 0 … 2^F−1 |
-| `of` | output | `N_INPUTS` | biplex_core overflow per lane |
+| `of` | output | `N_INPUTS` | biplex_core overflow per lane, lane 0 in the MSB (`of[N_INPUTS−1−n]` = lane `n`) |

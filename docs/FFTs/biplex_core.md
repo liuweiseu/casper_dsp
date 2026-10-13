@@ -80,5 +80,5 @@ Lane ports are unpacked arrays of `N_INPUTS` words.
 | `sync` | input | 1 | Frame sync (one pulse per `2^FFT_SIZE`-sample frame, the cycle before the frame) |
 | `shift` | input | `FFT_SIZE` | Dynamic downshift per stage (bit `s−1` = stage `s`) |
 | `out1_re`, `out1_im`, `out2_re`, `out2_im` | output | `N_BITS_OUT` × `N_INPUTS` | FFT outputs (order above) |
-| `of` | output | `N_INPUTS` | Overflow flags ORed over the stages |
+| `of` | output | `N_INPUTS` | Overflow flags ORed over the stages, lane 0 in the MSB (`of[N_INPUTS−1−n]` = lane `n`) |
 | `sync_out` | output | 1 | Sync, the cycle before the first output of a frame |
