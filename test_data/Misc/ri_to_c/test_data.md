@@ -2,6 +2,8 @@
 
 Each subdirectory corresponds to one parameter set. Input files are `sim_re.csv` (real part) and `sim_im.csv` (imaginary part); `sim_c.csv` holds the expected packed output `{re, im}`.
 
+Every `simdataN/` holds a `params.json` with the DUT parameters of that set; the testbench selects the set whose `params.json` matches the DUT (`find_data_dir` in `testbench/data_paths.py`).
+
 | Test # | Directory | NBITS | Cycles | Description |
 |--------|-----------|-------|--------|-------------|
 | 0 | `simdata0` | 8  | 100 | Pack two 8-bit words into a 16-bit complex word |

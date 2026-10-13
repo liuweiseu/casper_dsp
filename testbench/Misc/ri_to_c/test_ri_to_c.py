@@ -2,7 +2,7 @@ import cocotb
 from cocotb.triggers import Timer
 
 import numpy as np
-from testbench.data_paths import module_data_dir
+from testbench.data_paths import find_data_dir, module_data_dir
 
 testdatadir = module_data_dir(__file__)
 
@@ -21,13 +21,7 @@ async def module_test(dut):
     nbits = int(dut.NBITS.value)
     cocotb.log.info(f"Testing with NBITS={nbits}")
 
-    if nbits == 8:
-        datadir = testdatadir / "simdata0"
-    elif nbits == 16:
-        datadir = testdatadir / "simdata1"
-    else:
-        cocotb.log.warning(f"No test data for NBITS={nbits}. Skipping.")
-        return
+    datadir = find_data_dir(dut, testdatadir, ["NBITS"])
 
     sim_in_re = np.loadtxt(datadir / "sim_re.csv", dtype=int).tolist()
     sim_in_im = np.loadtxt(datadir / "sim_im.csv", dtype=int).tolist()

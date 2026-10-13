@@ -2,31 +2,17 @@ import cocotb
 from cocotb.clock import Clock
 from cocotb.triggers import RisingEdge
 
-import json
 import numpy as np
 
 from testbench.csv_ports import load_rows
-from testbench.data_paths import module_data_dir
+from testbench.data_paths import find_data_dir, module_data_dir
 
 testdatadir = module_data_dir(__file__)
 
 
-# Parameters matched against simdataN/params.json (USE_ENABLE sets, generated
-# by test_data/scripts/gen_basic_test_data.py); the original sets have no
-# params.json and are selected by the parameter checks below.
+# Parameters matched against simdataN/params.json
 PARAMS = ['NBITS', 'NINPUTS', 'LATENCY', 'FUNC', 'USE_ENABLE']
 
-
-def find_param_datadir(dut):
-    """Return the simdataN with a params.json matching the DUT, or None."""
-    dut_params = {name: int(getattr(dut, name).value) for name in PARAMS}
-    for d in sorted(testdatadir.glob("simdata*")):
-        pj = d / "params.json"
-        if pj.exists():
-            p = json.loads(pj.read_text())
-            if {k: p[k] for k in PARAMS} == dut_params:
-                return d
-    return None
 
 AND  = 0
 NAND = 1
@@ -68,33 +54,7 @@ async def module_test(dut):
         f"LATENCY={latency}, FUNC={func}"
     )
 
-    datadir = find_param_datadir(dut)
-    if datadir is not None:
-        pass
-    elif int(dut.USE_ENABLE.value):
-        assert False, "No params.json matches this USE_ENABLE configuration"
-    elif func == AND  and nbits == 4 and ninputs == 2 and latency == 1:
-        datadir = testdatadir / "simdata0"
-    elif func == NAND and nbits == 4 and ninputs == 2 and latency == 1:
-        datadir = testdatadir / "simdata1"
-    elif func == OR   and nbits == 4 and ninputs == 2 and latency == 1:
-        datadir = testdatadir / "simdata2"
-    elif func == NOR  and nbits == 4 and ninputs == 2 and latency == 1:
-        datadir = testdatadir / "simdata3"
-    elif func == XOR  and nbits == 4 and ninputs == 2 and latency == 1:
-        datadir = testdatadir / "simdata4"
-    elif func == XNOR and nbits == 4 and ninputs == 2 and latency == 1:
-        datadir = testdatadir / "simdata5"
-    elif func == AND  and nbits == 4 and ninputs == 3 and latency == 1:
-        datadir = testdatadir / "simdata6"
-    elif func == XOR  and nbits == 4 and ninputs == 2 and latency == 2:
-        datadir = testdatadir / "simdata7"
-    else:
-        cocotb.log.warning(
-            f"No test data for FUNC={func}, NBITS={nbits}, "
-            f"NINPUTS={ninputs}, LATENCY={latency}. Skipping."
-        )
-        return
+    datadir = find_data_dir(dut, testdatadir, PARAMS)
 
     # sim_din<j>.csv = din[j]; row i = [din[0], ..., din[NINPUTS-1]]
     sim_din  = load_rows(datadir, "din")

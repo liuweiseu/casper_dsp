@@ -6,6 +6,8 @@ Each subdirectory corresponds to one parameter set. `FUNC`: 0=AND, 1=NAND, 2=OR,
 
 This applies to `simdata0`–`simdata7` (`USE_ENABLE` = 0). `simdata8` tests the enable (`en` from `sim_en.csv`). It is generated from a Python model of the Xilinx System Generator block (`data/sysgen/block_models/xl*.sgm`) by `test_data/scripts/gen_basic_test_data.py`, which also writes a `params.json` for each set (the testbench matches the DUT parameters against it).
 
+Every `simdataN/` holds a `params.json` with the DUT parameters of that set; the testbench selects the set whose `params.json` matches the DUT (`find_data_dir` in `testbench/data_paths.py`).
+
 | Test # | Directory | NBITS | NINPUTS | LATENCY | FUNC | USE_ENABLE | Cycles | Description |
 |--------|-----------|-------|---------|---------|------|------------|--------|-------------|
 | 0 | `simdata0` | 4 | 2 | 1 | 0 (AND)  | 0 | 16 | Bitwise AND of 2 inputs |

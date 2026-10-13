@@ -6,6 +6,8 @@ Each subdirectory corresponds to one parameter set. `COMP`: 0=eq, 1=ne, 2=lt, 3=
 
 This applies to `simdata0`–`simdata7` (unsigned, `SIGNED` = 0). `simdata8`–`simdata16` test the `SIGNED` parameter, and `simdata17` tests the enable (`USE_ENABLE = 1`, `en` from `sim_en.csv`). They are generated from a Python model by `test_data/scripts/gen_basic_test_data.py`, which also writes a `params.json` for each set. The 4- and 5-bit sets cover every input pair in shuffled order. `USE_ENABLE` is 0 in every set except `simdata17`.
 
+Every `simdataN/` holds a `params.json` with the DUT parameters of that set; the testbench selects the set whose `params.json` matches the DUT (`find_data_dir` in `testbench/data_paths.py`).
+
 | Test # | Directory | NBITS | COMP | LATENCY | SIGNED | USE_ENABLE | Cycles | Description |
 |--------|-----------|-------|------|---------|--------|------------|--------|-------------|
 | 0 | `simdata0` | 4 | 0 (eq) | 1 | 0 | 0 | 20 | Equal — registered output |

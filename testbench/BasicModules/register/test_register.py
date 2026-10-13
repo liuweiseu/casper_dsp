@@ -3,7 +3,7 @@ from cocotb.clock import Clock
 from cocotb.triggers import RisingEdge
 
 import numpy as np
-from testbench.data_paths import module_data_dir
+from testbench.data_paths import find_data_dir, module_data_dir
 
 # test data of this module: $CASPER_TEST_DATA or test_data/, same path as below testbench/
 testdatadir = module_data_dir(__file__)
@@ -36,24 +36,7 @@ async def module_test(dut):
         f"USE_ENABLE={use_enable}, INIT_VAL={init_val}"
     )
 
-    if   use_rst == 1 and use_enable == 1 and init_val == 0:
-        datadir = testdatadir / "simdata0"
-    elif use_rst == 1 and use_enable == 0 and init_val == 0:
-        datadir = testdatadir / "simdata1"
-    elif use_rst == 0 and use_enable == 1:
-        datadir = testdatadir / "simdata2"
-    elif use_rst == 0 and use_enable == 0:
-        datadir = testdatadir / "simdata3"
-    elif use_rst == 1 and use_enable == 1 and init_val == 7:
-        datadir = testdatadir / "simdata4"
-    elif use_rst == 1 and use_enable == 0 and init_val == 10:
-        datadir = testdatadir / "simdata5"
-    else:
-        cocotb.log.warning(
-            f"No test data for USE_RST={use_rst}, USE_ENABLE={use_enable}, "
-            f"INIT_VAL={init_val}. Skipping."
-        )
-        return
+    datadir = find_data_dir(dut, testdatadir, ["BITWIDTH", "USE_RST", "USE_ENABLE", "INIT_VAL"])
 
     sim_d    = np.loadtxt(datadir / "sim_d.csv",   dtype=int).tolist()
     expected = np.loadtxt(datadir / "sim_q.csv", dtype=int).tolist()

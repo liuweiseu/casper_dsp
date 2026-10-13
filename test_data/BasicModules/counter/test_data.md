@@ -11,6 +11,8 @@ This applies to `simdata0`–`simdata4`. `simdata5`–`simdata13` are generated 
 
 In `simdata12` a load is attempted while `enable` is low (ignored) and during a reset (the reset wins). In `simdata13` a load arrives while the counter sits at `COUNT_TO_VAL` (the wrap to `INIT_VAL` wins). In `simdata10`–`simdata13`, `simulation.toml` leaves `RST_VAL` at its default, `INIT_VAL`. In sets 0–4 `ENABLE_SYNC_RST` and `ENABLE_ENABLE` are 0, so `RST_VAL` (default `INIT_VAL`) has no effect.
 
+Every `simdataN/` holds a `params.json` with the DUT parameters of that set; the testbench selects the set whose `params.json` matches the DUT (`find_data_dir` in `testbench/data_paths.py`).
+
 | Test # | Directory | NBITS | STEP | INIT_VAL | COUNT_TO_VAL | COUNTER_TYPE | COUNT_DIR | ENABLE_SYNC_RST | ENABLE_ENABLE | RST_VAL | ENABLE_LOAD | Cycles | Description |
 |--------|-----------|-------|------|----------|--------------|--------------|-----------|-----------------|---------------|---------|-------------|--------|-------------|
 | 0 | `simdata0` | 8 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 299 | Free-running, up, step=1 — basic increment with wrap-around |

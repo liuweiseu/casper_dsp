@@ -2,6 +2,8 @@
 
 Each subdirectory corresponds to one parameter set. The input file `sim_c.csv` holds the packed complex word; `sim_re.csv` and `sim_im.csv` hold the expected real and imaginary outputs. `BIN_PT` does not affect bit-level behaviour and is not varied across test sets.
 
+Every `simdataN/` holds a `params.json` with the DUT parameters of that set; the testbench selects the set whose `params.json` matches the DUT (`find_data_dir` in `testbench/data_paths.py`).
+
 | Test # | Directory | N_BITS | BIN_PT | Cycles | Description |
 |--------|-----------|-------|--------|--------|-------------|
 | 0 | `simdata0` | 8  | 7  | 100 | Unpack a 16-bit complex word into two 8-bit parts |

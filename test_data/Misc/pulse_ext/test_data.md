@@ -4,6 +4,8 @@ Each subdirectory corresponds to one parameter set. Input file is `sim_in.csv` (
 
 **CSV data exported from the corresponding MATLAB Simulink block.**
 
+Every `simdataN/` holds a `params.json` with the DUT parameters of that set; the testbench selects the set whose `params.json` matches the DUT (`find_data_dir` in `testbench/data_paths.py`).
+
 | Test # | Directory | PULSE_LEN | Cycles | Description |
 |--------|-----------|-----------|--------|-------------|
 | 0 | `simdata0` | 3 | 30 | Single rising edge — pulse of 3 cycles |

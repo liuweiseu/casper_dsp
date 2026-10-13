@@ -3,7 +3,7 @@ from cocotb.clock import Clock
 from cocotb.triggers import RisingEdge, Timer
 
 import numpy as np
-from testbench.data_paths import module_data_dir
+from testbench.data_paths import find_data_dir, module_data_dir
 
 # test data of this module: $CASPER_TEST_DATA or test_data/, same path as below testbench/
 testdatadir = module_data_dir(__file__)
@@ -63,23 +63,7 @@ async def module_test(dut):
     output_pol = int(dut.POLARITY.value)
     cocotb.log.info(f"Testing with EDGE={edge_type}, POLARITY={output_pol}")
 
-    if   edge_type == RISING  and output_pol == ACTIVE_HIGH:
-        datadir = testdatadir / "simdata0"
-    elif edge_type == RISING  and output_pol == ACTIVE_LOW:
-        datadir = testdatadir / "simdata1"
-    elif edge_type == FALLING and output_pol == ACTIVE_HIGH:
-        datadir = testdatadir / "simdata2"
-    elif edge_type == FALLING and output_pol == ACTIVE_LOW:
-        datadir = testdatadir / "simdata3"
-    elif edge_type == BOTH    and output_pol == ACTIVE_HIGH:
-        datadir = testdatadir / "simdata4"
-    elif edge_type == BOTH    and output_pol == ACTIVE_LOW:
-        datadir = testdatadir / "simdata5"
-    else:
-        cocotb.log.warning(
-            f"No test data for EDGE={edge_type}, POLARITY={output_pol}. Skipping."
-        )
-        return
+    datadir = find_data_dir(dut, testdatadir, ["EDGE", "POLARITY"])
 
     sim_in           = np.loadtxt(datadir / "sim_din.csv",  dtype=int).tolist()
     expected_results = np.loadtxt(datadir / "sim_dout.csv", dtype=int).tolist()

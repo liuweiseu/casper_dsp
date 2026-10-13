@@ -24,6 +24,9 @@ MATLAB R2021a Update 8; Vivado / Model Composer 2021.1.
 | 12 | `auto_tap` / `baseline_tap` replace their delay with a portless stored `delay_slr` and lose its lines | `auto_tap`, `baseline_tap` and `xeng` with `use_bram_delay` off | Confirmed in MATLAB R2021a |
 | 13 | `cmult_init` delays `dvalid` by the add latency where the convert latency belongs | `cmult` with `async` and `pipelined_enable` on, `conv_latency ≠ add_latency` | Confirmed in MATLAB R2021a |
 | 14 | `delay_bram_init` never creates `dout` with `async` on and `bram_latency = 1` | `delay_bram` with `async` on and `bram_latency = 1` | Confirmed in MATLAB R2021a |
+| 15 | `cosin_init` saturates the quarter-cycle backwards address, so address 0 reads the wrong entry | `twiddle_general` (via `coeff_gen` → `cosin`) with a quarter-cycle table: `fft_direct` / `fft_wideband_real` `map_tail` lists, quarter-cycle in-order lists | Confirmed in MATLAB R2021a |
+| 16 | `bus_addsub_init` does not delay `en` / `misci` through the `pipeline_en` pipelines | `bus_addsub` with `pipeline_en` and `async` (or `misc`) on | From source only |
+| 17 | `cmult_init` passes `csp_latency` to a Xilinx `Delay` in its floating-point async branch | `cmult` with `floating_point` and `async` on | From source only |
 
 **Environment note:** `pfb_coeff_gen_calc.m:57, 72` computes the PFB
 window through MATLAB's Python interface (`casper_library/python/window.py`).
@@ -717,6 +720,125 @@ runs zero times, so `dout` is never created.
 **Suggested fix:** create `dout` outside the loop and wire it to the RAM
 output when `bram_latency = 1`.
 
+## 15. cosin: the quarter-cycle backwards address saturates at address 0
+
+**Affected code:** `casper_library/cosin_init.m:789-797` (`Convert2`,
+`overflow = 'Saturate'`) and `cosin_init.m:812-842` (the backwards
+address), in `add_convert_init`.
+
+**Symptom:** a twiddle coefficient that should be ±1.0 reads
+±cos(2π/2^full_cycle_bits) instead, e.g. 0.98079 instead of 1.0 for a
+32-point quarter. It is the coefficient at address 0, so the first output
+sample after every sync is wrong (large errors in the FFT outputs).
+
+**Trigger:** `coeff_gen` stores a quarter cycle (`store = 2`, i.e.
+`lookup_bits = full_cycle_bits − 2`) and reads it from the other quadrant
+at address 0:
+- the list spans a quarter cycle (`multiple_bits = 2`) and is held as one
+  shared `sin` table (`coeff_sharing` on, not packed again for BRAM), as
+  in `fft_direct` / `fft_wideband_real` `map_tail` stage-1 lists or an
+  in-order `Coeffs = 0 … N−1` with `FFTSize − StepPeriod − log2 N = 2`;
+- or the list spans more than a quarter and `coeff_decimation` cuts it to
+  a quarter (more than 64 coefficients, or a large BRAM table).
+
+**HDL trigger:** `FFTs/Twiddle/twiddle_general`: `N_COEFFS > 1 && (FFT_SIZE - STEP_PERIOD - $clog2(N_COEFFS) == 2 && COEFF_SHARING != 0 && !(N_COEFFS * COEFF_BIT_WIDTH > 2 ** COEFFS_BIT_LIMIT && COEFF_BIT_WIDTH <= 18 && (COEFF_DECIMATION != 0 && $clog2(N_COEFFS) > 6 ? 4 : 8) * N_COEFFS * COEFF_BIT_WIDTH <= 36864) || FFT_SIZE - STEP_PERIOD - $clog2(N_COEFFS) < 2 && COEFF_DECIMATION != 0 && ($clog2(N_COEFFS) > 6 || N_COEFFS * COEFF_BIT_WIDTH > 4608))`;
+`FFTs/butterfly_direct`: `!(N_COEFFS == 2 && COEFF_0 == 0 && COEFF_1 == 1 && STEP_PERIOD == FFT_SIZE - 2) && N_COEFFS > 1 && (FFT_SIZE - STEP_PERIOD - $clog2(N_COEFFS) == 2 && COEFF_SHARING != 0 && !(N_COEFFS * COEFF_BIT_WIDTH > 2 ** COEFFS_BIT_LIMIT && COEFF_BIT_WIDTH <= 18 && (COEFF_DECIMATION != 0 && $clog2(N_COEFFS) > 6 ? 4 : 8) * N_COEFFS * COEFF_BIT_WIDTH <= 36864) || FFT_SIZE - STEP_PERIOD - $clog2(N_COEFFS) < 2 && COEFF_DECIMATION != 0 && ($clog2(N_COEFFS) > 6 || N_COEFFS * COEFF_BIT_WIDTH > 4608))`;
+`FFTs/fft_stage_n`: `FFT_STAGE >= 3 && COEFF_DECIMATION != 0 && (FFT_STAGE - 1 > 6 || 2 ** (FFT_STAGE - 1) * COEFF_BIT_WIDTH > 4608)`;
+`FFTs/biplex_core`: `FFT_SIZE >= 3 && COEFF_DECIMATION != 0 && (FFT_SIZE - 1 > 6 || 2 ** (FFT_SIZE - 1) * COEFF_BIT_WIDTH > 4608)`;
+`FFTs/fft_biplex_real_4x`: `FFT_SIZE >= 3 && COEFF_DECIMATION != 0 && (FFT_SIZE - 1 > 6 || 2 ** (FFT_SIZE - 1) * COEFF_BIT_WIDTH > 4608)`;
+`FFTs/fft_direct`: `MAP_TAIL != 0 && LARGER_FFT_SIZE > FFT_SIZE && (COEFF_GENERATION == 0 || LARGER_FFT_SIZE - FFT_SIZE <= $clog2(MULT_LATENCY + (DSP48_ADDERS != 0 ? 2 : ADD_LATENCY) + CONV_LATENCY + 1) + CAL_BITS) && (FFT_SIZE >= 2 && COEFF_SHARING != 0 && !(2 ** (LARGER_FFT_SIZE - FFT_SIZE) * COEFF_BIT_WIDTH > 2 ** COEFFS_BIT_LIMIT && COEFF_BIT_WIDTH <= 18 && (COEFF_DECIMATION != 0 && LARGER_FFT_SIZE - FFT_SIZE > 6 ? 4 : 8) * 2 ** (LARGER_FFT_SIZE - FFT_SIZE) * COEFF_BIT_WIDTH <= 36864) || COEFF_DECIMATION != 0 && (LARGER_FFT_SIZE - FFT_SIZE > 6 || 2 ** (LARGER_FFT_SIZE - FFT_SIZE) * COEFF_BIT_WIDTH > 4608))`;
+`FFTs/fft_wideband_real`: `((COEFF_GENERATION == 0 || FFT_SIZE - N_INPUTS <= $clog2(MULT_LATENCY + (DSP48_ADDERS != 0 ? 2 : ADD_LATENCY) + CONV_LATENCY + 1) + CAL_BITS) && (N_INPUTS >= 2 && COEFF_SHARING != 0 && !(2 ** (FFT_SIZE - N_INPUTS) * COEFF_BIT_WIDTH > 2 ** COEFFS_BIT_LIMIT && COEFF_BIT_WIDTH <= 18 && (COEFF_DECIMATION != 0 && FFT_SIZE - N_INPUTS > 6 ? 4 : 8) * 2 ** (FFT_SIZE - N_INPUTS) * COEFF_BIT_WIDTH <= 36864) || COEFF_DECIMATION != 0 && (FFT_SIZE - N_INPUTS > 6 || 2 ** (FFT_SIZE - N_INPUTS) * COEFF_BIT_WIDTH > 4608))) || (FFT_SIZE - N_INPUTS) >= 3 && COEFF_DECIMATION != 0 && ((FFT_SIZE - N_INPUTS) - 1 > 6 || 2 ** ((FFT_SIZE - N_INPUTS) - 1) * COEFF_BIT_WIDTH > 4608)`
+
+The expressions are a superset of the exact `coeff_gen_init.m` /
+`cosin_init.m` decision (no miss in a sweep of every list size, phase,
+coefficient width, `coeffs_bit_limit`, sharing, decimation and generation
+setting); they may also exclude configurations whose table happens not to
+hit address 0. `twiddle_general` and `butterfly_direct` assume in-order
+coefficients `0 … N_COEFFS−1` (the HDL holds the list only in
+`INIT_FILE`). Biplex stages (`fft_stage_n`, `biplex_core`) store half a
+cycle and trigger only with decimated tables (stage ≥ 8 or a large table).
+
+**Root cause:** for quarter-cycle storage the backwards address is
+`2^lookup_bits − addr`, computed by an `AddSub` with
+`lookup_bits + 1` bits (`:812-830`). For `addr = 0` it is
+`2^lookup_bits`, which `Convert2` saturates to `lookup_bits` bits:
+`2^lookup_bits − 1`, the last table entry. The intended read is the
+entry one past the stored quarter, i.e. the quadrant boundary (±1.0).
+
+**Impact on casper designs:** every `fft` / `fft_wideband_real` whose
+`fft_direct` builds its stage-1 twiddles with `cosin` (lookup path:
+`coeff_generation` off or too few coefficients for `feedback_osc`), and
+any `twiddle_general` with a quarter-cycle table.
+
+**Confirmed in MATLAB R2021a:** `butterfly_direct` set 6, `fft_direct`
+sets 0, 1, 2, 4, 5 and `fft_wideband_real` sets 0, 1, 5. A coefficient
+model with the saturated address matches every port of these sets bit
+exactly; the HDL table (±1.0 at address 0) does not.
+
+**Suggested fix:** compute the backwards address modulo the table (or let
+`Convert2` wrap), and store the quadrant-boundary entry: use a table of
+`2^lookup_bits + 1` entries, or treat address 0 of the backwards quadrant
+as the ±1.0 case.
+
+**HDL:** implements the intended behaviour: `rtl/FFTs/Twiddle/scripts/gen_twiddle_coeffs.py`
+writes the exact coefficient (±1.0, saturated to the largest word) at
+address 0. Sets that trigger the bug are excluded from the Simulink
+comparison.
+
+## 16. bus_addsub: pipeline_en does not delay en and misci
+
+**Affected code:** `casper_library/bus_addsub_init.m:250-290` (input
+pipelines), `:437` (`en` into the `AddSub`s), `:444-456` (`dmisc`,
+`den`) and `:507-520` (output pipeline).
+
+**Symptom:** with `pipeline_en` on, `dvalid` (and `misco`) arrive
+`2·pipeline_latency` cycles before the data, and `en` gates each
+`AddSub` `pipeline_latency` cycles early.
+
+**Trigger:** `pipeline_en = 'on'`, `pipeline_latency > 0`, and
+`async = 'on'` (for `dvalid` and the gating) or `misc = 'on'` (for
+`misco`).
+
+**HDL trigger:** none (`pipeline_en` is not implemented in the HDL).
+
+**Root cause:** `pipeline_en` puts a `pipeline` of `pipeline_latency` on
+`a` and `b` and another on `dout`, but `en` goes straight to the
+`AddSub`s, and `den` / `dmisc` delay `en` / `misci` by
+`csp_latency` only. The data takes
+`pipeline_latency + csp_latency + pipeline_latency`.
+
+**Impact on casper designs:** `bus_addsub` users with `pipeline_en` and
+`async` or `misc` on. No casper_library caller was checked for it.
+
+**Status:** from source only.
+
+**Suggested fix:** pass `en` and `misci` through the input pipeline
+(and the `den` / `dmisc` outputs through the output pipeline), so they
+take the same `2·pipeline_latency + csp_latency` as the data.
+
+## 17. cmult: the floating-point async branch passes csp_latency to a Xilinx Delay
+
+**Affected code:** `casper_library/cmult_init.m:531-535`.
+
+**Symptom:** expected (not run): `reuse_block` fails with
+`Simulink:Commands:ParamUnknown` (`xbsIndex_r4/Delay` has no parameter
+`csp_latency`), so the `cmult` mask initialization fails.
+
+**Trigger:** `floating_point = 'on'` and `async = 'on'`.
+
+**HDL trigger:** none (`FLOATING_POINT = 1` is not implemented in the HDL).
+
+**Root cause:** in the floating-point branch the `dvalid` Delay `den` is
+created as an `xbsIndex_r4/Delay` with `'csp_latency'`, the parameter
+name of the casper blocks; the Xilinx `Delay` calls it `latency`.
+
+**Impact on casper designs:** `cmult` with floating point and async on.
+casper_library's own `cmult` instances are fixed point.
+
+**Status:** from source only.
+
+**Suggested fix:** pass `'latency', num2str(latency)` to `den`.
+
 ## How casper_dsp handles these bugs
 
 - **Mapping:** the HDL-Simulink Mapping blocks record the bugs, so that
@@ -793,6 +915,15 @@ output when `bram_latency = 1`.
 - **Bug 12:** `unsupported` entries `USE_BRAM_DELAY == 0` on
   `rtl/Correlator/auto_tap.sv`, `baseline_tap.sv` and `xeng.sv`. They skip
   `auto_tap` set 1, `baseline_tap` set 2 and `xeng` set 1.
+- **Bug 15:** not reproduced: the HDL twiddle tables hold the exact
+  coefficients (±1.0 at address 0). The **HDL trigger** excludes the sets
+  that read a saturated quarter-cycle table in Simulink.
+- **Bugs 16 and 17:** the HDL does not implement `pipeline_en` (bus
+  `adder_subtractor`) or floating point (`cmult`), so no set triggers
+  them. An implementation of either feature must follow the intended
+  behaviour: `en` (and `misci`) delayed together with the data through
+  the `pipeline_en` pipelines, and a valid `latency` parameter on the
+  `dvalid` Delay.
 - **Simulink parameter limits:** other configurations that the init scripts
   reject are also `unsupported` entries (each with the init-script
   reference in its `reason`):

@@ -4,6 +4,8 @@ Each subdirectory corresponds to one parameter set. `EDGE`: 0 = rising edge, 1 =
 
 **CSV data exported from the corresponding MATLAB Simulink block.**
 
+Every `simdataN/` holds a `params.json` with the DUT parameters of that set; the testbench selects the set whose `params.json` matches the DUT (`find_data_dir` in `testbench/data_paths.py`).
+
 | Test # | Directory | EDGE | POLARITY | Cycles | Description |
 |--------|-----------|-----------|------------|--------|-------------|
 | 0 | `simdata0` | 0 (rising)  | 0 (active high) | 100 | Detect rising edge, output pulse active high |

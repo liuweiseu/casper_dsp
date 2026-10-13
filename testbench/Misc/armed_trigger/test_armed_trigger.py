@@ -3,7 +3,7 @@ from cocotb.clock import Clock
 from cocotb.triggers import RisingEdge
 
 import numpy as np
-from testbench.data_paths import module_data_dir
+from testbench.data_paths import find_data_dir, module_data_dir
 
 # test data of this module: $CASPER_TEST_DATA or test_data/, same path as below testbench/
 testdatadir = module_data_dir(__file__)
@@ -26,7 +26,7 @@ async def module_test(dut):
     clock = Clock(dut.clk, 10, units="ns")
     cocotb.start_soon(clock.start())
 
-    datadir = testdatadir / "simdata0"
+    datadir = find_data_dir(dut, testdatadir, [])   # no parameters: the one set
 
     sim_arm     = np.loadtxt(datadir / "sim_arm.csv",      dtype=int).tolist()
     sim_trig_in = np.loadtxt(datadir / "sim_trig_in.csv",  dtype=int).tolist()

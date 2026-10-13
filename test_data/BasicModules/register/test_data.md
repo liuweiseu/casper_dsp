@@ -4,6 +4,8 @@ Each subdirectory corresponds to one parameter set. `USE_RST`: 1 = synchronous r
 
 **CSV data exported from the corresponding MATLAB Simulink block.**
 
+Every `simdataN/` holds a `params.json` with the DUT parameters of that set; the testbench selects the set whose `params.json` matches the DUT (`find_data_dir` in `testbench/data_paths.py`).
+
 | Test # | Directory | BITWIDTH | USE_RST | USE_ENABLE | INIT_VAL | Cycles | Description |
 |--------|-----------|----------|---------|------------|----------|--------|-------------|
 | 0 | `simdata0` | 4 | 1 | 1 | 0  | 11 | Reset + enable — reset clears to 0 |

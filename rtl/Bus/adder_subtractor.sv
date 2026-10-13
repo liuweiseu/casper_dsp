@@ -71,7 +71,7 @@
 // exp_width = 'floating point is not implemented'
 // frac_width = 'floating point is not implemented'
 // add_implementation = 'implementation option, not modelled'
-// pipeline_en = 'input pipeline not implemented: pipeline_en=on puts a casper pipeline of pipeline_latency cycles on a and b (bus_addsub_init.m:250-289), adding latency; the HDL equals pipeline_en=off'
+// pipeline_en = 'not implemented: pipeline_en=on puts a casper pipeline of pipeline_latency cycles on a and b and another on dout (bus_addsub_init.m:250-289, 507-520), adding 2*pipeline_latency; the HDL equals pipeline_en=off. casper does not delay en / misci with them (mlib_devel bug 16); an implementation must delay them with the data'
 // pipeline_latency = 'input pipeline not implemented (only used when pipeline_en=on)'
 //
 // [ports]

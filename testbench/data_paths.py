@@ -6,8 +6,12 @@ testbench/ (the repository's test_data/ in a checkout, its copy
 tests/test_data/ in the test container). A module's data directory is the
 root plus the testbench's path below testbench/, e.g.
 testbench/FFTs/Twiddle/twiddle_general/ -> <root>/FFTs/Twiddle/twiddle_general/.
+
+Each simdataN/ holds a params.json with the DUT parameters it was made for;
+find_data_dir() picks the set whose params.json matches the DUT.
 """
 
+import json
 import os
 from pathlib import Path
 
@@ -25,6 +29,23 @@ def module_data_dir(testbench_file):
     """Data directory of the module whose testbench is `testbench_file`."""
     here = Path(testbench_file).resolve().parent
     return test_data_root() / here.relative_to(_TB_ROOT)
+
+
+def find_data_dir(dut, datadir, params, defaults=None):
+    """The simdataN under `datadir` whose params.json matches the DUT.
+
+    `params` are the DUT parameter names compared; a name missing from a
+    params.json takes its value from `defaults`. Fails if no set matches.
+    """
+    defaults = defaults or {}
+    dut_params = {name: int(getattr(dut, name).value) for name in params}
+    for d in sorted(datadir.glob("simdata*")):
+        pj = d / "params.json"
+        if pj.exists():
+            p = json.loads(pj.read_text())
+            if {k: p.get(k, defaults.get(k)) for k in params} == dut_params:
+                return d
+    raise AssertionError(f"no simdataN/params.json in {datadir} matches {dut_params}")
 
 
 # keep pytest from collecting the helper above as a test

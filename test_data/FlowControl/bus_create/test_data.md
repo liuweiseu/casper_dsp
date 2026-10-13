@@ -4,6 +4,8 @@ Each subdirectory corresponds to one parameter set. The `din` array port has one
 
 **CSV data exported from the corresponding MATLAB Simulink block.**
 
+Every `simdataN/` holds a `params.json` with the DUT parameters of that set; the testbench selects the set whose `params.json` matches the DUT (`find_data_dir` in `testbench/data_paths.py`).
+
 | Test # | Directory | NBITS | INPUT_NUM | Cycles | Description |
 |--------|-----------|-------|---------|--------|-------------|
 | 0 | `simdata0` | 8  | 2 | 513 | Concatenate 2 × 8-bit inputs into a 16-bit output bus |
