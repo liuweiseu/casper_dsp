@@ -37,7 +37,9 @@ unscramblers.
   character code of the digit. The result is the same whenever
   `DELAYS_BIT_LIMIT ≥ 5`.
 - Generate each stage's table with
-  `rtl/FFTs/Twiddle/scripts/gen_twiddle_coeffs.py --fft-size FFT_SIZE --coeffs 0 … 2^(s−1)−1`.
+  `rtl/FFTs/Twiddle/scripts/gen_twiddle_coeffs.py --fft-size FFT_SIZE --coeffs 0 … 2^(s−1)−1
+  --step-period FFT_SIZE−s --coeff-generation 0`, plus the module's `COEFFS_BIT_LIMIT`,
+  `COEFF_SHARING` and `COEFF_DECIMATION` (the words follow casper's `cosin`).
 - `BIN_PT_IN` is the same for every stage.
 
 ## Parameters

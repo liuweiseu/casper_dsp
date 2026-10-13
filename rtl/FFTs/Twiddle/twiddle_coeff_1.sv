@@ -19,7 +19,8 @@
 //
 // Every leg (ai→ao, both bi lanes, sync) has the same latency
 //   LATENCY = 1 + MULT_LATENCY + ADD_LATENCY + CONV_LATENCY
-// (casper_library: "must match twiddle_general with single coefficient");
+// (casper_library: "must match twiddle_general with single coefficient",
+// though that one has MULT+ADD+CONV);
 // BRAM_LATENCY is accepted but, as in casper_library, not used.
 // ASYNC = 1 (casper async): en only qualifies the data; dvalid = en delayed
 // by the latency.

@@ -72,14 +72,17 @@ otherwise. `TWIDDLE_LATENCY` depends on the variant:
 |---------|-------------------|
 | `twiddle_pass_through` | 0 |
 | `twiddle_coeff_0`, `twiddle_coeff_1` | `1 + MULT_LATENCY + ADD_LATENCY + CONV_LATENCY` |
-| `twiddle_stage_2`, `twiddle_general` | `BRAM_LATENCY + MULT_LATENCY + ADD_LATENCY + CONV_LATENCY` |
-| `twiddle_general` with one coefficient | `1 + MULT_LATENCY + ADD_LATENCY + CONV_LATENCY` |
+| `twiddle_stage_2` | `BRAM_LATENCY + MULT_LATENCY + ADD_LATENCY + CONV_LATENCY` |
+| `twiddle_general` (table) | `BRAM_LATENCY + MULT_LATENCY + 2·ADD_LATENCY + 2·CONV_LATENCY + 2` |
+| `twiddle_general` with one coefficient | `MULT_LATENCY + ADD_LATENCY + CONV_LATENCY` |
 
-A single-coefficient `twiddle_general` is a constant in casper (`coeff_gen`
-without a table). `twiddle_coeff_0_init.m` requires its latency to match
-twiddle_coeff_0's, so that the butterflies of one [`fft_direct`](fft_direct.md)
-stage stay aligned. The coefficient read latency passed to `twiddle_general`
-is therefore 1 for `N_COEFFS = 1`, whatever `BRAM_LATENCY` is.
+These are casper's latencies. `twiddle_general` carries the data on
+`coeff_gen`'s misc path, which has the latency of the `cosin` lookup
+(`BRAM_LATENCY + ADD_LATENCY + CONV_LATENCY + 2`); a single coefficient is a
+pair of Constants with no latency. The variants therefore differ, also
+between the butterflies of one [`fft_direct`](fft_direct.md) stage when
+their coefficient lists select different twiddles, exactly as in Simulink.
+The `shift` select is delayed by `FAN_LATENCY` only, not with the twiddle.
 
 `of` has one more cycle of latency than the data.
 
@@ -103,7 +106,7 @@ is therefore 1 for `N_COEFFS = 1`, whatever `BRAM_LATENCY` is.
 | `HARDCODE_SHIFTS` | 0           | `1`: static shift (`DOWNSHIFT`); `shift` input unused |
 | `ADD_LATENCY`     | 1           | Butterfly adders and twiddle adders |
 | `MULT_LATENCY`    | 2           | Twiddle multipliers |
-| `BRAM_LATENCY`    | 1           | Twiddle coefficient / stage_2 pre-delay |
+| `BRAM_LATENCY`    | 1           | Twiddle coefficient lookup (`cosin`) / stage_2 pre-delay |
 | `CONV_LATENCY`    | 1           | Output convert and twiddle convert |
 | `QUANTIZATION`    | 0           | Output (and `twiddle_general`) rounding: `0`/`1`/`2` as `convert` |
 | `OVERFLOW`        | 0           | Output (and `twiddle_general`) overflow: `0`=wrap, `1`=saturate |

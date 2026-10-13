@@ -45,6 +45,11 @@ Generate all of them with:
 python3 rtl/FFTs/scripts/gen_fft_mem_files.py biplex_real_4x --fft-size F --coeff-bit-width W -o DIR/
 ```
 
+Pass the module's coefficient options too (`--coeffs-bit-limit`, `--coeff-sharing`,
+`--coeff-decimation`, `--coeff-generation`, `--latency-sum`, `--cal-bits`; see
+`--help`): the table words follow casper's `cosin` lookup, as described in
+[`twiddle_general`](Twiddle/twiddle_general.md).
+
 ### Sync, overflow and limits
 
 - The inputs need a sync once per `2^FFT_SIZE`-cycle frame (or a multiple

@@ -23,7 +23,7 @@ import sys
 from pathlib import Path
 
 from common import TEST_DATA_ROOT as TEST_DATA, run_cli          # also puts rtl/.../scripts on sys.path
-from gen_twiddle_coeffs import mem_lines, twiddle_table            # rtl/FFTs/Twiddle/scripts/
+from gen_twiddle_coeffs import COEFF_DEFAULTS, coeff_options, coeff_params, mem_lines, twiddle_table            # rtl/FFTs/Twiddle/scripts/
 from gen_butterfly_test_data import delay, m_butterfly, write_csv, P, toml
 import gen_twiddle_test_data as tw
 
@@ -183,7 +183,8 @@ def m_fft_stage(p, st):
                              "ADD_LATENCY", "MULT_LATENCY", "BRAM_LATENCY", "CONV_LATENCY",
                              "QUANTIZATION", "OVERFLOW", "MAX_FANOUT"]}
     bp.update(BIPLEX=1, N_COEFFS=len(coeffs), COEFF_0=0, COEFF_1=1,
-              STEP_PERIOD=p["FFT_SIZE"] - p["FFT_STAGE"])
+              STEP_PERIOD=p["FFT_SIZE"] - p["FFT_STAGE"],
+              **coeff_params(dict(p, COEFF_GENERATION=0), COEFF_DEFAULTS["fft_stage_n"]))
     bst = {"a_re": [list(r) for r, _ in a], "a_im": [list(i) for _, i in a],
            "b_re": [list(r) for r, _ in b], "b_im": [list(i) for _, i in b],
            "sync_in": sync_bf,
@@ -225,7 +226,10 @@ def gen_fft_stage():
         if p["FFT_STAGE"] >= 3:
             (d / "twiddle.mem").write_text("".join(
                 line + "\n" for line in mem_lines(
-                    twiddle_table(coeffs, f, p["COEFF_BIT_WIDTH"]), p["COEFF_BIT_WIDTH"])))
+                    twiddle_table(coeffs, f, p["COEFF_BIT_WIDTH"], **coeff_options(
+                        dict(p, **coeff_params(dict(p, COEFF_GENERATION=0),
+                                               COEFF_DEFAULTS["fft_stage_n"])),
+                        f - p["FFT_STAGE"])), p["COEFF_BIT_WIDTH"])))
             full["INIT_FILE"] = MEM_REL.format(n=n)
         pre, nd, mux, use_bram = stage_timing(p)
         (d / "params.json").write_text(json.dumps(dict(

@@ -7,10 +7,10 @@
 //   LATENCY = 1 + MULT_LATENCY + ADD_LATENCY + CONV_LATENCY
 //
 // the formula casper_library uses so the latency "matches twiddle_general
-// with single coefficient", letting butterfly_direct swap twiddle variants
-// transparently (equal to twiddle_general's latency when its
-// BRAM_LATENCY = 1). As in casper_library, BRAM_LATENCY is accepted but does
-// not enter the formula. bwo keeps the input width (only twiddle_general
+// with single coefficient". It does not: a single-coefficient twiddle_general
+// has MULT+ADD+CONV (a Constant coefficient), one cycle less, in casper and in
+// this HDL. As in casper_library, BRAM_LATENCY is accepted but does not enter
+// the formula. bwo keeps the input width (only twiddle_general
 // grows bwo by one bit).
 //
 // INPUT_BIT_WIDTH is added for the HDL port widths. ASYNC = 1 (casper
@@ -27,7 +27,7 @@
 // @simulink-mapping begin
 // block = 'casper_library_ffts_twiddle.slx/twiddle_coeff_0'
 // deviations = [
-//   "latency is 1+MULT_LATENCY+ADD_LATENCY+CONV_LATENCY on every leg in both models (twiddle_coeff_0_init.m latency_s); BRAM_LATENCY is accepted but unused in both. Its init comment says this 'must match twiddle_general with single coefficient', but per coeff_gen_init.m (constant coefficient, no delay) + bus_mult (mult+add, fan_latency 0) + bus_convert (conv) a single-coefficient Simulink twiddle_general appears to have mult+add+conv, one cycle less (unverified)",
+//   "latency is 1+MULT_LATENCY+ADD_LATENCY+CONV_LATENCY on every leg in both models (twiddle_coeff_0_init.m latency_s); BRAM_LATENCY is accepted but unused in both. Its init comment says this 'must match twiddle_general with single coefficient', but per coeff_gen_init.m (constant coefficient, no delay) + bus_mult (mult+add, fan_latency 0) + bus_convert (conv) a single-coefficient twiddle_general has mult+add+conv, one cycle less (the HDL twiddle_general follows casper)",
 //   'test vectors in casper_dsp/test_data/FFTs/Twiddle/twiddle_coeff_0/test_data.md come from a Python reference model (not exported from MATLAB), so cycle/bit equivalence with the Simulink block is unverified',
 // ]
 //

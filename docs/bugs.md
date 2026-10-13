@@ -27,6 +27,7 @@ MATLAB R2021a Update 8; Vivado / Model Composer 2021.1.
 | 15 | `cosin_init` saturates the quarter-cycle backwards address, so address 0 reads the wrong entry | `twiddle_general` (via `coeff_gen` → `cosin`) with a quarter-cycle table: `fft_direct` / `fft_wideband_real` `map_tail` lists, quarter-cycle in-order lists | Confirmed in MATLAB R2021a |
 | 16 | `bus_addsub_init` does not delay `en` / `misci` through the `pipeline_en` pipelines | `bus_addsub` with `pipeline_en` and `async` (or `misc`) on | From source only |
 | 17 | `cmult_init` passes `csp_latency` to a Xilinx `Delay` in its floating-point async branch | `cmult` with `floating_point` and `async` on | From source only |
+| 18 | `biplex_core_init` compares the stage delay with the character code of `num2str(bram_latency)` | `biplex_core` (also in `fft_biplex_real_4x`, `fft_wideband_real`) with `delays_bit_limit ≤ 4` | Confirmed in MATLAB R2021a |
 
 **Environment note:** `pfb_coeff_gen_calc.m:57, 72` computes the PFB
 window through MATLAB's Python interface (`casper_library/python/window.py`).
@@ -775,6 +776,13 @@ sets 0, 1, 2, 4, 5 and `fft_wideband_real` sets 0, 1, 5. A coefficient
 model with the saturated address matches every port of these sets bit
 exactly; the HDL table (±1.0 at address 0) does not.
 
+**Note:** the in-order lists of the trigger (`FFTSize − StepPeriod − log2 N = 2`,
+e.g. `butterfly_direct` set 6) differ from the HDL in the other entries as well:
+for an in-order list `cosin` uses the angles
+`2π·bit_rev(k, log2 N)/2^(FFTSize − StepPeriod)`, which equal the `Coeffs`
+formula only for `FFTSize − StepPeriod − log2 N = 1` (the biplex case). That
+finding is not yet recorded as a bug; the HDL keeps the formula for such lists.
+
 **Suggested fix:** compute the backwards address modulo the table (or let
 `Convert2` wrap), and store the quadrant-boundary entry: use a table of
 `2^lookup_bits + 1` entries, or treat address 0 of the backwards quadrant
@@ -838,6 +846,52 @@ casper_library's own `cmult` instances are fixed point.
 **Status:** from source only.
 
 **Suggested fix:** pass `'latency', num2str(latency)` to `den`.
+
+## 18. biplex_core compares the stage delay with the character code of bram_latency
+
+**Affected code:** `casper_library/biplex_core_init.m:157-164`:
+
+```matlab
+if FFTSize - stage  > delays_bit_limit && 2^(FFTSize - stage) > num2str(bram_latency)
+```
+
+**Symptom:** stages whose delay should go into BRAM use registers instead.
+The data is the same, but each affected stage is `2·bram_latency` cycles
+shorter (its fan-out / BRAM compensation latency `P` appears twice in the
+stage), and it uses more logic.
+
+**Trigger:** a stage `s` with `FFTSize − s > delays_bit_limit` and
+`bram_latency < 2^(FFTSize − s) ≤ c`, where `c` is the character code of
+`num2str(bram_latency)` (49 for `bram_latency = 1`, 50 for 2; for two digits
+every digit's code must be exceeded). So it needs
+`2^delays_bit_limit < 2^(FFTSize − s) ≤ 32`, which the default
+`delays_bit_limit = 8` never allows. `fft_biplex_real_4x` and
+`fft_wideband_real` (whose biplex has `FFTSize − n_inputs` stages) pass
+`delays_bit_limit` and `bram_latency` to their `biplex_core`.
+
+**HDL trigger:** `FFTs/biplex_core`: `(DELAYS_BIT_LIMIT + 1 > $clog2(BRAM_LATENCY + 1) ? DELAYS_BIT_LIMIT + 1 : $clog2(BRAM_LATENCY + 1)) <= (FFT_SIZE - 1 < 5 ? FFT_SIZE - 1 : 5)`;
+`FFTs/fft_biplex_real_4x`: `(DELAYS_BIT_LIMIT + 1 > $clog2(BRAM_LATENCY + 1) ? DELAYS_BIT_LIMIT + 1 : $clog2(BRAM_LATENCY + 1)) <= (FFT_SIZE - 1 < 5 ? FFT_SIZE - 1 : 5)`;
+`FFTs/fft_wideband_real`: `(DELAYS_BIT_LIMIT + 1 > $clog2(BRAM_LATENCY + 1) ? DELAYS_BIT_LIMIT + 1 : $clog2(BRAM_LATENCY + 1)) <= ((FFT_SIZE - N_INPUTS) - 1 < 5 ? (FFT_SIZE - N_INPUTS) - 1 : 5)`
+
+**Root cause:** `num2str(bram_latency)` turns the latency into a character
+array, so the comparison is against its character codes, not against
+`bram_latency`. The comment above it says the delay must be "longer than
+bram_latency".
+
+**Impact on casper designs:** `biplex_core`, `fft_biplex_real_4x`, `fft`
+and `fft_wideband_real` with `delays_bit_limit ≤ 4`. Their latency is then
+shorter than intended, by `2·bram_latency` per affected stage.
+
+**Confirmed in MATLAB R2021a:** `biplex_core` sets 1 and 3 are 4 and 8
+cycles shorter than the intended rule gives; with the character-code rule
+the model matches every port bit-exactly.
+
+**Suggested fix:** compare against `bram_latency`, not
+`num2str(bram_latency)`.
+
+**HDL:** implements the intended rule (`delay_bram` when
+`FFT_SIZE − s > DELAYS_BIT_LIMIT` and `2^(FFT_SIZE − s) > BRAM_LATENCY`);
+sets that trigger the bug are excluded from the Simulink comparison.
 
 ## How casper_dsp handles these bugs
 
@@ -918,6 +972,9 @@ casper_library's own `cmult` instances are fixed point.
 - **Bug 15:** not reproduced: the HDL twiddle tables hold the exact
   coefficients (±1.0 at address 0). The **HDL trigger** excludes the sets
   that read a saturated quarter-cycle table in Simulink.
+- **Bug 18:** not reproduced: `rtl/FFTs/biplex_core.sv` uses the intended
+  `delay_bram` rule. The **HDL trigger** excludes the sets whose stage
+  latency differs in Simulink.
 - **Bugs 16 and 17:** the HDL does not implement `pipeline_en` (bus
   `adder_subtractor`) or floating point (`cmult`), so no set triggers
   them. An implementation of either feature must follow the intended

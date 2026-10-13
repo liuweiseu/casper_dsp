@@ -35,7 +35,13 @@
       "QUANTIZATION": 1,
       "OVERFLOW": 0,
       "DELAYS_BRAM": 0,
-      "MAX_FANOUT": 4
+      "MAX_FANOUT": 4,
+      "COEFFS_BIT_LIMIT": 8,
+      "COEFF_SHARING": 1,
+      "COEFF_DECIMATION": 1,
+      "COEFF_GENERATION": 0,
+      "CAL_BITS": 1,
+      "DSP48_ADDERS": 0
     },
     {
       "N_INPUTS": 2,
@@ -54,7 +60,13 @@
       "QUANTIZATION": 1,
       "OVERFLOW": 0,
       "DELAYS_BRAM": 0,
-      "MAX_FANOUT": 4
+      "MAX_FANOUT": 4,
+      "COEFFS_BIT_LIMIT": 8,
+      "COEFF_SHARING": 1,
+      "COEFF_DECIMATION": 1,
+      "COEFF_GENERATION": 0,
+      "CAL_BITS": 1,
+      "DSP48_ADDERS": 0
     },
     {
       "N_INPUTS": 2,
@@ -73,7 +85,13 @@
       "QUANTIZATION": 1,
       "OVERFLOW": 0,
       "DELAYS_BRAM": 0,
-      "MAX_FANOUT": 4
+      "MAX_FANOUT": 4,
+      "COEFFS_BIT_LIMIT": 8,
+      "COEFF_SHARING": 1,
+      "COEFF_DECIMATION": 1,
+      "COEFF_GENERATION": 0,
+      "CAL_BITS": 1,
+      "DSP48_ADDERS": 0
     },
     {
       "N_INPUTS": 2,
@@ -92,7 +110,13 @@
       "QUANTIZATION": 1,
       "OVERFLOW": 0,
       "DELAYS_BRAM": 0,
-      "MAX_FANOUT": 4
+      "MAX_FANOUT": 4,
+      "COEFFS_BIT_LIMIT": 8,
+      "COEFF_SHARING": 1,
+      "COEFF_DECIMATION": 1,
+      "COEFF_GENERATION": 0,
+      "CAL_BITS": 1,
+      "DSP48_ADDERS": 0
     }
   ]
 }

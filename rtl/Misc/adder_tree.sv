@@ -27,6 +27,10 @@
 //                  their format until their next add. dout has N_BITS_OUT
 //                  bits (DATA_WIDTH for N_INPUTS = 1).
 //   N_BITS_OUT_EFF is dout's width.
+// PRECISION, N_BITS_OUT, BIN_PT_OUT, QUANTIZATION and OVERFLOW are HDL-only
+// extensions: the adder_tree mask has none of them, so only PRECISION = 0
+// has a standalone Simulink counterpart. PRECISION = 1 is compared against
+// Simulink through pfb_fir_real.
 //
 // Declared for traceability only: FIRST_STAGE_HDL and ADDER_IMP (adder
 // implementation choices) are ignored; FLOATING_POINT must be 0.
@@ -81,15 +85,19 @@
 // 0 = 'off'
 // 1 = 'on'
 //
+// [[unsupported]]
+// when = 'PRECISION != 0'
+// reason = "HDL-only configuration: the adder_tree mask has no precision option and adder_tree_init.m:250-261 always builds Full-precision AddSubs. PRECISION = 1 with N_BITS_OUT / BIN_PT_OUT / QUANTIZATION / OVERFLOW reproduces pfb_fir_real_init.m:233-246, which set_params the inner addr* AddSubs to User Defined / Truncate / Wrap from outside the mask, so a standalone adder_tree has no Simulink counterpart; the configuration is covered against Simulink through pfb_fir_real"
+//
 // [hdl_only]
 // DATA_WIDTH = 'inherited width: Simulink takes it from the input signal'
 // BIN_PT = 'inherited width: Simulink takes it from the input signal'
 // TYPE = 'inherited width: Simulink takes it from the input signal'
-// PRECISION = "not in the adder_tree mask: the standalone block's AddSubs are always Full precision (adder_tree_init.m:257 reuses xbsIndex_r4/AddSub defaults). Models pfb_fir_real_init.m's settings of the inner AddSubs"
-// N_BITS_OUT = "models pfb_fir_real_init.m's settings of the inner AddSubs"
-// BIN_PT_OUT = "models pfb_fir_real_init.m's settings of the inner AddSubs"
-// QUANTIZATION = "models pfb_fir_real_init.m's settings of the inner AddSubs"
-// OVERFLOW = "models pfb_fir_real_init.m's settings of the inner AddSubs"
+// PRECISION = "HDL extension, not in the adder_tree mask: the standalone block's AddSubs are always Full precision (adder_tree_init.m:250-261), so only PRECISION = 0 (the default) is Simulink-equivalent. PRECISION = 1 models pfb_fir_real_init.m:233-246's settings of the inner AddSubs (see [[unsupported]])"
+// N_BITS_OUT = "HDL extension (PRECISION = 1 only): models pfb_fir_real_init.m's settings of the inner AddSubs"
+// BIN_PT_OUT = "HDL extension (PRECISION = 1 only): models pfb_fir_real_init.m's settings of the inner AddSubs"
+// QUANTIZATION = "HDL extension (PRECISION = 1 only): models pfb_fir_real_init.m's settings of the inner AddSubs"
+// OVERFLOW = "HDL extension (PRECISION = 1 only): models pfb_fir_real_init.m's settings of the inner AddSubs"
 // N_BITS_OUT_EFF = 'derived from other parameters (do not override)'
 //
 // [mask_missing]

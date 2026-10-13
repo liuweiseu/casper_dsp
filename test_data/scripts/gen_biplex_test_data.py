@@ -26,7 +26,7 @@ import sys
 from pathlib import Path
 
 from common import TEST_DATA_ROOT, run_cli                         # also puts rtl/.../scripts on sys.path
-from gen_twiddle_coeffs import mem_lines, twiddle_table             # rtl/FFTs/Twiddle/scripts/
+from gen_twiddle_coeffs import COEFF_DEFAULTS, coeff_options, coeff_params, mem_lines, twiddle_table             # rtl/FFTs/Twiddle/scripts/
 from gen_butterfly_test_data import write_csv, P, toml
 from gen_fft_stage_test_data import m_fft_stage, stage_coeffs
 import gen_twiddle_test_data as tw
@@ -69,6 +69,7 @@ def stage_params(p, s):
         "DELAYS_BRAM": 1 if (f - s > p["DELAYS_BIT_LIMIT"]
                              and 2 ** (f - s) > p["BRAM_LATENCY"]) else 0,
         "MAX_FANOUT": p["MAX_FANOUT"],
+        **coeff_params(dict(p, COEFF_GENERATION=0), COEFF_DEFAULTS["biplex_core"]),
     }
 
 
@@ -161,7 +162,8 @@ def gen_biplex():
         for s in range(3, f + 1):
             (d / f"twiddle_stage{s}.mem").write_text("".join(
                 line + "\n" for line in mem_lines(
-                    twiddle_table(stage_coeffs({"FFT_STAGE": s}), f, p["COEFF_BIT_WIDTH"]),
+                    twiddle_table(stage_coeffs({"FFT_STAGE": s}), f, p["COEFF_BIT_WIDTH"],
+                                  **coeff_options(stage_params(p, s), f - s)),
                     p["COEFF_BIT_WIDTH"])))
         full = dict(p, COEFF_DIR=COEFF_REL.format(n=n))
         stages = [stage_params(p, s) for s in range(1, f + 1)]

@@ -31,8 +31,9 @@ Every leg (`ai → ao`, both `bi` lanes, `sync`) has the same latency:
 LATENCY = 1 + MULT_LATENCY + ADD_LATENCY + CONV_LATENCY
 ```
 
-This matches [`twiddle_coeff_0`](twiddle_coeff_0.md), and matches
-[`twiddle_general`](twiddle_general.md) when its `BRAM_LATENCY` is 1.
+This matches [`twiddle_coeff_0`](twiddle_coeff_0.md). A single-coefficient
+[`twiddle_general`](twiddle_general.md) has one cycle less (`MULT_LATENCY +
+ADD_LATENCY + CONV_LATENCY`).
 `BRAM_LATENCY` is accepted but not used, as in casper_library.
 
 ## Parameters

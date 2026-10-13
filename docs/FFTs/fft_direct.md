@@ -20,9 +20,13 @@ for its last `N_INPUTS` stages.
 | shift | Stage `s` uses `shift[s]`; `DOWNSHIFT = HARDCODE_SHIFTS && SHIFT_SCHEDULE` bit `s` |
 | sync | The stage-0 butterfly gets `sync`; butterfly `2u+c` gets the `sync_out` of butterfly `u`; `sync_out` = `sync_out` of the last stage's butterfly 0 |
 
-All butterflies of one stage share the twiddle-table latency, so the stages
-stay aligned. For this, a single-coefficient general twiddle has the
-latency of `twiddle_coeff_0`; see [`butterfly_direct`](butterfly_direct.md).
+The twiddle latencies are casper's (see [`butterfly_direct`](butterfly_direct.md)).
+With `MAP_TAIL = 1` every butterfly of a stage has a list of
+`2^(LARGER_FFT_SIZE−FFT_SIZE)` coefficients, a `twiddle_general` table, so
+the butterflies of a stage stay aligned. With `MAP_TAIL = 0` each butterfly
+has one coefficient: `twiddle_coeff_0` (`1 + MULT + ADD + CONV`) for
+coefficient 0 and a constant `twiddle_general` (`MULT + ADD + CONV`) for
+coefficients ≥ 2, so they differ by one cycle, as in Simulink.
 
 ### Coefficients
 
@@ -47,6 +51,11 @@ python3 rtl/FFTs/scripts/gen_fft_mem_files.py direct --fft-size F --coeff-bit-wi
 python3 rtl/FFTs/scripts/gen_fft_mem_files.py direct --fft-size F --map-tail \
         --larger-fft-size L --start-stage S --coeff-bit-width W -o DIR/
 ```
+
+Pass the module's coefficient options too (`--coeffs-bit-limit`, `--coeff-sharing`,
+`--coeff-decimation`, `--coeff-generation`, `--latency-sum`, `--cal-bits`; see
+`--help`): the table words follow casper's `cosin` lookup, as described in
+[`twiddle_general`](Twiddle/twiddle_general.md).
 
 ### Widths
 

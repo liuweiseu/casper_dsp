@@ -17,7 +17,8 @@
 //   INIT_FILE     = {COEFF_DIR, "twiddle_stage<s>.mem"} (stages >= 3 use
 //                   twiddle_general; generate the files with
 //                   rtl/FFTs/Twiddle/scripts/gen_twiddle_coeffs.py --fft-size FFT_SIZE
-//                   --coeffs 0 .. 2^(s-1)-1)
+//                   --coeffs 0 .. 2^(s-1)-1 --step-period FFT_SIZE-s
+//                   --coeff-generation 0 and the COEFF_* options)
 // BIN_PT_IN is the same for every stage.
 //
 // SHIFT_SCHEDULE is casper's shift_schedule vector as a bit mask (bit s-1 =

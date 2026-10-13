@@ -47,8 +47,13 @@ As a result, stage 1 uses `twiddle_pass_through`, stage 2 uses
 
 ```
 python3 rtl/FFTs/Twiddle/scripts/gen_twiddle_coeffs.py --fft-size FFT_SIZE \
-    --coeffs 0 1 … 2^(FFT_STAGE-1)-1 --coeff-bit-width COEFF_BIT_WIDTH -o table.mem
+    --coeffs 0 1 … 2^(FFT_STAGE-1)-1 --step-period FFT_SIZE-FFT_STAGE --coeff-generation 0 \
+    --coeffs-bit-limit COEFFS_BIT_LIMIT --coeff-bit-width COEFF_BIT_WIDTH -o table.mem
 ```
+
+The words match casper's `cosin` (−1.0 derived by negation is −(1 − LSB)), so
+the generator needs the module's `COEFFS_BIT_LIMIT`, `COEFF_SHARING` and
+`COEFF_DECIMATION` (see [`twiddle_general`](Twiddle/twiddle_general.md)).
 
 The butterfly's dynamic downshift is `shift[FFT_STAGE−1]`. The stage's
 `of = butterfly of | of_in`, registered for one cycle.

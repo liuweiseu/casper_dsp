@@ -43,6 +43,15 @@ from gen_fft_internal_test_data import BR, m_bi_real_unscr_4x
 from gen_fft_unscrambler_test_data import FU, m_fft_unscrambler
 from gen_fft_mem_files import (bit_rev, direct_coeffs, twiddle_kind, write_biplex_real_4x,
                                write_direct, write_wideband_real)
+from gen_twiddle_coeffs import COEFF_DEFAULTS, coeff_options, coeff_params
+
+
+def mem_coeff_opts(p, module):
+    """gen_fft_mem_files coeff_opts of a set of module (its COEFF_KEYS, else
+    the module's defaults)."""
+    opts = coeff_options(dict(p, **coeff_params(p, COEFF_DEFAULTS[module])), 0)
+    del opts["step_period"]
+    return opts
 
 SCRIPT = Path(__file__).name
 CATEGORY = "FFTs"
@@ -129,7 +138,8 @@ def m_fft_direct(p, st):
                   "ADD_LATENCY": p["ADD_LATENCY"], "MULT_LATENCY": p["MULT_LATENCY"],
                   "BRAM_LATENCY": p["BRAM_LATENCY"], "CONV_LATENCY": p["CONV_LATENCY"],
                   "QUANTIZATION": p["QUANTIZATION"], "OVERFLOW": p["OVERFLOW"],
-                  "MAX_FANOUT": p["MAX_FANOUT"]}
+                  "MAX_FANOUT": p["MAX_FANOUT"],
+                  **coeff_params(p, COEFF_DEFAULTS["fft_direct"])}
             bst = {"a_re": a["re"], "a_im": a["im"], "b_re": b["re"], "b_im": b["im"],
                    "sync_in": s_in, "shift": [(x >> s) & 1 for x in st["shift"]]}
             outs[(s, u)] = m_butterfly(bp, coeffs, bst)
@@ -230,7 +240,8 @@ def gen_fft_direct():
         for old in d.glob("*.mem"):
             old.unlink()
         files = write_direct(d, f, p["COEFF_BIT_WIDTH"], bool(p["MAP_TAIL"]),
-                             p["LARGER_FFT_SIZE"], p["START_STAGE"])
+                             p["LARGER_FFT_SIZE"], p["START_STAGE"],
+                             coeff_opts=mem_coeff_opts(p, "fft_direct"))
         full = dict(p, COEFF_DIR=MEM_REL.format(module=name, n=n))
         (d / "params.json").write_text(json.dumps(full, indent=2) + "\n")
         for k in ("din_re", "din_im", "sync", "shift"):
@@ -281,6 +292,7 @@ def m_fft_biplex_real_4x(p, st):
                 p["ADD_LATENCY"], p["MULT_LATENCY"], p["BRAM_LATENCY"], p["CONV_LATENCY"],
                 p["QUANTIZATION"], p["OVERFLOW"], p["DELAYS_BIT_LIMIT"], p["MAX_FANOUT"],
                 p["BITGROWTH"], p["MAX_BITS"], p["HARDCODE_SHIFTS"], p["SHIFT_SCHEDULE"]])
+    bc.update(coeff_params(p, COEFF_DEFAULTS["fft_biplex_real_4x"]))
     bst = {"pol1_re": lanes(st["pol_in"], [4 * j for j in range(nb)]),
            "pol1_im": lanes(st["pol_in"], [4 * j + 1 for j in range(nb)]),
            "pol2_re": lanes(st["pol_in"], [4 * j + 2 for j in range(nb)]),
@@ -375,7 +387,8 @@ def gen_fft_biplex_real_4x():
         chk = "n/a" if full_scale else check_biplex4x_is_fft(p, st, out)
         d = mdir / f"simdata{n}"
         d.mkdir(parents=True, exist_ok=True)
-        write_biplex_real_4x(d, f, p["COEFF_BIT_WIDTH"])
+        write_biplex_real_4x(d, f, p["COEFF_BIT_WIDTH"],
+                             coeff_opts=mem_coeff_opts(p, "fft_biplex_real_4x"))
         bram_delays, bram_map, w_out = biplex4x_derived(p)
         rel = MEM_REL.format(module=name, n=n)
         full = dict(p, COEFF_DIR=rel, MAP_DIR=rel)
@@ -432,6 +445,7 @@ def m_fft_wideband_real(p, st):
                  p["QUANTIZATION"], p["OVERFLOW"], p["DELAYS_BIT_LIMIT"], p["COEFFS_BIT_LIMIT"],
                  p["MAX_FANOUT"], p["BITGROWTH"], p["MAX_BITS"], p["HARDCODE_SHIFTS"],
                  p["SHIFT_SCHEDULE"] & ((1 << fb) - 1)])
+    q4.update(coeff_params(p, COEFF_DEFAULTS["fft_wideband_real"]))
     b4 = m_fft_biplex_real_4x(q4, {"pol_in": delay(st["din"], il, [0] * nin),
                                    "sync": delay(st["sync"], il, 0),
                                    "shift": [x & ((1 << fb) - 1) for x in st["shift"]]})
@@ -440,6 +454,7 @@ def m_fft_wideband_real(p, st):
                 p["ADD_LATENCY"], p["MULT_LATENCY"], p["BRAM_LATENCY"], p["CONV_LATENCY"],
                 p["QUANTIZATION"], p["OVERFLOW"], p["MAX_FANOUT"], p["BITGROWTH"], p["MAX_BITS"],
                 p["HARDCODE_SHIFTS"], p["SHIFT_SCHEDULE"] >> fb])
+    qd.update(coeff_params(p, COEFF_DEFAULTS["fft_wideband_real"]))
     dr = m_fft_direct(qd, {"din_re": delay(b4["pol_out_re"], bdl, [0] * nin),
                            "din_im": delay(b4["pol_out_im"], bdl, [0] * nin),
                            "sync": delay(b4["sync_out"], bdl, 0),
@@ -566,7 +581,8 @@ def gen_fft_wideband_real():
         d.mkdir(parents=True, exist_ok=True)
         for old in d.glob("*.mem"):
             old.unlink()
-        write_wideband_real(d, f, ni, p["COEFF_BIT_WIDTH"], bool(p["UNSCRAMBLE"]))
+        write_wideband_real(d, f, ni, p["COEFF_BIT_WIDTH"], bool(p["UNSCRAMBLE"]),
+                            coeff_opts=mem_coeff_opts(p, "fft_wideband_real"))
         full = dict(p, MEM_DIR=MEM_REL.format(module=name, n=n))
         (d / "params.json").write_text(json.dumps(dict(full, N_BITS_OUT=dv["w_out"]), indent=2) + "\n")
         for k in ("din", "sync", "shift"):

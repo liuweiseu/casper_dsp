@@ -42,7 +42,11 @@
 //
 // LATENCY (data and sync_out) = TWIDDLE_LATENCY + ADD_LATENCY + MUX_LATENCY +
 // CONV_LATENCY, MUX_LATENCY = 1 for dynamic shifting, 0 otherwise; of comes
-// one cycle later.
+// one cycle later. TWIDDLE_LATENCY (as casper): 0 for twiddle_pass_through,
+// 1+MULT+ADD+CONV for twiddle_coeff_0 / _1, BRAM+MULT+ADD+CONV for
+// twiddle_stage_2, BRAM+MULT+2*ADD+2*CONV+2 for twiddle_general with a table
+// and MULT+ADD+CONV for twiddle_general with one coefficient. The shift select
+// is not delayed with the twiddle (FAN_LATENCY only), as in casper.
 //
 // Declared for traceability only (not implemented in v1): ASYNC and
 // FLOATING_POINT must be 0; FLOAT_TYPE, EXP_WIDTH, FRAC_WIDTH,
@@ -309,18 +313,18 @@ module butterfly_direct #(
         (N_COEFFS == 2 && COEFF_0 == 0 && COEFF_1 == 1 && STEP_PERIOD == FFT_SIZE - 2) ? TW_STAGE_2 :
                                           TW_GENERAL;
 
-    // A single-coefficient twiddle_general is a constant in casper (coeff_gen
-    // without a table), with the 1+mult+add+conv latency of twiddle_coeff_0
-    // ("must match twiddle_general with single coefficient so that latencies
-    // match when used in fft_direct", twiddle_coeff_0_init.m): its coefficient
-    // read latency is 1 here, whatever BRAM_LATENCY is.
-    localparam int TW_BRAM_LATENCY = (N_COEFFS == 1) ? 1 : BRAM_LATENCY;
-
+    // twiddle latencies as casper builds them: twiddle_general carries the data
+    // on coeff_gen's misc path (cosin lookup: bram + add + conv + 2; a single
+    // coefficient is a Constant, 0), then bus_mult and bus_convert
     localparam int TWIDDLE_LATENCY =
         (TWIDDLE_TYPE == TW_PASS_THROUGH) ? 0 :
         (TWIDDLE_TYPE == TW_COEFF_0 || TWIDDLE_TYPE == TW_COEFF_1)
-            ? 1 + MULT_LATENCY + ADD_LATENCY + CONV_LATENCY
-            : TW_BRAM_LATENCY + MULT_LATENCY + ADD_LATENCY + CONV_LATENCY;
+            ? 1 + MULT_LATENCY + ADD_LATENCY + CONV_LATENCY :
+        (TWIDDLE_TYPE == TW_STAGE_2)
+            ? BRAM_LATENCY + MULT_LATENCY + ADD_LATENCY + CONV_LATENCY :
+        (N_COEFFS == 1)
+            ? MULT_LATENCY + ADD_LATENCY + CONV_LATENCY
+            : BRAM_LATENCY + MULT_LATENCY + 2 * ADD_LATENCY + 2 * CONV_LATENCY + 2;
 
     localparam int DYNAMIC     = (BITGROWTH == 0 && HARDCODE_SHIFTS == 0) ? 1 : 0;
     localparam int MUX_LATENCY = DYNAMIC;
@@ -389,7 +393,7 @@ module butterfly_direct #(
                 .STEP_PERIOD(STEP_PERIOD), .INPUT_BIT_WIDTH(IW), .BIN_PT_IN(BP),
                 .COEFF_BIT_WIDTH(COEFF_BIT_WIDTH), .MULT_LATENCY(MULT_LATENCY),
                 .ADD_LATENCY(ADD_LATENCY), .CONV_LATENCY(CONV_LATENCY),
-                .BRAM_LATENCY(TW_BRAM_LATENCY), .QUANTIZATION(QUANTIZATION),
+                .BRAM_LATENCY(BRAM_LATENCY), .QUANTIZATION(QUANTIZATION),
                 .OVERFLOW(OVERFLOW), .INIT_FILE(INIT_FILE), .PLATFORM(PLATFORM)
             ) u_twiddle (
                 .clk(clk), .ai_re(a_re), .ai_im(a_im), .bi_re(b_re), .bi_im(b_im),

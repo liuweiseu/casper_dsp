@@ -1,15 +1,23 @@
 // twiddle_general — general twiddle stage: bwo = bi · w[k], ao = ai (delayed)
 //
 // Corresponds to casper_library's twiddle_general (fixed-point, synchronous
-// path). N_INPUTS complex lanes share one coefficient per cycle:
+// path), with casper's structure and timing. N_INPUTS complex lanes share one
+// coefficient per cycle:
 //
 //   sync_in ─► counter (reset by sync) ─► addr = cnt >> STEP_PERIOD
 //                                          │
 //                                          ▼
-//                  rom (INIT_FILE, {re,im}) ─► pipeline(BRAM_LATENCY-1) ─► w
-//   bi ─► pipeline(BRAM_LATENCY) ────────────────────────────────────────► ×w
+//                  rom (INIT_FILE, {re,im}) ─► pipeline(CG_LATENCY-1) ─► w
+//   bi ─► pipeline(CG_LATENCY) ──────────────────────────────────────────► ×w
 //        ─► complex_multiplier (exact) ─► convert (QUANTIZATION, OVERFLOW) ─► bwo
 //   ai, sync_in ─► pipeline(LATENCY) ─► ao, sync_out
+//
+// casper's coeff_gen carries ai / bi / sync on its misc path, delayed like
+// the coefficients: CG_LATENCY = BRAM_LATENCY + ADD_LATENCY + CONV_LATENCY + 2
+// for a table (cosin: bram, then mux + add + conv address manipulation and
+// mux + neg inversion with mux_latency 1, neg_latency 0). A single
+// coefficient (N_COEFFS = 1) is two Constants: no counter, no rom,
+// CG_LATENCY = 0, and the value is row 0 of INIT_FILE.
 //
 // Coefficient schedule: the counter is cleared by sync_in, so the sample
 // arriving the cycle after a sync pulse (CASPER's first sample of a frame) is
@@ -20,7 +28,11 @@
 // The table comes from rtl/FFTs/Twiddle/scripts/gen_twiddle_coeffs.py: row k = w[k] =
 // exp(-2πj · bit_rev(Coeffs[k], FFT_SIZE-1) / 2^FFT_SIZE), each part a
 // COEFF_BIT_WIDTH-bit signed word with binary point COEFF_BIT_WIDTH-1,
-// packed {re, im} (re in the upper half).
+// packed {re, im} (re in the upper half). The words are the ones casper's
+// cosin lookup outputs for the module's STEP_PERIOD / COEFFS_BIT_LIMIT /
+// COEFF_SHARING / COEFF_DECIMATION: +1.0 is the largest word and a -1.0 that
+// cosin derives by negating it is -(1 - 2^-(COEFF_BIT_WIDTH-1)), as in Simulink
+// (a fixed-point convention, not a library bug).
 //
 // Formats (as casper_library's twiddle_general):
 //   ai, bi, ao    : INPUT_BIT_WIDTH bits, binary point BIN_PT_IN, signed
@@ -31,10 +43,11 @@
 //   rtl/Bus/convert: 0=truncate, 1=round ±inf, 2=round even / 0=wrap,
 //   1=saturate).
 //
-// Latency of every output: LATENCY = BRAM_LATENCY + MULT_LATENCY +
-// ADD_LATENCY + CONV_LATENCY. With BRAM_LATENCY = 1 this equals the
-// 1+mult_latency+add_latency+conv_latency of twiddle_coeff_0 / twiddle_coeff_1,
-// so butterfly_direct can swap the variants without re-timing.
+// Latency of every output: LATENCY = CG_LATENCY + MULT_LATENCY +
+// ADD_LATENCY + CONV_LATENCY, i.e. BRAM_LATENCY + MULT_LATENCY +
+// 2*ADD_LATENCY + 2*CONV_LATENCY + 2 with a table and MULT_LATENCY +
+// ADD_LATENCY + CONV_LATENCY with a single coefficient (as Simulink). The
+// shift / of paths of the enclosing butterfly are not delayed with it.
 //
 // ASYNC = 1 (casper async): en enables the coefficient address counter, so
 // the coefficients step over valid samples only; dvalid = en delayed LATENCY.
@@ -57,12 +70,11 @@
 // @simulink-mapping begin
 // block = 'casper_library_ffts_twiddle.slx/twiddle_general'
 // deviations = [
-//   "latency differs from Simulink: the HDL has LATENCY = BRAM_LATENCY+MULT_LATENCY+ADD_LATENCY+CONV_LATENCY on ao/bwo/sync_out, but casper routes ai/bi/sync through coeff_gen's misc path (twiddle_general_init.m:180-183) so in the common cosin case (in-order Coeffs, or coeff_generation off) they gain the cosin latency bram+add+conv+2 (cosin_init.m:917 mux+add+conv with mux_latency 1, :240 bram, :1018 mux+neg with neg_latency 0; coeff_gen_init.m:452), then bus_mult mult+add (fan_latency 0) and bus_convert conv: bram+mult+2*add+2*conv+2 in total, add+conv+2 cycles more than the HDL (derived from the init scripts, not simulated)",
-//   'with a single coefficient Simulink uses two Constants (no ROM, no latency) quantized to coeff_bit_width-2 fractional bits (coeff_gen_init.m:156-157) giving mult+add+conv latency; the HDL always uses the ROM (COEFF_BIT_WIDTH-1 fractional bits) and BRAM_LATENCY (>= 1) more cycles',
+//   'with a single coefficient Simulink quantizes the Constants to coeff_bit_width-2 fractional bits (coeff_gen_init.m:156-157); the HDL uses row 0 of INIT_FILE as given (rtl/FFTs/Twiddle/scripts/gen_twiddle_coeffs.py applies that rounding for a one-entry list)',
 //   "for bit-reversed Coeffs with coeff_generation='on' and log2(length(Coeffs)) > ceil(log2(mult+add+conv+1))+cal_bits, Simulink generates coefficients with feedback_osc (recursive rotation at n_bits_rotation precision, different latency; coeff_gen_init.m:534) - values and timing then differ from the HDL's flat ROM; COEFF_GENERATION/CAL_BITS/N_BITS_ROTATION are ignored",
-//   "coefficient words: the HDL table (gen_twiddle_coeffs.py) rounds half away from zero and saturates each w[k] directly; cosin stores a partial cycle and derives the rest by negation/swap (Negate 'Saturate', cosin_init.m invert_init), so values at |w| = 1 (e.g. -1.0 = -(saturated +1)) may differ by 1 LSB (unverified)",
+//   "coefficient words: gen_twiddle_coeffs.py reproduces cosin's storage and negation scheme (coeff_gen_init.m store / pack decisions, cosin_init.m add_convert / invert), so the words match Simulink, including -(1 - 2^-(coeff_bit_width-1)) for a -1.0 derived by negating the saturated +1.0 (checked bit-exact against MATLAB R2021a for the FFT sets). Two exceptions: the quarter-cycle backwards address at 0 holds the intended value (mlib_devel bug 15), and in-order Coeffs with FFT_SIZE - STEP_PERIOD - log2(N_COEFFS) != 1, for which cosin's angles 2*pi*bit_rev(k)/2^(FFT_SIZE-STEP_PERIOD) are not the Coeffs formula, get the formula values",
 //   'the HDL accepts any N_COEFFS (also non-powers of two, arbitrary order); coeff_gen_init.m:282-290 errors unless the FFT size is a power-of-two multiple of length(Coeffs) and Coeffs are in order or bit-reversed',
-//   "the address counter is cleared by sync_in in both models (coeff_gen Counter rst='on'); the HDL requires BRAM_LATENCY >= 1 ($fatal), Simulink accepts 0",
+//   "the address counter is cleared by sync_in in both models (coeff_gen Counter rst='on')",
 //   'add_pipe_latency / mult_pipe_latency (bus_mult pipeline_cmult_en) and max_fanout / use_hdl / use_embedded (multiplier implementation) are not modelled',
 //   'test vectors in casper_dsp/test_data/FFTs/Twiddle/twiddle_general/test_data.md come from a Python reference model (not exported from MATLAB), so cycle/bit equivalence with the Simulink block is unverified',
 // ]
@@ -236,7 +248,10 @@ module twiddle_general #(
     output logic                       dvalid
 );
 
-    localparam int LATENCY     = BRAM_LATENCY + MULT_LATENCY + ADD_LATENCY + CONV_LATENCY;
+    // casper: coeff_gen delays ai / bi / sync (and en) on its misc path by the
+    // coefficient latency; bus_mult / bus_convert carry ai / sync on theirs
+    localparam int CG_LATENCY  = (N_COEFFS == 1) ? 0 : BRAM_LATENCY + ADD_LATENCY + CONV_LATENCY + 2;
+    localparam int LATENCY     = CG_LATENCY + MULT_LATENCY + ADD_LATENCY + CONV_LATENCY;
     localparam int PERIOD      = N_COEFFS << STEP_PERIOD;     // counter period
     localparam int CNT_BITS    = (PERIOD > 1) ? $clog2(PERIOD) : 1;
     localparam int ADDR_WIDTH  = (N_COEFFS > 1) ? $clog2(N_COEFFS) : 1;
@@ -245,57 +260,76 @@ module twiddle_general #(
     localparam int BIN_PT_PROD = BIN_PT_IN + COEFF_BIT_WIDTH - 1;
 
     if (FLOATING_POINT != 0) $fatal(1, "twiddle_general: FLOATING_POINT is not implemented");
-    if (BRAM_LATENCY < 1)    $fatal(1, "twiddle_general: BRAM_LATENCY must be >= 1 (rom read latency)");
+    if (BRAM_LATENCY < 0)    $fatal(1, "twiddle_general: BRAM_LATENCY must be >= 0");
 
-    // ── coefficient address: counter cleared by sync_in ─────────────────────
-    // ASYNC = 1: the counter only advances on en = 1 (coeff_gen Counter en,
-    // coeff_gen_init.m:408-416); sync still clears it (rst wins over en)
-    logic [CNT_BITS-1:0]   cnt;
-    logic [ADDR_WIDTH-1:0] addr;
+    logic [2*CW-1:0] coeff;
 
-    counter #(
-        .COUNTER_TYPE   (1),              // count_limit: 0 .. PERIOD-1
-        .NBITS          (CNT_BITS),
-        .COUNT_TO_VAL   (PERIOD - 1),
-        .COUNT_DIR      (0),
-        .INIT_VAL       (0),
-        .STEP           (1),
-        .ENABLE_SYNC_RST(1),
-        .ENABLE_ENABLE  (int'(ASYNC != 0))
-    ) u_counter (
-        .clk   (clk),
-        .rst   (sync_in),
-        .enable(en),
-        .dout  (cnt)
-    );
+    generate
+        if (N_COEFFS == 1) begin : GEN_CONST
+            // single coefficient: two Constants, no counter and no latency
+            // (coeff_gen_init.m:148-170); the value is row 0 of INIT_FILE
+            logic [2*CW-1:0] cmem [0:0];
+            initial begin
+                cmem[0] = '0;
+                if (INIT_FILE != "") $readmemh(INIT_FILE, cmem);
+            end
+            assign coeff = cmem[0];
+        end else begin : GEN_TABLE
+            // coefficient address: free-running counter cleared by sync_in
+            // (coeff_gen_init.m:408-422, Slice of the upper log2(N_COEFFS)
+            // bits). ASYNC = 1: it only advances on en = 1; sync still clears
+            // it (rst wins over en)
+            logic [CNT_BITS-1:0]   cnt;
+            logic [ADDR_WIDTH-1:0] addr;
+            logic [2*CW-1:0]       coeff_rom;
 
-    assign addr = ADDR_WIDTH'(cnt >> STEP_PERIOD);
+            counter #(
+                .COUNTER_TYPE   (1),              // count_limit: 0 .. PERIOD-1
+                .NBITS          (CNT_BITS),
+                .COUNT_TO_VAL   (PERIOD - 1),
+                .COUNT_DIR      (0),
+                .INIT_VAL       (0),
+                .STEP           (1),
+                .ENABLE_SYNC_RST(1),
+                .ENABLE_ENABLE  (int'(ASYNC != 0))
+            ) u_counter (
+                .clk   (clk),
+                .rst   (sync_in),
+                .enable(en),
+                .dout  (cnt)
+            );
 
-    // ── coefficient table ───────────────────────────────────────────────────
-    logic [2*CW-1:0] coeff_rom, coeff;
+            assign addr = ADDR_WIDTH'(cnt >> STEP_PERIOD);
 
-    rom #(
-        .DATA_WIDTH(2 * CW),
-        .ADDR_WIDTH(ADDR_WIDTH),
-        .INIT_FILE (INIT_FILE),
-        .PLATFORM  (PLATFORM)
-    ) u_rom (
-        .clk (clk),
-        .addr(addr),
-        .dout(coeff_rom)
-    );
+            // cosin lookup: CG_LATENCY = bram + (mux + add + conv) address
+            // manipulation + (mux + neg) inversion, mux_latency 1 and
+            // neg_latency 0 (coeff_gen_init.m:452; cosin_init.m:240, 917, 1018).
+            // Here: a 1-cycle rom read plus the rest as a pipeline
+            rom #(
+                .DATA_WIDTH(2 * CW),
+                .ADDR_WIDTH(ADDR_WIDTH),
+                .INIT_FILE (INIT_FILE),
+                .PLATFORM  (PLATFORM)
+            ) u_rom (
+                .clk (clk),
+                .addr(addr),
+                .dout(coeff_rom)
+            );
 
-    pipeline #(.BITWIDTH(2 * CW), .CSP_LATENCY(BRAM_LATENCY - 1)) u_coeff_dly (
-        .clk(clk), .din(coeff_rom), .dout(coeff));
+            pipeline #(.BITWIDTH(2 * CW), .CSP_LATENCY(CG_LATENCY - 1)) u_coeff_dly (
+                .clk(clk), .din(coeff_rom), .dout(coeff));
+        end
+    endgenerate
 
     // ── bi × w per lane ─────────────────────────────────────────────────────
     for (genvar n = 0; n < N_INPUTS; n++) begin : GEN_LANE
         logic [INPUT_BIT_WIDTH-1:0] b_re_d, b_im_d;
         logic [N_BITS_PROD-1:0]     p_re, p_im;
 
-        pipeline #(.BITWIDTH(INPUT_BIT_WIDTH), .CSP_LATENCY(BRAM_LATENCY)) u_b_re_dly (
+        // bi on coeff_gen's misc path
+        pipeline #(.BITWIDTH(INPUT_BIT_WIDTH), .CSP_LATENCY(CG_LATENCY)) u_b_re_dly (
             .clk(clk), .din(bi_re[n]), .dout(b_re_d));
-        pipeline #(.BITWIDTH(INPUT_BIT_WIDTH), .CSP_LATENCY(BRAM_LATENCY)) u_b_im_dly (
+        pipeline #(.BITWIDTH(INPUT_BIT_WIDTH), .CSP_LATENCY(CG_LATENCY)) u_b_im_dly (
             .clk(clk), .din(bi_im[n]), .dout(b_im_d));
 
         // exact product (quantization 0 / overflow 0 cannot lose anything
@@ -331,7 +365,7 @@ module twiddle_general #(
             .QUANTIZATION(QUANTIZATION), .OVERFLOW(OVERFLOW), .CSP_LATENCY(CONV_LATENCY)
         ) u_conv_im (.clk(clk), .din(p_im), .dout(bwo_im[n]), .overflow(), .misco());
 
-        // ── a leg: delay-matched only ──────────────────────────────────────
+        // ── a leg: coeff_gen, bus_mult and bus_convert misc paths ──────────
         pipeline #(.BITWIDTH(INPUT_BIT_WIDTH), .CSP_LATENCY(LATENCY)) u_a_re_dly (
             .clk(clk), .din(ai_re[n]), .dout(ao_re[n]));
         pipeline #(.BITWIDTH(INPUT_BIT_WIDTH), .CSP_LATENCY(LATENCY)) u_a_im_dly (

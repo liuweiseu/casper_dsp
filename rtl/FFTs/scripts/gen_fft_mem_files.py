@@ -65,8 +65,11 @@ def write_lines(path, lines):
     Path(path).write_text("".join(x + "\n" for x in lines))
 
 
-def write_direct(out_dir, fft_size, coeff_bit_width, map_tail=False, larger=None, start=None):
-    """Write fft_direct's general twiddle tables; returns the file names."""
+def write_direct(out_dir, fft_size, coeff_bit_width, map_tail=False, larger=None, start=None, *,
+                 coeff_opts):
+    """Write fft_direct's general twiddle tables; returns the file names.
+    coeff_opts: gen_twiddle_coeffs.twiddle_table's casper options except
+    step_period (fft_direct's butterflies have StepPeriod 0)."""
     out_dir, names = Path(out_dir), []
     out_dir.mkdir(parents=True, exist_ok=True)
     for s in range(fft_size):
@@ -76,21 +79,24 @@ def write_direct(out_dir, fft_size, coeff_bit_width, map_tail=False, larger=None
                 continue
             name = f"twiddle_direct_s{s}_{u}.mem"
             write_lines(out_dir / name, twiddle_mem_lines(
-                twiddle_table(coeffs, size, coeff_bit_width), coeff_bit_width))
+                twiddle_table(coeffs, size, coeff_bit_width, step_period=0, **coeff_opts),
+                coeff_bit_width))
             names.append(name)
     return names
 
 
 # ── fft_biplex_real_4x ──────────────────────────────────────────────────────
 
-def write_biplex_real_4x(out_dir, fft_size, coeff_bit_width):
+def write_biplex_real_4x(out_dir, fft_size, coeff_bit_width, *, coeff_opts):
     out_dir, names = Path(out_dir), []
     out_dir.mkdir(parents=True, exist_ok=True)
     for s in range(3, fft_size + 1):           # biplex_core stages >= 3 use twiddle_general
         name = f"twiddle_stage{s}.mem"
         coeffs = list(range(1 << (s - 1)))
         write_lines(out_dir / name, twiddle_mem_lines(
-            twiddle_table(coeffs, fft_size, coeff_bit_width), coeff_bit_width))
+            twiddle_table(coeffs, fft_size, coeff_bit_width, step_period=fft_size - s,
+                          **dict(coeff_opts, coeff_generation=0)),   # fft_stage_n_init.m:501
+            coeff_bit_width))
         names.append(name)
     for which in ("even", "odd", "out"):
         name = f"map_{which}.mem"
@@ -101,10 +107,12 @@ def write_biplex_real_4x(out_dir, fft_size, coeff_bit_width):
 
 # ── fft_wideband_real ───────────────────────────────────────────────────────
 
-def write_wideband_real(out_dir, fft_size, n_inputs, coeff_bit_width, unscramble=True):
-    names = write_biplex_real_4x(out_dir, fft_size - n_inputs, coeff_bit_width)
+def write_wideband_real(out_dir, fft_size, n_inputs, coeff_bit_width, unscramble=True, *,
+                        coeff_opts):
+    names = write_biplex_real_4x(out_dir, fft_size - n_inputs, coeff_bit_width,
+                                 coeff_opts=coeff_opts)
     names += write_direct(out_dir, n_inputs, coeff_bit_width, map_tail=True,
-                          larger=fft_size, start=fft_size - n_inputs + 1)
+                          larger=fft_size, start=fft_size - n_inputs + 1, coeff_opts=coeff_opts)
     if unscramble and n_inputs > 1:
         name = "map_unscrambler.mem"
         write_lines(Path(out_dir) / name,
@@ -127,20 +135,32 @@ def main():
     w.add_argument("--fft-size", type=int, required=True)
     w.add_argument("--n-inputs", type=int, required=True)
     w.add_argument("--no-unscramble", action="store_true")
-    for p in (d, b, w):
+    for p, limit in ((d, 9), (b, 8), (w, 8)):
         p.add_argument("--coeff-bit-width", type=int, required=True)
+        p.add_argument("--coeffs-bit-limit", type=int, default=limit,
+                       help=f"COEFFS_BIT_LIMIT (default {limit}, the module's)")
+        p.add_argument("--coeff-sharing", type=int, default=1)
+        p.add_argument("--coeff-decimation", type=int, default=1)
+        p.add_argument("--coeff-generation", type=int, default=1)
+        p.add_argument("--latency-sum", type=int, default=4,
+                       help="MULT_LATENCY + ADD_LATENCY + CONV_LATENCY (default 4)")
+        p.add_argument("--cal-bits", type=int, default=1)
         p.add_argument("-o", "--output-dir", required=True)
     args = ap.parse_args()
+    opts = dict(coeffs_bit_limit=args.coeffs_bit_limit, coeff_sharing=args.coeff_sharing,
+                coeff_decimation=args.coeff_decimation, coeff_generation=args.coeff_generation,
+                latency_sum=args.latency_sum, cal_bits=args.cal_bits)
     if args.block == "direct":
         if args.map_tail and (args.larger_fft_size is None or args.start_stage is None):
             ap.error("--map-tail needs --larger-fft-size and --start-stage")
         names = write_direct(args.output_dir, args.fft_size, args.coeff_bit_width,
-                             args.map_tail, args.larger_fft_size, args.start_stage)
+                             args.map_tail, args.larger_fft_size, args.start_stage, coeff_opts=opts)
     elif args.block == "biplex_real_4x":
-        names = write_biplex_real_4x(args.output_dir, args.fft_size, args.coeff_bit_width)
+        names = write_biplex_real_4x(args.output_dir, args.fft_size, args.coeff_bit_width,
+                                     coeff_opts=opts)
     else:
         names = write_wideband_real(args.output_dir, args.fft_size, args.n_inputs,
-                                    args.coeff_bit_width, not args.no_unscramble)
+                                    args.coeff_bit_width, not args.no_unscramble, coeff_opts=opts)
     print(f"wrote {len(names)} files to {args.output_dir}: {' '.join(names) or '(none needed)'}")
 
 

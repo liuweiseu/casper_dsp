@@ -13,9 +13,11 @@ LATENCY = 1 + MULT_LATENCY + ADD_LATENCY + CONV_LATENCY
 
 This is casper_library's formula. Its source comments that the latency "must
 match twiddle_general with single coefficient", so that `butterfly_direct`
-can swap twiddle variants transparently. In this repo that holds for a
-[`twiddle_general`](twiddle_general.md) with `BRAM_LATENCY = 1`. As in
-casper_library, `BRAM_LATENCY` is accepted but does not enter the formula.
+can swap twiddle variants transparently. It does not hold: a
+single-coefficient [`twiddle_general`](twiddle_general.md) uses a constant
+coefficient and has `MULT_LATENCY + ADD_LATENCY + CONV_LATENCY`, one cycle
+less, in casper and in this repo. As in casper_library, `BRAM_LATENCY` is
+accepted but does not enter the formula.
 
 ## Parameters
 

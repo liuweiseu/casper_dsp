@@ -33,7 +33,7 @@ from pathlib import Path
 
 from common import TEST_DATA_ROOT, run_cli                  # also puts rtl/.../scripts on sys.path
 from gen_fixed_point_test_data import quantize, to_value
-from gen_twiddle_coeffs import mem_lines, twiddle_table    # rtl/FFTs/Twiddle/scripts/
+from gen_twiddle_coeffs import COEFF_DEFAULTS, coeff_options, coeff_params, mem_lines, twiddle_table    # rtl/FFTs/Twiddle/scripts/
 
 SCRIPT = Path(__file__).name
 CATEGORY = "FFTs/Twiddle"
@@ -91,11 +91,19 @@ def lane_stim(rng, width, n, cycles):
 
 # ── reference models ────────────────────────────────────────────────────────
 
+def general_latency(p):
+    """twiddle_general latency as casper builds it: coeff_gen's misc path
+    (cosin: bram + add + conv + 2; a single coefficient is a Constant, 0),
+    then bus_mult (mult + add) and bus_convert (conv)."""
+    cg = 0 if p["N_COEFFS"] == 1 else p["BRAM_LATENCY"] + p["ADD_LATENCY"] + p["CONV_LATENCY"] + 2
+    return cg + p["MULT_LATENCY"] + p["ADD_LATENCY"] + p["CONV_LATENCY"]
+
+
 def m_twiddle_general(p, st, table):
     n, w = p["N_INPUTS"], p["INPUT_BIT_WIDTH"]
     bp, cw = p["BIN_PT_IN"], p["COEFF_BIT_WIDTH"]
     period = p["N_COEFFS"] << p["STEP_PERIOD"]
-    lat = p["BRAM_LATENCY"] + p["MULT_LATENCY"] + p["ADD_LATENCY"] + p["CONV_LATENCY"]
+    lat = general_latency(p)
     cycles = len(st["sync_in"])
 
     cnt, addr = 0, []
@@ -226,7 +234,7 @@ GENERAL_TESTS = [
     ([2, 5, 7], [1, 4, 1, 16, 15, 16, 2, 1, 1, 1, 1, 0], 512,
      "3 coefficients (not a power of two), held 2 cycles"),
     ([3], [4, 3, 0, 8, 7, 8, 0, 0, 0, 1, 1, 1], 256,
-     "single coefficient, 4 lanes, only the rom latency"),
+     "single coefficient, 4 lanes: a constant, latency mult + add + conv only"),
     ([0, 8, 4, 12, 2, 10, 6, 14, 1, 9, 5, 13, 3, 11, 7, 15], [1, 6, 0, 18, 17, 18, 3, 2, 2, 2, 1, 0],
      1024, "16 bit-reversed coefficients of a 64-point FFT, BRAM_LATENCY 2"),
 ]
@@ -241,7 +249,12 @@ MODULES = {
               "`2^STEP_PERIOD` cycles, the schedule restarting at `w[0]` on the "
               "cycle after every sync pulse, requantized to "
               "`INPUT_BIT_WIDTH+1` bits (binary point `BIN_PT_IN`). Sync pulses "
-              "come once per schedule period, with one early re-sync mid-run.",
+              "come once per schedule period, with one early re-sync mid-run. "
+              "Every output is delayed by casper's latency: `BRAM_LATENCY + "
+              "MULT_LATENCY + 2·ADD_LATENCY + 2·CONV_LATENCY + 2` with a table "
+              "(coeff_gen's cosin misc path, then bus_mult and bus_convert), "
+              "`MULT_LATENCY + ADD_LATENCY + CONV_LATENCY` for a single "
+              "coefficient (a Constant).",
         tests=[(P(GEN, [v[0], v[1], len(c)] + v[2:]), cyc, d, c) for c, v, cyc, d in GENERAL_TESTS],
         frame=lambda p: p["N_COEFFS"] << p["STEP_PERIOD"]),
     "twiddle_pass_through": dict(
@@ -346,7 +359,9 @@ def write_module(name, spec):
         d.mkdir(parents=True, exist_ok=True)
         meta = full_params(name, n, params)
         if name == "twiddle_general":
-            table = twiddle_table(coeffs, params["FFT_SIZE"], params["COEFF_BIT_WIDTH"])
+            cp = dict(params, **coeff_params(params, COEFF_DEFAULTS["twiddle_general"]))
+            table = twiddle_table(coeffs, params["FFT_SIZE"], params["COEFF_BIT_WIDTH"],
+                                  **coeff_options(cp, params["STEP_PERIOD"]))
             (d / "twiddle.mem").write_text(
                 "".join(line + "\n" for line in mem_lines(table, params["COEFF_BIT_WIDTH"])))
             out = m_twiddle_general(params, st, table)

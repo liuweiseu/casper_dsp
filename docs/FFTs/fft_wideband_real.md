@@ -94,6 +94,11 @@ python3 rtl/FFTs/scripts/gen_fft_mem_files.py wideband_real --fft-size F --n-inp
         --coeff-bit-width W -o DIR/
 ```
 
+Pass the module's coefficient options too (`--coeffs-bit-limit`, `--coeff-sharing`,
+`--coeff-decimation`, `--coeff-generation`, `--latency-sum`, `--cal-bits`; see
+`--help`): the table words follow casper's `cosin` lookup, as described in
+[`twiddle_general`](Twiddle/twiddle_general.md).
+
 ### Ports
 
 - Element `k` of `din` is `in<s><n>` with `k = s·2^NI + n`.

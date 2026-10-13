@@ -26,7 +26,7 @@ from pathlib import Path
 
 from common import TEST_DATA_ROOT as TEST_DATA, run_cli           # also puts rtl/.../scripts on sys.path
 from gen_fixed_point_test_data import quantize, to_value
-from gen_twiddle_coeffs import mem_lines, twiddle_table             # rtl/FFTs/Twiddle/scripts/
+from gen_twiddle_coeffs import COEFF_DEFAULTS, coeff_options, coeff_params, mem_lines, twiddle_table             # rtl/FFTs/Twiddle/scripts/
 import gen_twiddle_test_data as tw
 
 SCRIPT = Path(__file__).name
@@ -174,6 +174,13 @@ def twiddle_type(p):
     return "general"
 
 
+def bf_coeff_options(p):
+    """twiddle_table options of a butterfly: its COEFF_KEYS (a container passes
+    its own), else butterfly_direct's defaults."""
+    cp = dict(p, **coeff_params(p, COEFF_DEFAULTS["butterfly_direct"]))
+    return coeff_options(cp, p["STEP_PERIOD"])
+
+
 def run_twiddle(p, coeffs, st):
     """Twiddle outputs as time series (no cycle-0 adjustment)."""
     kind = twiddle_type(p)
@@ -195,13 +202,10 @@ def run_twiddle(p, coeffs, st):
         out = tw.m_twiddle_stage_2(dict(common, FFT_SIZE=p["FFT_SIZE"]), tst)
         bw_width = p["INPUT_BIT_WIDTH"]
     else:
-        # single coefficient: casper's constant coeff_gen, read latency 1
-        if p["N_COEFFS"] == 1:
-            common = dict(common, BRAM_LATENCY=1)
         gp = dict(common, N_COEFFS=p["N_COEFFS"], STEP_PERIOD=p["STEP_PERIOD"],
                   COEFF_BIT_WIDTH=p["COEFF_BIT_WIDTH"], QUANTIZATION=p["QUANTIZATION"],
                   OVERFLOW=p["OVERFLOW"])
-        table = twiddle_table(coeffs, p["FFT_SIZE"], p["COEFF_BIT_WIDTH"])
+        table = twiddle_table(coeffs, p["FFT_SIZE"], p["COEFF_BIT_WIDTH"], **bf_coeff_options(p))
         out, bw_width = tw.m_twiddle_general(gp, tst, table), p["INPUT_BIT_WIDTH"] + 1
     return out, bw_width
 
@@ -255,10 +259,10 @@ def m_butterfly(p, coeffs, st):
 
     tw_lat = {"pass_through": 0,
               "coeff_0": 1 + p["MULT_LATENCY"] + p["ADD_LATENCY"] + p["CONV_LATENCY"],
-              "coeff_1": 1 + p["MULT_LATENCY"] + p["ADD_LATENCY"] + p["CONV_LATENCY"]}.get(
-        twiddle_type(p),
-        (1 if p["N_COEFFS"] == 1 else p["BRAM_LATENCY"]) + p["MULT_LATENCY"] + p["ADD_LATENCY"]
-        + p["CONV_LATENCY"])
+              "coeff_1": 1 + p["MULT_LATENCY"] + p["ADD_LATENCY"] + p["CONV_LATENCY"],
+              "stage_2": p["BRAM_LATENCY"] + p["MULT_LATENCY"] + p["ADD_LATENCY"]
+              + p["CONV_LATENCY"]}.get(
+        twiddle_type(p), tw.general_latency(p))
     if tw_lat + p["ADD_LATENCY"] + mux_lat + p["CONV_LATENCY"] == 0:
         # fully combinational: the first clock edge (t = 0) is before the
         # first input value arrives, so cycle 0 shows the all-zero result
@@ -307,7 +311,8 @@ def gen_butterfly():
         if twiddle_type(p) == "general":
             (d / "twiddle.mem").write_text("".join(
                 line + "\n" for line in mem_lines(
-                    twiddle_table(coeffs, fft, p["COEFF_BIT_WIDTH"]), p["COEFF_BIT_WIDTH"])))
+                    twiddle_table(coeffs, fft, p["COEFF_BIT_WIDTH"], **bf_coeff_options(p)),
+                    p["COEFF_BIT_WIDTH"])))
             full["INIT_FILE"] = MEM_REL.format(n=n)
         (d / "params.json").write_text(json.dumps(dict(full, COEFFS=coeffs), indent=2) + "\n")
         for port in LANE_IN + ["sync_in", "shift"]:
