@@ -1116,13 +1116,21 @@ are excluded from the Simulink comparison.
     `feedback_osc` with too few phase steps.
 
   They skip `twiddle_stage_2` set 2, `auto_tap` set 3, `tap_real` set 3,
-  `twiddle_general` sets 1 and 3, `scale` sets 3 and 4, `xeng_descramble`
-  set 2, `adder_subtractor` set 4, `convert` set 6 and `fft_wideband_real`
-  set 2; the HDL tests of these sets still run.
-- **HDL-only configurations:** `adder_tree` with `PRECISION != 0` (an HDL
-  extension that models the inner AddSubs `pfb_fir_real_init.m` sets) is an
-  `unsupported` entry; `tests/simulation.toml` lists no such set, and
-  `pfb_fir_real` covers it against Simulink.
+  `twiddle_general` sets 1 and 3, `xeng_descramble` set 2,
+  `adder_subtractor` set 4, `convert` set 4 and `fft_wideband_real` set 2;
+  the HDL tests of these sets still run.
+- **HDL-only configurations:** HDL extensions without a Simulink
+  counterpart are `unsupported` entries, and `tests/simulation.toml` lists
+  no set that uses them:
+  - `adder_tree` with `PRECISION != 0` (models the inner AddSubs
+    `pfb_fir_real_init.m` sets; `pfb_fir_real` covers it against Simulink);
+  - `convert` with an unsigned input or output (`TYPE_IN` / `TYPE_OUT = 0`;
+    `bus_convert` is always signed);
+  - `negate` with any format other than signed in = signed out of the same
+    width and binary point;
+  - `scale` other than a pure reinterpretation (`N_BITS_OUT = N_BITS_IN`,
+    `BIN_PT_OUT = BIN_PT_IN − SCALE_FACTOR`, `TYPE_OUT = TYPE_IN`,
+    `LATENCY = 0`).
 - **Coverage lost:** the HDL `twiddle_coeff_1` (and the
   `N_COEFFS = 1, COEFF_0 = 1` branch of `butterfly_direct`) and
   `fft_direct` with `MAP_TAIL = 0` and `FFT_SIZE ≥ 2` are no longer in the

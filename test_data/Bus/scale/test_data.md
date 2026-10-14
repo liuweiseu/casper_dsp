@@ -10,10 +10,9 @@ Encodings: `TYPE` 0=unsigned, 1=signed; `QUANTIZATION` 0=truncate, 1=round half 
 
 | Test # | Directory | N_BITS_IN | BIN_PT_IN | TYPE_IN | SCALE_FACTOR | N_BITS_OUT | BIN_PT_OUT | TYPE_OUT | QUANTIZATION | OVERFLOW | LATENCY | MISC | MISC_WIDTH | Cycles | Description |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 0 | `simdata0` | 16 | 8 | 1 | -3 | 16 | 8 | 1 | 2 | 0 | 1 | 0 | 1 | 128 | Fix_16_8 ÷ 8, round half to even |
-| 1 | `simdata1` | 8 | 4 | 1 | 2 | 8 | 4 | 1 | 0 | 1 | 0 | 0 | 1 | 128 | Fix_8_4 × 4, saturate, combinational |
-| 2 | `simdata2` | 8 | 4 | 1 | 2 | 8 | 4 | 1 | 0 | 0 | 1 | 0 | 1 | 128 | Fix_8_4 × 4, wrap |
-| 3 | `simdata3` | 8 | 8 | 0 | -1 | 8 | 8 | 0 | 1 | 0 | 2 | 0 | 1 | 128 | UFix_8_8 ÷ 2, round half away from zero, 2-stage pipeline |
-| 4 | `simdata4` | 8 | 2 | 1 | 5 | 12 | 0 | 1 | 0 | 0 | 1 | 0 | 1 | 128 | Fix_8_2 × 32 → Fix_12_0 (intermediate binary point −3), exact |
-| 5 | `simdata5` | 18 | 17 | 1 | -1 | 18 | 17 | 1 | 2 | 1 | 1 | 0 | 1 | 128 | Fix_18_17 ÷ 2, round even + saturate (FFT stage shift) |
-| 6 | `simdata6` | 16 | 8 | 1 | -3 | 16 | 11 | 1 | 0 | 0 | 0 | 1 | 4 | 128 | Fix_16_8 ÷ 8 as a pure reinterpretation to Fix_16_11 (the bus_scale-equivalent format, LATENCY 0), with misc: 4-bit misci → misco undelayed |
+| 0 | `simdata0` | 16 | 8 | 1 | -3 | 16 | 11 | 1 | 0 | 0 | 0 | 1 | 4 | 128 | Fix_16_8 ÷ 8 as a pure reinterpretation to Fix_16_11 (the bus_scale-equivalent format, LATENCY 0), with misc: 4-bit misci → misco undelayed |
+| 1 | `simdata1` | 8 | 4 | 1 | 2 | 8 | 2 | 1 | 0 | 0 | 0 | 0 | 1 | 128 | Fix_8_4 × 4 → Fix_8_2 (positive scale factor) |
+| 2 | `simdata2` | 18 | 17 | 1 | -1 | 18 | 18 | 1 | 0 | 0 | 0 | 0 | 1 | 128 | Fix_18_17 ÷ 2 → Fix_18_18 (FFT stage shift) |
+| 3 | `simdata3` | 8 | 4 | 0 | 3 | 8 | 1 | 0 | 0 | 0 | 0 | 0 | 1 | 128 | UFix_8_4 × 8 → UFix_8_1 (unsigned) |
+| 4 | `simdata4` | 16 | 8 | 1 | 8 | 16 | 0 | 1 | 0 | 0 | 0 | 0 | 1 | 128 | Fix_16_8 × 256 → Fix_16_0 (largest scale factor, SCALE_FACTOR = BIN_PT_IN) |
+| 5 | `simdata5` | 8 | 4 | 1 | -4 | 8 | 8 | 1 | 0 | 0 | 0 | 0 | 1 | 128 | Fix_8_4 ÷ 16 → Fix_8_8 (smallest scale factor, BIN_PT_IN − N_BITS_IN) |

@@ -321,23 +321,23 @@ MODULES = {
              "Fix_16_8 → Fix_8_4, round half away from zero + saturate"),
             (P(CONV, [16, 8, 1, 8, 4, 1, 2, 1, 2]),
              "Fix_16_8 → Fix_8_4, round half to even + saturate, 2-stage pipeline"),
-            (P(CONV, [8, 4, 0, 10, 6, 1, 0, 0, 1]),
-             "UFix_8_4 → Fix_10_6, exact bit growth (unsigned → signed)"),
-            (P(CONV, [12, 10, 1, 8, 4, 0, 1, 1, 1]),
-             "Fix_12_10 → UFix_8_4, round + saturate (negatives clamp to 0)"),
             (P(CONV, [16, 12, 1, 8, 4, 1, 2, 0, 1]),
              "Fix_16_12 → Fix_8_4, round half to even + wrap"),
             (P(CONV, [8, -2, 1, 12, 0, 1, 0, 0, 0]),
              "Fix_8_-2 → Fix_12_0, negative input binary point (exact ×4)"),
             (P(CONV, [8, 0, 1, 12, 2, 1, 0, 0, 0]),
-             "Fix_8_0 → Fix_12_2, same shift as set 6 (exact ×4), Simulink-buildable"),
+             "Fix_8_0 → Fix_12_2, same shift as set 4 (exact ×4), Simulink-buildable"),
             (with_misc(P(CONV, [16, 8, 1, 8, 4, 1, 2, 1, 2]), 3),
              "set 2 with misc: 3-bit misci → misco, delayed CSP_LATENCY"),
             (dict(P(CONV, [16, 8, 1, 8, 4, 1, 1, 1, 1]), OF=1),
              "set 1 with of: overflow flags 4 dropped integer bits (casper convert_of rule)"),
-            (dict(P(CONV, [8, 4, 0, 10, 6, 1, 0, 0, 0]), OF=1),
-             "set 3 with of, combinational: bit growth, overflow always 0"),
-        ]),
+            (P(CONV, [12, 10, 1, 8, 4, 1, 1, 1, 1]),
+             "Fix_12_10 → Fix_8_4, round half away from zero + saturate"),
+        ],
+        # TYPE_IN / TYPE_OUT = 0 sets are not listed (unsigned formats have no
+        # bus_convert counterpart, see the mapping); the others keep their
+        # former seeds (old 5..9 -> 3..7)
+        seeds={3: 5, 4: 6, 5: 7, 6: 8, 7: 9, 8: 11}),
     "adder_subtractor": dict(
         category="Bus",
         model=m_adder_subtractor, inputs=["a", "b"], outputs=["dout"],
@@ -476,23 +476,26 @@ MODULES = {
         misc_latency=lambda p: 0,                         # bus_scale_init.m:159-164
         prose="`scale` computes `din · 2^SCALE_FACTOR` and requantizes to the "
               "output format.",
+        # Only the bus_scale-equivalent format is listed: a pure reinterpretation
+        # (N_BITS_OUT = N_BITS_IN, BIN_PT_OUT = BIN_PT_IN - SCALE_FACTOR,
+        # TYPE_OUT = TYPE_IN, LATENCY 0); the HDL requantizer has no Simulink
+        # counterpart (see the mapping).
         tests=[
-            (P(SCALE, [16, 8, 1, -3, 16, 8, 1, 2, 0, 1]),
-             "Fix_16_8 ÷ 8, round half to even"),
-            (P(SCALE, [8, 4, 1, 2, 8, 4, 1, 0, 1, 0]),
-             "Fix_8_4 × 4, saturate, combinational"),
-            (P(SCALE, [8, 4, 1, 2, 8, 4, 1, 0, 0, 1]),
-             "Fix_8_4 × 4, wrap"),
-            (P(SCALE, [8, 8, 0, -1, 8, 8, 0, 1, 0, 2]),
-             "UFix_8_8 ÷ 2, round half away from zero, 2-stage pipeline"),
-            (P(SCALE, [8, 2, 1, 5, 12, 0, 1, 0, 0, 1]),
-             "Fix_8_2 × 32 → Fix_12_0 (intermediate binary point −3), exact"),
-            (P(SCALE, [18, 17, 1, -1, 18, 17, 1, 2, 1, 1]),
-             "Fix_18_17 ÷ 2, round even + saturate (FFT stage shift)"),
             (with_misc(P(SCALE, [16, 8, 1, -3, 16, 11, 1, 0, 0, 0]), 4),
              "Fix_16_8 ÷ 8 as a pure reinterpretation to Fix_16_11 (the bus_scale-equivalent "
              "format, LATENCY 0), with misc: 4-bit misci → misco undelayed"),
-        ]),
+            (P(SCALE, [8, 4, 1, 2, 8, 2, 1, 0, 0, 0]),
+             "Fix_8_4 × 4 → Fix_8_2 (positive scale factor)"),
+            (P(SCALE, [18, 17, 1, -1, 18, 18, 1, 0, 0, 0]),
+             "Fix_18_17 ÷ 2 → Fix_18_18 (FFT stage shift)"),
+            (P(SCALE, [8, 4, 0, 3, 8, 1, 0, 0, 0, 0]),
+             "UFix_8_4 × 8 → UFix_8_1 (unsigned)"),
+            (P(SCALE, [16, 8, 1, 8, 16, 0, 1, 0, 0, 0]),
+             "Fix_16_8 × 256 → Fix_16_0 (largest scale factor, SCALE_FACTOR = BIN_PT_IN)"),
+            (P(SCALE, [8, 4, 1, -4, 8, 8, 1, 0, 0, 0]),
+             "Fix_8_4 ÷ 16 → Fix_8_8 (smallest scale factor, BIN_PT_IN − N_BITS_IN)"),
+        ],
+        seeds={0: 6}),
     "negate": dict(
         category="Bus",
         model=m_negate, inputs=["din"], outputs=["dout"],
@@ -505,17 +508,17 @@ MODULES = {
              "Fix_8_4 → Fix_8_4, wrap (−(−8) wraps to −8), combinational"),
             (P(CONV, [8, 4, 1, 8, 4, 1, 0, 1, 1]),
              "Fix_8_4 → Fix_8_4, saturate (−(−8) clamps to max)"),
-            (P(CONV, [8, 4, 1, 9, 4, 1, 0, 0, 1]),
-             "Fix_8_4 → Fix_9_4, full precision"),
-            (P(CONV, [8, 4, 0, 9, 4, 1, 0, 0, 2]),
-             "UFix_8_4 → Fix_9_4, unsigned input, 2-stage pipeline"),
-            (P(CONV, [12, 8, 1, 8, 4, 1, 1, 1, 1]),
-             "Fix_12_8 → Fix_8_4, round half away from zero + saturate"),
-            (P(CONV, [12, 8, 1, 8, 4, 1, 2, 0, 1]),
-             "Fix_12_8 → Fix_8_4, round half to even + wrap"),
             (with_misc(P(CONV, [8, 4, 1, 8, 4, 1, 0, 1, 1]), 2),
              "set 1 with misc (the bus_negate-equivalent format): 2-bit misci → misco, delayed CSP_LATENCY"),
-        ]),
+            (P(CONV, [12, 8, 1, 12, 8, 1, 0, 1, 2]),
+             "Fix_12_8 → Fix_12_8, saturate, 2-stage pipeline"),
+            (P(CONV, [18, 17, 1, 18, 17, 1, 0, 0, 1]),
+             "Fix_18_17 → Fix_18_17, wrap (−(−1) wraps to −1)"),
+        ],
+        # Only the bus_negate-equivalent format (signed in = signed out, same
+        # width and binary point) is listed; set 2 keeps the stimulus of its
+        # former number 6
+        seeds={2: 6, 3: 7, 4: 8}),
 }
 
 
@@ -524,7 +527,10 @@ MODULES = {
 def write_module(name, spec):
     mdir = TEST_DATA / spec["category"] / name
     for n, (params, _) in enumerate(spec["tests"]):
-        rng = random.Random(f"{name}-{n}")
+        # "seeds": new set index -> the index whose random stimulus it keeps
+        # (sets renumbered after removing others keep their data)
+        sid = spec.get("seeds", {}).get(n, n)
+        rng = random.Random(f"{name}-{sid}")
         if "vectors" in spec:
             vecs = spec["vectors"](rng, params)
         else:
@@ -536,7 +542,7 @@ def write_module(name, spec):
         (d / "params.json").write_text(json.dumps(params, indent=2) + "\n")
         for k, port in enumerate(spec["inputs"]):
             (d / f"sim_{port}.csv").write_text("".join(f"{v[k]}\n" for v in vecs))
-        en = en_stream(random.Random(f"{name}-{n}-en"), len(vecs)) if params.get("ASYNC") else None
+        en = en_stream(random.Random(f"{name}-{sid}-en"), len(vecs)) if params.get("ASYNC") else None
         if en is not None:
             (d / "sim_en.csv").write_text("".join(f"{x}\n" for x in en))
         if en is not None and name == "cmult":
@@ -554,7 +560,7 @@ def write_module(name, spec):
             # dvalid = en through a free Delay of the latency (bus_addsub den)
             (d / "sim_dvalid.csv").write_text("".join(f"{x}\n" for x in delayed(en, lat, 0)))
         if n in spec.get("tvalid_sets", ()):
-            trng = random.Random(f"{name}-{n}-tvalid")
+            trng = random.Random(f"{name}-{sid}-tvalid")
             a_tv = [int(trng.random() < 0.8) for _ in vecs]
             b_tv = [int(trng.random() < 0.8) for _ in vecs]
             tv = delayed([a & b for a, b in zip(a_tv, b_tv)], lat, 0)
@@ -565,7 +571,7 @@ def write_module(name, spec):
                          convert_overflow(params, 0))
             (d / "sim_overflow.csv").write_text("".join(f"{x}\n" for x in of))
         if params.get("MISC"):
-            mrng = random.Random(f"{name}-{n}-misc")
+            mrng = random.Random(f"{name}-{sid}-misc")
             misci = [mrng.randrange(1 << params["MISC_WIDTH"]) for _ in vecs]
             misco = delayed(misci, spec["misc_latency"](params), 0)
             (d / "sim_misci.csv").write_text("".join(f"{x}\n" for x in misci))

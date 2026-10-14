@@ -34,7 +34,11 @@
 //
 // [[unsupported]]
 // when = 'SCALE_FACTOR < BIN_PT_IN - N_BITS_IN || SCALE_FACTOR > BIN_PT_IN'
-// reason = 'Xilinx Scale (bus_scale -> xbsIndex_r4/Scale scale1, System Generator 2021.1): the output binary point bin_pt_in - scale_factor must lie between the LSB and MSB of the input word, inclusive, i.e. bin_pt_in - n_bits_in <= scale_factor <= bin_pt_in; otherwise Illegal parameterization: Scale factor s ... must be between <lo> and <hi>, inclusive (confirmed in MATLAB R2021a, sets 3 and 4)'
+// reason = 'Xilinx Scale (bus_scale -> xbsIndex_r4/Scale scale1, System Generator 2021.1): the output binary point bin_pt_in - scale_factor must lie between the LSB and MSB of the input word, inclusive, i.e. bin_pt_in - n_bits_in <= scale_factor <= bin_pt_in; otherwise Illegal parameterization: Scale factor s ... must be between <lo> and <hi>, inclusive (confirmed in MATLAB R2021a with the former sets 3 and 4)'
+//
+// [[unsupported]]
+// when = '!(N_BITS_OUT == N_BITS_IN && BIN_PT_OUT == BIN_PT_IN - SCALE_FACTOR && TYPE_OUT == TYPE_IN && LATENCY == 0)'
+// reason = 'HDL-only configuration: bus_scale is a pure reinterpretation with zero latency (xlScale.sgm moves the binary point to bin_pt_in - scale_factor, bus_create concatenates the unchanged bits: bus_scale_init.m:126,140), so the HDL requantizer (N_BITS_OUT / BIN_PT_OUT / TYPE_OUT / QUANTIZATION / OVERFLOW) and its LATENCY registers have a Simulink counterpart only as that reinterpretation (see deviations)'
 //
 // [params.MISC]
 // mask = 'misc'

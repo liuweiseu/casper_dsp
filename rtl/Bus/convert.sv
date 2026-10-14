@@ -66,7 +66,11 @@
 //
 // [[unsupported]]
 // when = 'BIN_PT_IN < 0 || BIN_PT_OUT < 0'
-// reason = 'System Generator fixed-point types need bin_pt >= 0: Invalid output binary point detected: binary point must be greater than or equal to 0 (bus_convert_init.m:169 bus_expand reinterpret, confirmed in MATLAB R2021a); the HDL only uses BIN_PT_IN - BIN_PT_OUT, so shift both binary points up by the same amount for an equivalent buildable set (convert set 7 is set 6 shifted by 2)'
+// reason = 'System Generator fixed-point types need bin_pt >= 0: Invalid output binary point detected: binary point must be greater than or equal to 0 (bus_convert_init.m:169 bus_expand reinterpret, confirmed in MATLAB R2021a); the HDL only uses BIN_PT_IN - BIN_PT_OUT, so shift both binary points up by the same amount for an equivalent buildable set (convert set 5 is set 4 shifted by 2)'
+//
+// [[unsupported]]
+// when = 'TYPE_IN == 0 || TYPE_OUT == 0'
+// reason = "HDL-only configuration: bus_convert always reinterprets the input as signed (bus_expand outputArithmeticType = type_in = 1, bus_convert_init.m:13,167) and always produces a signed output (Convert / convert_of arith_type 'Signed  (2''s comp)', bus_convert_init.m:247, convert_of_init.m:120), so an unsigned input or output has no Simulink counterpart (see deviations)"
 //
 // [params.MISC]
 // mask = 'misc'

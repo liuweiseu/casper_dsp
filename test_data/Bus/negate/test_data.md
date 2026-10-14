@@ -12,8 +12,6 @@ Encodings: `TYPE` 0=unsigned, 1=signed; `QUANTIZATION` 0=truncate, 1=round half 
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | `simdata0` | 8 | 4 | 1 | 8 | 4 | 1 | 0 | 0 | 0 | 0 | 1 | 128 | Fix_8_4 → Fix_8_4, wrap (−(−8) wraps to −8), combinational |
 | 1 | `simdata1` | 8 | 4 | 1 | 8 | 4 | 1 | 0 | 1 | 1 | 0 | 1 | 128 | Fix_8_4 → Fix_8_4, saturate (−(−8) clamps to max) |
-| 2 | `simdata2` | 8 | 4 | 1 | 9 | 4 | 1 | 0 | 0 | 1 | 0 | 1 | 128 | Fix_8_4 → Fix_9_4, full precision |
-| 3 | `simdata3` | 8 | 4 | 0 | 9 | 4 | 1 | 0 | 0 | 2 | 0 | 1 | 128 | UFix_8_4 → Fix_9_4, unsigned input, 2-stage pipeline |
-| 4 | `simdata4` | 12 | 8 | 1 | 8 | 4 | 1 | 1 | 1 | 1 | 0 | 1 | 128 | Fix_12_8 → Fix_8_4, round half away from zero + saturate |
-| 5 | `simdata5` | 12 | 8 | 1 | 8 | 4 | 1 | 2 | 0 | 1 | 0 | 1 | 128 | Fix_12_8 → Fix_8_4, round half to even + wrap |
-| 6 | `simdata6` | 8 | 4 | 1 | 8 | 4 | 1 | 0 | 1 | 1 | 1 | 2 | 128 | set 1 with misc (the bus_negate-equivalent format): 2-bit misci → misco, delayed CSP_LATENCY |
+| 2 | `simdata2` | 8 | 4 | 1 | 8 | 4 | 1 | 0 | 1 | 1 | 1 | 2 | 128 | set 1 with misc (the bus_negate-equivalent format): 2-bit misci → misco, delayed CSP_LATENCY |
+| 3 | `simdata3` | 12 | 8 | 1 | 12 | 8 | 1 | 0 | 1 | 2 | 0 | 1 | 128 | Fix_12_8 → Fix_12_8, saturate, 2-stage pipeline |
+| 4 | `simdata4` | 18 | 17 | 1 | 18 | 17 | 1 | 0 | 0 | 1 | 0 | 1 | 128 | Fix_18_17 → Fix_18_17, wrap (−(−1) wraps to −1) |

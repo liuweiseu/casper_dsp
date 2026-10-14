@@ -674,7 +674,7 @@ ASYNC = 1
 dir = "Bus"
 top = "convert"
 test_data_script = "gen_fixed_point_test_data.py"
-simulation_cycles = [128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128]
+simulation_cycles = [128, 128, 128, 128, 128, 128, 128, 128, 128]
 # Fix_16_8 → Fix_8_4, truncate + wrap, combinational
 [[simulations.parameters]]
 N_BITS_IN = 16
@@ -708,28 +708,6 @@ TYPE_OUT = 1
 QUANTIZATION = 2
 OVERFLOW = 1
 CSP_LATENCY = 2
-# UFix_8_4 → Fix_10_6, exact bit growth (unsigned → signed)
-[[simulations.parameters]]
-N_BITS_IN = 8
-BIN_PT_IN = 4
-TYPE_IN = 0
-N_BITS_OUT = 10
-BIN_PT_OUT = 6
-TYPE_OUT = 1
-QUANTIZATION = 0
-OVERFLOW = 0
-CSP_LATENCY = 1
-# Fix_12_10 → UFix_8_4, round + saturate (negatives clamp to 0)
-[[simulations.parameters]]
-N_BITS_IN = 12
-BIN_PT_IN = 10
-TYPE_IN = 1
-N_BITS_OUT = 8
-BIN_PT_OUT = 4
-TYPE_OUT = 0
-QUANTIZATION = 1
-OVERFLOW = 1
-CSP_LATENCY = 1
 # Fix_16_12 → Fix_8_4, round half to even + wrap
 [[simulations.parameters]]
 N_BITS_IN = 16
@@ -752,7 +730,7 @@ TYPE_OUT = 1
 QUANTIZATION = 0
 OVERFLOW = 0
 CSP_LATENCY = 0
-# Fix_8_0 → Fix_12_2, same shift as set 6 (exact ×4), Simulink-buildable
+# Fix_8_0 → Fix_12_2, same shift as set 4 (exact ×4), Simulink-buildable
 [[simulations.parameters]]
 N_BITS_IN = 8
 BIN_PT_IN = 0
@@ -788,18 +766,17 @@ QUANTIZATION = 1
 OVERFLOW = 1
 CSP_LATENCY = 1
 OF = 1
-# set 3 with of, combinational: bit growth, overflow always 0
+# Fix_12_10 → Fix_8_4, round half away from zero + saturate
 [[simulations.parameters]]
-N_BITS_IN = 8
-BIN_PT_IN = 4
-TYPE_IN = 0
-N_BITS_OUT = 10
-BIN_PT_OUT = 6
+N_BITS_IN = 12
+BIN_PT_IN = 10
+TYPE_IN = 1
+N_BITS_OUT = 8
+BIN_PT_OUT = 4
 TYPE_OUT = 1
-QUANTIZATION = 0
-OVERFLOW = 0
-CSP_LATENCY = 0
-OF = 1
+QUANTIZATION = 1
+OVERFLOW = 1
+CSP_LATENCY = 1
 
 # test multiplier
 [[simulations]]
@@ -899,7 +876,7 @@ MISC_WIDTH = 5
 dir = "Bus"
 top = "negate"
 test_data_script = "gen_fixed_point_test_data.py"
-simulation_cycles = [128, 128, 128, 128, 128, 128, 128]
+simulation_cycles = [128, 128, 128, 128, 128]
 # Fix_8_4 → Fix_8_4, wrap (−(−8) wraps to −8), combinational
 [[simulations.parameters]]
 N_BITS_IN = 8
@@ -922,50 +899,6 @@ TYPE_OUT = 1
 QUANTIZATION = 0
 OVERFLOW = 1
 CSP_LATENCY = 1
-# Fix_8_4 → Fix_9_4, full precision
-[[simulations.parameters]]
-N_BITS_IN = 8
-BIN_PT_IN = 4
-TYPE_IN = 1
-N_BITS_OUT = 9
-BIN_PT_OUT = 4
-TYPE_OUT = 1
-QUANTIZATION = 0
-OVERFLOW = 0
-CSP_LATENCY = 1
-# UFix_8_4 → Fix_9_4, unsigned input, 2-stage pipeline
-[[simulations.parameters]]
-N_BITS_IN = 8
-BIN_PT_IN = 4
-TYPE_IN = 0
-N_BITS_OUT = 9
-BIN_PT_OUT = 4
-TYPE_OUT = 1
-QUANTIZATION = 0
-OVERFLOW = 0
-CSP_LATENCY = 2
-# Fix_12_8 → Fix_8_4, round half away from zero + saturate
-[[simulations.parameters]]
-N_BITS_IN = 12
-BIN_PT_IN = 8
-TYPE_IN = 1
-N_BITS_OUT = 8
-BIN_PT_OUT = 4
-TYPE_OUT = 1
-QUANTIZATION = 1
-OVERFLOW = 1
-CSP_LATENCY = 1
-# Fix_12_8 → Fix_8_4, round half to even + wrap
-[[simulations.parameters]]
-N_BITS_IN = 12
-BIN_PT_IN = 8
-TYPE_IN = 1
-N_BITS_OUT = 8
-BIN_PT_OUT = 4
-TYPE_OUT = 1
-QUANTIZATION = 2
-OVERFLOW = 0
-CSP_LATENCY = 1
 # set 1 with misc (the bus_negate-equivalent format): 2-bit misci → misco, delayed CSP_LATENCY
 [[simulations.parameters]]
 N_BITS_IN = 8
@@ -979,87 +912,35 @@ OVERFLOW = 1
 CSP_LATENCY = 1
 MISC = 1
 MISC_WIDTH = 2
+# Fix_12_8 → Fix_12_8, saturate, 2-stage pipeline
+[[simulations.parameters]]
+N_BITS_IN = 12
+BIN_PT_IN = 8
+TYPE_IN = 1
+N_BITS_OUT = 12
+BIN_PT_OUT = 8
+TYPE_OUT = 1
+QUANTIZATION = 0
+OVERFLOW = 1
+CSP_LATENCY = 2
+# Fix_18_17 → Fix_18_17, wrap (−(−1) wraps to −1)
+[[simulations.parameters]]
+N_BITS_IN = 18
+BIN_PT_IN = 17
+TYPE_IN = 1
+N_BITS_OUT = 18
+BIN_PT_OUT = 17
+TYPE_OUT = 1
+QUANTIZATION = 0
+OVERFLOW = 0
+CSP_LATENCY = 1
 
 # test scale
 [[simulations]]
 dir = "Bus"
 top = "scale"
 test_data_script = "gen_fixed_point_test_data.py"
-simulation_cycles = [128, 128, 128, 128, 128, 128, 128]
-# Fix_16_8 ÷ 8, round half to even
-[[simulations.parameters]]
-N_BITS_IN = 16
-BIN_PT_IN = 8
-TYPE_IN = 1
-SCALE_FACTOR = -3
-N_BITS_OUT = 16
-BIN_PT_OUT = 8
-TYPE_OUT = 1
-QUANTIZATION = 2
-OVERFLOW = 0
-LATENCY = 1
-# Fix_8_4 × 4, saturate, combinational
-[[simulations.parameters]]
-N_BITS_IN = 8
-BIN_PT_IN = 4
-TYPE_IN = 1
-SCALE_FACTOR = 2
-N_BITS_OUT = 8
-BIN_PT_OUT = 4
-TYPE_OUT = 1
-QUANTIZATION = 0
-OVERFLOW = 1
-LATENCY = 0
-# Fix_8_4 × 4, wrap
-[[simulations.parameters]]
-N_BITS_IN = 8
-BIN_PT_IN = 4
-TYPE_IN = 1
-SCALE_FACTOR = 2
-N_BITS_OUT = 8
-BIN_PT_OUT = 4
-TYPE_OUT = 1
-QUANTIZATION = 0
-OVERFLOW = 0
-LATENCY = 1
-# UFix_8_8 ÷ 2, round half away from zero, 2-stage pipeline
-[[simulations.parameters]]
-N_BITS_IN = 8
-BIN_PT_IN = 8
-TYPE_IN = 0
-SCALE_FACTOR = -1
-N_BITS_OUT = 8
-BIN_PT_OUT = 8
-TYPE_OUT = 0
-QUANTIZATION = 1
-OVERFLOW = 0
-LATENCY = 2
-# Fix_8_2 × 32 → Fix_12_0 (intermediate binary point −3), exact
-[[simulations.parameters]]
-N_BITS_IN = 8
-BIN_PT_IN = 2
-TYPE_IN = 1
-SCALE_FACTOR = 5
-N_BITS_OUT = 12
-BIN_PT_OUT = 0
-TYPE_OUT = 1
-QUANTIZATION = 0
-OVERFLOW = 0
-LATENCY = 1
-# Fix_18_17 ÷ 2, round even + saturate (FFT stage shift)
-[[simulations.parameters]]
-N_BITS_IN = 18
-BIN_PT_IN = 17
-TYPE_IN = 1
-SCALE_FACTOR = -1
-N_BITS_OUT = 18
-BIN_PT_OUT = 17
-TYPE_OUT = 1
-QUANTIZATION = 2
-OVERFLOW = 1
-LATENCY = 1
-
-# ── Correlator ───────────────────────────────────────────────────────────────
+simulation_cycles = [128, 128, 128, 128, 128, 128]
 # Fix_16_8 ÷ 8 as a pure reinterpretation to Fix_16_11 (the bus_scale-equivalent format, LATENCY 0), with misc: 4-bit misci → misco undelayed
 [[simulations.parameters]]
 N_BITS_IN = 16
@@ -1074,6 +955,68 @@ OVERFLOW = 0
 LATENCY = 0
 MISC = 1
 MISC_WIDTH = 4
+# Fix_8_4 × 4 → Fix_8_2 (positive scale factor)
+[[simulations.parameters]]
+N_BITS_IN = 8
+BIN_PT_IN = 4
+TYPE_IN = 1
+SCALE_FACTOR = 2
+N_BITS_OUT = 8
+BIN_PT_OUT = 2
+TYPE_OUT = 1
+QUANTIZATION = 0
+OVERFLOW = 0
+LATENCY = 0
+# Fix_18_17 ÷ 2 → Fix_18_18 (FFT stage shift)
+[[simulations.parameters]]
+N_BITS_IN = 18
+BIN_PT_IN = 17
+TYPE_IN = 1
+SCALE_FACTOR = -1
+N_BITS_OUT = 18
+BIN_PT_OUT = 18
+TYPE_OUT = 1
+QUANTIZATION = 0
+OVERFLOW = 0
+LATENCY = 0
+# UFix_8_4 × 8 → UFix_8_1 (unsigned)
+[[simulations.parameters]]
+N_BITS_IN = 8
+BIN_PT_IN = 4
+TYPE_IN = 0
+SCALE_FACTOR = 3
+N_BITS_OUT = 8
+BIN_PT_OUT = 1
+TYPE_OUT = 0
+QUANTIZATION = 0
+OVERFLOW = 0
+LATENCY = 0
+# Fix_16_8 × 256 → Fix_16_0 (largest scale factor, SCALE_FACTOR = BIN_PT_IN)
+[[simulations.parameters]]
+N_BITS_IN = 16
+BIN_PT_IN = 8
+TYPE_IN = 1
+SCALE_FACTOR = 8
+N_BITS_OUT = 16
+BIN_PT_OUT = 0
+TYPE_OUT = 1
+QUANTIZATION = 0
+OVERFLOW = 0
+LATENCY = 0
+# Fix_8_4 ÷ 16 → Fix_8_8 (smallest scale factor, BIN_PT_IN − N_BITS_IN)
+[[simulations.parameters]]
+N_BITS_IN = 8
+BIN_PT_IN = 4
+TYPE_IN = 1
+SCALE_FACTOR = -4
+N_BITS_OUT = 8
+BIN_PT_OUT = 8
+TYPE_OUT = 1
+QUANTIZATION = 0
+OVERFLOW = 0
+LATENCY = 0
+
+# ── Correlator ───────────────────────────────────────────────────────────────
 
 # test auto_tap
 [[simulations]]

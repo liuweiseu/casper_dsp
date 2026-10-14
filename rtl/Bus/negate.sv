@@ -35,6 +35,10 @@
 // [mask_set.floating_point]
 // value = 'off'
 //
+// [[unsupported]]
+// when = '!(TYPE_IN == 1 && TYPE_OUT == 1 && N_BITS_OUT == N_BITS_IN && BIN_PT_OUT == BIN_PT_IN)'
+// reason = 'HDL-only configuration: bus_negate always reinterprets the input as signed (bus_negate_init.m:155) and negates it into the same signed format (n_bits_in / bin_pt_in, Signed, Truncate: bus_negate_init.m:201-203, 212-214), so any other input / output format has no Simulink counterpart (see deviations)'
+//
 // [params.MISC]
 // mask = 'misc'
 // type = 'checkbox'

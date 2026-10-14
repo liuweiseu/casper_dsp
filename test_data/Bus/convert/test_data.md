@@ -13,11 +13,9 @@ Encodings: `TYPE` 0=unsigned, 1=signed; `QUANTIZATION` 0=truncate, 1=round half 
 | 0 | `simdata0` | 16 | 8 | 1 | 8 | 4 | 1 | 0 | 0 | 0 | 0 | 1 | 0 | 128 | Fix_16_8 → Fix_8_4, truncate + wrap, combinational |
 | 1 | `simdata1` | 16 | 8 | 1 | 8 | 4 | 1 | 1 | 1 | 1 | 0 | 1 | 0 | 128 | Fix_16_8 → Fix_8_4, round half away from zero + saturate |
 | 2 | `simdata2` | 16 | 8 | 1 | 8 | 4 | 1 | 2 | 1 | 2 | 0 | 1 | 0 | 128 | Fix_16_8 → Fix_8_4, round half to even + saturate, 2-stage pipeline |
-| 3 | `simdata3` | 8 | 4 | 0 | 10 | 6 | 1 | 0 | 0 | 1 | 0 | 1 | 0 | 128 | UFix_8_4 → Fix_10_6, exact bit growth (unsigned → signed) |
-| 4 | `simdata4` | 12 | 10 | 1 | 8 | 4 | 0 | 1 | 1 | 1 | 0 | 1 | 0 | 128 | Fix_12_10 → UFix_8_4, round + saturate (negatives clamp to 0) |
-| 5 | `simdata5` | 16 | 12 | 1 | 8 | 4 | 1 | 2 | 0 | 1 | 0 | 1 | 0 | 128 | Fix_16_12 → Fix_8_4, round half to even + wrap |
-| 6 | `simdata6` | 8 | -2 | 1 | 12 | 0 | 1 | 0 | 0 | 0 | 0 | 1 | 0 | 128 | Fix_8_-2 → Fix_12_0, negative input binary point (exact ×4) |
-| 7 | `simdata7` | 8 | 0 | 1 | 12 | 2 | 1 | 0 | 0 | 0 | 0 | 1 | 0 | 128 | Fix_8_0 → Fix_12_2, same shift as set 6 (exact ×4), Simulink-buildable |
-| 8 | `simdata8` | 16 | 8 | 1 | 8 | 4 | 1 | 2 | 1 | 2 | 1 | 3 | 0 | 128 | set 2 with misc: 3-bit misci → misco, delayed CSP_LATENCY |
-| 9 | `simdata9` | 16 | 8 | 1 | 8 | 4 | 1 | 1 | 1 | 1 | 0 | 1 | 1 | 128 | set 1 with of: overflow flags 4 dropped integer bits (casper convert_of rule) |
-| 10 | `simdata10` | 8 | 4 | 0 | 10 | 6 | 1 | 0 | 0 | 0 | 0 | 1 | 1 | 128 | set 3 with of, combinational: bit growth, overflow always 0 |
+| 3 | `simdata3` | 16 | 12 | 1 | 8 | 4 | 1 | 2 | 0 | 1 | 0 | 1 | 0 | 128 | Fix_16_12 → Fix_8_4, round half to even + wrap |
+| 4 | `simdata4` | 8 | -2 | 1 | 12 | 0 | 1 | 0 | 0 | 0 | 0 | 1 | 0 | 128 | Fix_8_-2 → Fix_12_0, negative input binary point (exact ×4) |
+| 5 | `simdata5` | 8 | 0 | 1 | 12 | 2 | 1 | 0 | 0 | 0 | 0 | 1 | 0 | 128 | Fix_8_0 → Fix_12_2, same shift as set 4 (exact ×4), Simulink-buildable |
+| 6 | `simdata6` | 16 | 8 | 1 | 8 | 4 | 1 | 2 | 1 | 2 | 1 | 3 | 0 | 128 | set 2 with misc: 3-bit misci → misco, delayed CSP_LATENCY |
+| 7 | `simdata7` | 16 | 8 | 1 | 8 | 4 | 1 | 1 | 1 | 1 | 0 | 1 | 1 | 128 | set 1 with of: overflow flags 4 dropped integer bits (casper convert_of rule) |
+| 8 | `simdata8` | 12 | 10 | 1 | 8 | 4 | 1 | 1 | 1 | 1 | 0 | 1 | 0 | 128 | Fix_12_10 → Fix_8_4, round half away from zero + saturate |

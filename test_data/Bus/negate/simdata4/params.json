@@ -1,11 +1,11 @@
 {
-  "N_BITS_IN": 12,
-  "BIN_PT_IN": 8,
+  "N_BITS_IN": 18,
+  "BIN_PT_IN": 17,
   "TYPE_IN": 1,
-  "N_BITS_OUT": 8,
-  "BIN_PT_OUT": 4,
+  "N_BITS_OUT": 18,
+  "BIN_PT_OUT": 17,
   "TYPE_OUT": 1,
-  "QUANTIZATION": 1,
-  "OVERFLOW": 1,
+  "QUANTIZATION": 0,
+  "OVERFLOW": 0,
   "CSP_LATENCY": 1
 }

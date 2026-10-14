@@ -28,7 +28,7 @@
 // block = 'casper_library_misc.slx/convert_of'
 // deviations = [
 //   "OVERFLOW=2: convert_of_init.m:124 passes the popup text 'Error' to xbsIndex_r4/Convert, whose options are Wrap/Saturate/'Flag as error', so the Simulink block cannot be built with it. The HDL treats 2 as wrap.",
-//   "QUANTIZATION=2: the popup text 'Round  (unbiased: even values)' is passed verbatim to xbsIndex_r4/Convert, whose option is 'Round  (unbiased: Even Values)' (convert_of_init.m:123). Whether set_param accepts the case mismatch is unverified. The HDL rounds half to even.",
+//   "QUANTIZATION=2: the popup text 'Round  (unbiased: even values)' is passed verbatim to xbsIndex_r4/Convert, whose option is 'Round  (unbiased: Even Values)' (convert_of_init.m:123). set_param accepts the case mismatch and the block rounds half to even, as the HDL (verified in MATLAB R2021a: convert_of set 3 bit-exact).",
 //   "The HDL assumes a signed input (TYPE_IN=1 on the inner convert). Simulink's Convert uses the input signal's actual type, so an unsigned din is zero-extended there, but the HDL sign-extends it. The of check treats the MSB as a sign bit in both.",
 //   'When wb_lost+1 > BIT_WIDTH_I, the HDL clips the checked bit count to BIT_WIDTH_I. Simulink would create Slice blocks reaching above the MSB and fail to elaborate.',
 // ]

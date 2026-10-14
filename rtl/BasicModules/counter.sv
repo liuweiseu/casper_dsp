@@ -35,7 +35,7 @@
 //   "The mask default cnt_to = 'Inf' has no HDL equivalent (HDL default COUNT_TO_VAL = 0); it is only relevant for Count Limited, where cnt_to must be given as a finite raw value.",
 //   'Priority matches xlCounter.sgm (rst or count-limit hit -> start_count, else en: load -> din, else +/- step; the limit compare is only evaluated while en = 1); the HDL lets RST_VAL differ from INIT_VAL, which Sysgen cannot.',
 //   "din is loaded as a raw bit pattern; Simulink assigns din into the counter type, so din must already have the counter's n_bits/bin_pt/signedness to be bit-exact.",
-//   "The Up/Down mode is unverified against Simulink: xlCounter.sgm itself carries 'TODO: Address bug in 2nd half of xlcounter_tb (up/down counter)'.",
+//   "The Up/Down mode matches Simulink (verified in MATLAB R2021a: counter sets 10 and 11 bit-exact), although xlCounter.sgm carries 'TODO: Address bug in 2nd half of xlcounter_tb (up/down counter)'.",
 // ]
 //
 // [params.COUNTER_TYPE]

@@ -1,12 +1,12 @@
 {
   "N_BITS_IN": 8,
-  "BIN_PT_IN": 8,
+  "BIN_PT_IN": 4,
   "TYPE_IN": 0,
-  "SCALE_FACTOR": -1,
+  "SCALE_FACTOR": 3,
   "N_BITS_OUT": 8,
-  "BIN_PT_OUT": 8,
+  "BIN_PT_OUT": 1,
   "TYPE_OUT": 0,
-  "QUANTIZATION": 1,
+  "QUANTIZATION": 0,
   "OVERFLOW": 0,
-  "LATENCY": 2
+  "LATENCY": 0
 }
