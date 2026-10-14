@@ -41,8 +41,8 @@ so only `PRECISION = 0` (the default) has a standalone Simulink counterpart.
 `PRECISION = 1` reproduces how `pfb_fir_real_init.m:233-246` sets the inner
 `addr*` AddSubs from outside the mask; it is compared against Simulink through
 [`pfb_fir_real`](../PFBs/pfb_fir_real.md). The HDL-Simulink mapping marks
-`PRECISION != 0` as unsupported, so exporters skip those sets (adder_tree sets
-6 and 7 remain casper_dsp's own golden tests).
+`PRECISION != 0` as unsupported, so `tests/simulation.toml` lists no
+`PRECISION = 1` set for the standalone block.
 
 The output width is `N_BITS_OUT_EFF`. With `PRECISION = 1` and
 `N_BITS_OUT = DATA_WIDTH`, `BIN_PT_OUT = BIN_PT`, the output is as wide as

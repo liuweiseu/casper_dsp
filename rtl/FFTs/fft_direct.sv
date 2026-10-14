@@ -173,7 +173,7 @@
 //
 // [[unsupported]]
 // when = 'FFT_SIZE >= 2 && (MAP_TAIL == 0 || (LARGER_FFT_SIZE == FFT_SIZE && START_STAGE == 1))'
-// reason = 'mlib_devel bug: with map_tail off, butterfly u of stage s gets Coeffs = [u] (fft_direct_init.m:348-351), so FFT_SIZE >= 2 gives a Coeffs = [1] butterfly; map_tail on with LargerFFTSize = FFTSize and StartStage = 1 gives the same one-element lists. butterfly_direct_init.m:297-304 then passes float params that twiddle_coeff_1 lacks and the mask init fails'
+// reason = 'mlib_devel bugs 1-3 (docs/bugs.md): with map_tail off, butterfly u of stage s gets Coeffs = [u] (fft_direct_init.m:348-351), so FFT_SIZE >= 2 gives a Coeffs = [1] butterfly; map_tail on with LargerFFTSize = FFTSize and StartStage = 1 gives the same one-element lists. butterfly_direct_init.m:297-304 then passes float params that twiddle_coeff_1 lacks and the mask init fails'
 //
 // [mask_set.shift_schedule]
 // template = 'bitget({SHIFT_SCHEDULE}, 1:{FFT_SIZE})'

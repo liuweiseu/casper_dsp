@@ -16,7 +16,7 @@ a write at different addresses in the same cycle.
   block RAMs leave this undefined, so callers must avoid it. The GENERIC model
   returns the old data and lets port B's write win, but other platforms need
   not match.
-- The memory contents power up to 0. The outputs show `INIT_A` / `INIT_B` in the first
+- The memory contents power up to `INIT_MEM` (default 0; GENERIC only). The outputs show `INIT_A` / `INIT_B` in the first
   cycle only; the output registers power up to 0, so a port whose first edge is
   disabled reads 0 until its first enabled read (as the built Simulink block does).
 - `RST_x` / `EN_x` / `INIT_x` follow `xlDPBRAMXPM.sgm` (latency 1) and are
@@ -39,6 +39,7 @@ a write at different addresses in the same cycle.
 | `RST_A`, `RST_B` | 0       | `1` enables `rsta` / `rstb`: `dout_x` <= `INIT_X` instead of the read, even on a disabled port |
 | `EN_A`, `EN_B`   | 0       | `1` enables `ena` / `enb`: a disabled port neither reads nor writes, `dout_x` holds |
 | `INIT_A`, `INIT_B` | 0     | Output-register words at power-up and on reset (raw bits; Xilinx `init_a` / `init_b`) |
+| `INIT_MEM` | 0 | Power-on memory contents, word `w` at bits `[w·DATA_WIDTH +: DATA_WIDTH]` (raw bits; GENERIC only). Used by `xeng_descramble` to model its library `initVector`; the standalone mapping exports `initVector` as zeros |
 | `PLATFORM`   | `"GENERIC"` | `"GENERIC"`, `"XILINX"` or `"ALTERA"` |
 
 ## Ports

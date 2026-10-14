@@ -56,9 +56,10 @@ w[k] = exp(-2πj · bit_rev(Coeffs[k], FFTSize-1) / 2^FFTSize)
   negative word, as in Simulink (e.g. cos = −1 at w = −1, sin = −1 at w = −j).
   This is a fixed-point convention, not a library bug. Exceptions: the
   quarter-cycle address-0 entry holds the intended value
-  ([bug 15](../../bugs.md)); a `feedback_osc` list, and an in-order list with
-  `FFT_SIZE − STEP_PERIOD − log2 N_COEFFS ≠ 1` (whose `cosin` angles are not
-  the formula), get the exactly rounded formula values. A one-entry list is
+  ([bug 15](../../bugs.md)); a `feedback_osc` list, and an in-order list whose
+  `cosin` angles are not the formula ([bug 20](../../bugs.md); for
+  `0 … N_COEFFS−1`: `FFT_SIZE − STEP_PERIOD − log2 N_COEFFS ≠ 1`), get the
+  exactly rounded formula values. A one-entry list is
   rounded to `COEFF_BIT_WIDTH − 2` fractional bits, as casper's Constants
   (`coeff_gen_init.m:156-157`).
 - **Packing**: each row is `{re, im}`, with the real part in the upper half.

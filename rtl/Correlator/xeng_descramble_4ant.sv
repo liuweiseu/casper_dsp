@@ -16,6 +16,10 @@
 //   - read_ctrl and x_cast are identical.
 // So it is a thin wrapper around xeng_descramble.
 //
+// SIMULINK-COMPAT: the RAM's power-on contents reproduce this block's
+// initVector = [1:36*8] (system_928.xml:369), the same vector as
+// xeng_descramble's; the init code is xeng_descramble's RAM_INIT.
+//
 // Parameters: N_BITS, ACC_LEN, DEMUX_FACTOR are the mask parameters (stored
 // defaults 8, 256, 1); PLATFORM is passed to the RAM. With the defaults:
 // W = 25, P = 32, OW = 256, DEL = 84, CNT = 10.
@@ -31,7 +35,7 @@
 // @simulink-mapping begin
 // block = 'casper_library_correlator.slx/xeng_descramble_4ant'
 // deviations = [
-//   "Power-on RAM contents: the HDL RAM powers up to 0, while the library RAM (system_928.xml, latency 2) has initVector = [1:36*8]. Simulink's spontaneous power-on read pass therefore outputs initVector words (1, 2, 3, ...), and the HDL outputs zeros. The default depth (E+1)*D = 11 is shorter than the 288-entry vector, and how Sysgen truncates it was not checked.",
+//   "Power-on RAM contents are reproduced only for PLATFORM = GENERIC: the library RAM (system_928.xml:369, latency 2) has initVector = [1:36*8], which xeng_descramble's RAM_INIT reproduces (SIMULINK-COMPAT; narrow word n = min(n+1, 2^OW-1) for n < min(288, (E+1)*D), truncated to the depth, e.g. 11 words by default). Vendor RAMs power up to 0.",
 //   "Read/write collision: Simulink returns NaN on port A when port B ('No Read On Write') writes the same wide word in the same cycle (xlDPBRAM.sgm). The HDL returns defined data. This does not happen with legal xeng traffic.",
 // ]
 //

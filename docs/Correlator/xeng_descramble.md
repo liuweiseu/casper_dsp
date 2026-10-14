@@ -46,7 +46,7 @@ Derived values (mask initialization, N = `NUM_ANTS`, L = `ACC_LEN`, D = `DEMUX_F
 
 Defaults (N 8, N_BITS 4, L 128, D 8): W = P = OW = 16, DEL = 2, CNT = 288.
 
-**Power-on:** read_ctrl's `done` register starts at 0, so a read pass of `D·E` words runs with `valid_out = 1` before any `start`; `sync_out` stays 0 during it. The library RAM has `initVector = [1:36*8]`, a leftover from the N = 8 default. This RAM powers up to 0, so that pass reads zeros. That is the only deviation from the diagram.
+**Power-on:** read_ctrl's `done` register starts at 0, so a read pass of `D·E` words runs with `valid_out = 1` before any `start`; `sync_out` stays 0 during it. The library RAM has `initVector = [1:36*8]`, a leftover from the N = 8 default. The HDL reproduces it (`RAM_INIT`, tagged `SIMULINK-COMPAT:`; GENERIC RAM only): narrow word `n` powers up to `min(n+1, 2^OW−1)` for `n < 288` (Sysgen quantizes the vector to the `UFix_OW_0` `dina` type with Round / Saturate and truncates it to the depth `(E+1)·D`), and to 0 beyond. So the power-on pass reads `1, 2, 3, …` as in Simulink. It is not functionally intended and only affects the first readout after power-on.
 
 Built from `write_ctrl`, `x_cast`, `read_ctrl` (in `Correlator/Internal`), `dual_port_ram`, `pipeline`, `delay`, `register` and `logical`.
 

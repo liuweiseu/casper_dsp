@@ -28,6 +28,8 @@ MATLAB R2021a Update 8; Vivado / Model Composer 2021.1.
 | 16 | `bus_addsub_init` does not delay `en` / `misci` through the `pipeline_en` pipelines | `bus_addsub` with `pipeline_en` and `async` (or `misc`) on | From source only |
 | 17 | `cmult_init` passes `csp_latency` to a Xilinx `Delay` in its floating-point async branch | `cmult` with `floating_point` and `async` on | From source only |
 | 18 | `biplex_core_init` compares the stage delay with the character code of `num2str(bram_latency)` | `biplex_core` (also in `fft_biplex_real_4x`, `fft_wideband_real`) with `delays_bit_limit ≤ 4` | Confirmed in MATLAB R2021a |
+| 19 | The `pfb_fir_real` mask Initialization does not pass `n_pol_blocks` to `pfb_fir_real_init` | `pfb_fir_real` with `n_pol_blocks > 1` | Confirmed in MATLAB R2021a |
+| 20 | `coeff_gen_init` looks up in-order coefficient lists at angles that are not the `Coeffs` twiddles | `twiddle_general` / `butterfly_direct` with an in-order list `0 … N−1` and `FFTSize − StepPeriod − log2 N ≠ 1`; `fft_direct` with `map_tail` and `LargerFFTSize = FFTSize + 1` | Confirmed in MATLAB R2021a |
 
 **Environment note:** `pfb_coeff_gen_calc.m:57, 72` computes the PFB
 window through MATLAB's Python interface (`casper_library/python/window.py`).
@@ -292,9 +294,11 @@ model.
 - Built: the 4-bit sets (`cmac` 0/1/4, `dual_pol_cmac` 0/1 and the 4-bit
   sets of the other modules).
 - The `pfb_fir_real` failures are **not** this bug: `pfb_fir_real_0` still
-  fails with the workaround below on the path ("Failed to evaluate mask
-  initialization commands", no `CallbackEvalErr`). Their cause is still
-  unknown.
+  failed with the workaround below on the path ("Failed to evaluate mask
+  initialization commands", no `CallbackEvalErr`). The cause was the MATLAB
+  Python interface (see the environment note above): with `python3.8` first
+  on `PATH`, `pfb_fir_real` sets 0–3 build and match the HDL; set 4 hits
+  bug 19.
 
 **Suggested fix:** re-save the four libraries with the callbacks commented
 out, as `f994adffb` did for `casper_library_flow_control.slx`, or replace
@@ -424,8 +428,8 @@ that use `delay_bram` only for long delays are unaffected.
 
 **Confirmed in MATLAB R2021a:** `delay_bram` sets 0 (`DELAY_LEN = 2`) and
 5 (`DELAY_LEN = 1`) failed with the minimum-delay error, and set 6
-(`DELAY_LEN = 0`) left the block without ports. The other sets (5, 16, 100
-and 1000) built.
+(`DELAY_LEN = 0`) left the block without ports. Sets 1–4 (`DELAY_LEN` 5,
+16, 100 and 1000) built.
 
 **Suggested fix:** for `DelayLen = 0`, connect `din` to `dout` instead of
 clearing the block; for `DelayLen ≤ bram_latency + 1`, fall back to a
@@ -777,11 +781,8 @@ model with the saturated address matches every port of these sets bit
 exactly; the HDL table (±1.0 at address 0) does not.
 
 **Note:** the in-order lists of the trigger (`FFTSize − StepPeriod − log2 N = 2`,
-e.g. `butterfly_direct` set 6) differ from the HDL in the other entries as well:
-for an in-order list `cosin` uses the angles
-`2π·bit_rev(k, log2 N)/2^(FFTSize − StepPeriod)`, which equal the `Coeffs`
-formula only for `FFTSize − StepPeriod − log2 N = 1` (the biplex case). That
-finding is not yet recorded as a bug; the HDL keeps the formula for such lists.
+e.g. `butterfly_direct` set 6) also hit bug 20, so their other entries differ
+from the HDL as well.
 
 **Suggested fix:** compute the backwards address modulo the table (or let
 `Convert2` wrap), and store the quadrant-boundary entry: use a table of
@@ -893,6 +894,106 @@ the model matches every port bit-exactly.
 `FFT_SIZE − s > DELAYS_BIT_LIMIT` and `2^(FFT_SIZE − s) > BRAM_LATENCY`);
 sets that trigger the bug are excluded from the Simulink comparison.
 
+## 19. pfb_fir_real: the mask does not pass n_pol_blocks to the init
+
+**Affected code:** the `pfb_fir_real` block in `casper_library_pfbs.slx`
+(mask Initialization, `simulink/systems/system_root.xml:1213-1234`);
+`casper_library/pfb_fir_real_init.m:63, 75, 222`.
+
+**Symptom:** a `pfb_fir_real` with `n_pol_blocks > 1` behaves as
+`n_pol_blocks = 1`: each tap delay is `2^(PFBSize − n_inputs)` instead of
+`2^(PFBSize − n_inputs) · n_pol_blocks`, so the taps of the serially
+interleaved pol blocks are mixed.
+
+**Trigger:** `n_pol_blocks > 1`.
+
+**HDL trigger:** `PFBs/pfb_fir_real`: `N_POL_BLOCKS != 1`
+
+**Root cause:** the mask has an `n_pol_blocks` parameter, but its
+Initialization calls `pfb_fir_real_init(gcb, 'PFBSize', …, 'coeffs_share',
+coeffs_share)` without `'n_pol_blocks'`. `get_var` (`:75`) then returns the
+default `n_pol_blocks = 1` (`:63`), and the `tap_real` delays are built with
+it (`:222`). The `first_tap_real` mask in the same library does pass
+`n_pol_blocks`.
+
+**Impact on casper designs:** `pfb_fir_real` with more than one pol block.
+
+**Confirmed in MATLAB R2021a:** `pfb_fir_real` set 4 (`PFB_SIZE 3`,
+`N_INPUTS 0`, `N_POL_BLOCKS 2`). Its Simulink inputs run through the golden
+model (`gen_pfb_test_data.py`) give 394 of 416 `dout` and 1 `sync_out`
+mismatches with `N_POL_BLOCKS = 2`, and none with `N_POL_BLOCKS = 1`.
+
+**Suggested fix:** add `'n_pol_blocks', n_pol_blocks` to the mask
+Initialization call.
+
+**HDL:** implements the intended behaviour (tap delay
+`(1 << (PFB_SIZE − N_INPUTS)) · N_POL_BLOCKS`); sets that trigger the bug
+are excluded from the Simulink comparison.
+
+## 20. coeff_gen: in-order coefficient lists are looked up at the wrong angles
+
+**Affected code:** `casper_library/coeff_gen_init.m:228-247` (phase offset,
+step and `multiple_bits` of an in-order list) and `:432-456` (in-order
+lists address `cosin` through a `bit_reverse` of the counter).
+
+**Symptom:** a `twiddle_general` (or `butterfly_direct`) with an in-order
+`Coeffs` list outputs twiddles that are not `exp(−2πj·bit_rev(Coeffs(k),
+FFTSize−1)/2^FFTSize)`, the values `coeff_gen_init.m:145-147` computes as
+`ActualCoeffs` (and uses for a one-entry list). Every entry except the
+first can differ.
+
+**Trigger:** an in-order list `0, d, 2d, …, (N−1)·d` (`d = 2^a`; any
+two-entry list is "in order" for `coeff_gen_init.m:209-213`) with
+`FFTSize − StepPeriod − log2 N − 2a ≠ 1`. For `Coeffs = 0 … N−1` that is
+`FFTSize − StepPeriod − log2 N ≠ 1`. A biplex stage (`fft_stage_n`,
+`biplex_core`: `Coeffs = 0 … 2^(s−1)−1`, `StepPeriod = FFTSize − s`) always
+has 1, so it never triggers. Among `fft_direct` `map_tail` lists, only the
+two-entry lists of `LargerFFTSize = FFTSize + 1` (`FFTSize ≥ 2`) trigger, and
+those configurations already fail to build (bug 6). `fft_wideband_real`
+(`FFTSize − n_inputs ≥ 2`) and the other `map_tail` lists never trigger
+(sweep of every `FFTSize ≤ 9`, `LargerFFTSize − FFTSize ≤ 13`, stage and
+butterfly).
+
+**HDL trigger:** `FFTs/Twiddle/twiddle_general`: `N_COEFFS > 1 && FFT_SIZE - STEP_PERIOD - $clog2(N_COEFFS) != 1`;
+`FFTs/butterfly_direct`: `!(N_COEFFS == 2 && COEFF_0 == 0 && COEFF_1 == 1 && STEP_PERIOD == FFT_SIZE - 2) && N_COEFFS > 1 && FFT_SIZE - STEP_PERIOD - $clog2(N_COEFFS) != 1`;
+`FFTs/fft_direct`: `MAP_TAIL != 0 && LARGER_FFT_SIZE == FFT_SIZE + 1 && FFT_SIZE >= 2`
+
+The `twiddle_general` and `butterfly_direct` expressions assume the list
+`0 … N_COEFFS−1` (the HDL holds the list only in `INIT_FILE`), as for bug
+15; they also exclude bit-reversed lists of the same size, which do not
+trigger.
+
+**Root cause:** for an in-order list `coeff_gen` takes the span of the
+list in units of `2^(FFTSize − StepPeriod)` (`multiple_bits =
+FFTSize − StepPeriod − log2(N·d)`) and has `cosin` look up entry
+`bit_rev(k, log2 N)` of a table of `N` points over `1/2^multiple_bits` of a
+cycle, i.e. the angle `2π·bit_rev(k, log2 N)/2^(FFTSize − StepPeriod − a)`.
+The intended angle is `2π·bit_rev(k·d, FFTSize−1)/2^FFTSize =
+2π·bit_rev(k, log2 N)/2^(log2 N + a + 1)`. The two agree only when
+`FFTSize − StepPeriod − a = log2 N + a + 1`. The in-order branch mixes the
+`StepPeriod`-based span with the bit reversal over `FFTSize − 1` bits.
+
+**Impact on casper designs:** standalone `twiddle_general` /
+`butterfly_direct` blocks with such lists. The standard FFTs (`fft`,
+`fft_biplex_real_2x/4x`, `fft_wideband_real`) do not reach it: their biplex
+stages always satisfy the condition and their `fft_direct` lists are
+bit-reversed or (for `LargerFFTSize = FFTSize + 1`) unbuildable.
+
+**Confirmed in MATLAB R2021a:** `twiddle_general` set 0 and
+`butterfly_direct` set 6 (`Coeffs = 0 … 3`, `FFTSize 4`, `StepPeriod 0`):
+the coefficient model with the `cosin` angles above matches Simulink
+bit-exactly (together with bug 15); the `Coeffs` formula does not. Both
+sets are also bug-15 sets.
+
+**Suggested fix:** for in-order lists compute the `cosin` span from the
+intended angles (`2^FFTSize` units after `bit_rev(·, FFTSize−1)`, as
+`ActualCoeffs`), or store `ActualCoeffs` in a ROM.
+
+**HDL:** implements the intended values: `gen_twiddle_coeffs.py` compares
+the `cosin` angles with the formula for every in-order list and writes the
+exactly rounded formula values when they differ. Sets that trigger the bug
+are excluded from the Simulink comparison.
+
 ## How casper_dsp handles these bugs
 
 - **Mapping:** the HDL-Simulink Mapping blocks record the bugs, so that
@@ -975,6 +1076,14 @@ sets that trigger the bug are excluded from the Simulink comparison.
 - **Bug 18:** not reproduced: `rtl/FFTs/biplex_core.sv` uses the intended
   `delay_bram` rule. The **HDL trigger** excludes the sets whose stage
   latency differs in Simulink.
+- **Bug 20:** not reproduced: in-order lists whose `cosin` angles are not
+  the `Coeffs` formula get the formula values. The **HDL trigger** excludes
+  the sets (`twiddle_general` 0, 1, 5 and `butterfly_direct` 6, all of them
+  also bug 6 or 15 sets).
+- **Bug 19:** an `unsupported` entry `N_POL_BLOCKS != 1` on
+  `rtl/PFBs/pfb_fir_real.sv`; the HDL keeps the intended
+  `N_POL_BLOCKS` tap delay, which Simulink cannot model. It skips
+  `pfb_fir_real` set 4; the HDL test still runs.
 - **Bugs 16 and 17:** the HDL does not implement `pipeline_en` (bus
   `adder_subtractor`) or floating point (`cmult`), so no set triggers
   them. An implementation of either feature must follow the intended
@@ -1000,13 +1109,20 @@ sets that trigger the bug are excluded from the Simulink comparison.
     would count from `pivot_pnt` = 9 to `num_elements − 1` = 9 (Xilinx
     `Counter`: "Initial value cannot equal count to value");
   - `adder_subtractor` with `QUANTIZATION == 2`;
+  - `convert` with a negative `BIN_PT_IN` / `BIN_PT_OUT` (System Generator
+    fixed-point types need `bin_pt ≥ 0`), and with `OF` on and
+    `OVERFLOW == 2` (`convert_of` offers no 'Flag as error');
   - `fft_wideband_real` and `fft_direct` when `coeff_gen` draws a
     `feedback_osc` with too few phase steps.
 
   They skip `twiddle_stage_2` set 2, `auto_tap` set 3, `tap_real` set 3,
   `twiddle_general` sets 1 and 3, `scale` sets 3 and 4, `xeng_descramble`
-  set 2, `adder_subtractor` set 4 and `fft_wideband_real` set 2; the HDL
-  tests of these sets still run.
+  set 2, `adder_subtractor` set 4, `convert` set 6 and `fft_wideband_real`
+  set 2; the HDL tests of these sets still run.
+- **HDL-only configurations:** `adder_tree` with `PRECISION != 0` (an HDL
+  extension that models the inner AddSubs `pfb_fir_real_init.m` sets) is an
+  `unsupported` entry; `tests/simulation.toml` lists no such set, and
+  `pfb_fir_real` covers it against Simulink.
 - **Coverage lost:** the HDL `twiddle_coeff_1` (and the
   `N_COEFFS = 1, COEFF_0 = 1` branch of `butterfly_direct`) and
   `fft_direct` with `MAP_TAIL = 0` and `FFT_SIZE ≥ 2` are no longer in the

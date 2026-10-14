@@ -37,8 +37,8 @@
 // Power-on: read_ctrl's done register starts at 0, so a read pass runs
 // without any start; valid_out pulses for those D*E words (sync_out stays
 // 0). The library RAM has initVector = [1:36*8], a leftover of the N = 8,
-// D = 8 default; this RAM powers up to 0, so that power-on pass reads 0
-// instead of the initVector values (the only deviation from the diagram).
+// D = 8 default, and this RAM reproduces it (SIMULINK-COMPAT, see RAM_INIT
+// below), so that power-on pass reads the initVector values as in Simulink.
 //
 // Parameters: NUM_ANTS, N_BITS, ACC_LEN, DEMUX_FACTOR are the mask
 // parameters (stored defaults 8, 4, 128, 8). RAM_LATENCY (1 here, 2 in
@@ -57,7 +57,7 @@
 // @simulink-mapping begin
 // block = 'casper_library_correlator.slx/xeng_descramble'
 // deviations = [
-//   'Power-on RAM contents: the HDL RAM powers up to 0. The library Dual Port RAM (system_411.xml) has initVector = [1:36*8], and xlDPBRAM.sgm loads mem = xl_state(init). So the spontaneous power-on read pass (read_ctrl done = 0) outputs narrow words 1, 2, 3, ... in Simulink but zeros in the HDL. How Sysgen fits the 288-entry vector to other depths ((E+1)*D) was not checked.',
+//   'Power-on RAM contents are reproduced only for PLATFORM = GENERIC: the library Dual Port RAM (system_411.xml:369) has initVector = [1:36*8], quantized to the narrow dina type UFix_OW_0 with Round / Saturate (xlDPBRAM.sgm xl_state(init, const_prec_a)), so narrow word n powers up to min(n+1, 2^OW-1) for n < 288 and 0 beyond (vector shorter than the depth (E+1)*D: zero fill; longer: truncated). The HDL GENERIC RAM gets the same words (SIMULINK-COMPAT, RAM_INIT); vendor RAMs power up to 0. The zero fill / truncation follows the System Generator documentation and the plugins-demo2 Simulink comparisons (0 mismatches), not the compiled Sysgen source.',
 //   "Read/write collision: with write_mode_B = 'No Read On Write', xlDPBRAM.sgm (BinvalidatesA) makes port A return NaN when port B writes the same wide word in the same cycle. The HDL dual_port_ram returns defined data instead. Legal xeng traffic never collides; the tests assert this.",
 //   "NUM_ANTS odd or < 4 is a $fatal. Simulink builds these (the block description says 'NOT TESTED FOR non-2^N antennas'), but the pivot_pnt / Counter2 range is then non-integer or degenerate.",
 // ]
@@ -117,6 +117,26 @@ module xeng_descramble #(
     localparam int RAM_AW   = $clog2(E + 1);
     localparam int SUB_BITS = (D > 1) ? $clog2(D) : 1;
 
+    // SIMULINK-COMPAT: reproduces casper_library's Dual Port RAM
+    // initVector = [1:36*8] (casper_library_correlator.slx
+    // system_411.xml:369, xeng_descramble; system_928.xml:369,
+    // xeng_descramble_4ant), a leftover of the N = 8, D = 8 default. It is
+    // not functionally intended and affects only the first, spontaneous
+    // readout after power-on (read_ctrl done = 0); it exists only so that
+    // the HDL matches Simulink bit-exactly from cycle 0. Narrow word
+    // n = i*D + j (wide word i, lane j at bits [j*OW +: OW]) holds n+1,
+    // saturated to OW bits (Sysgen quantizes initVector to dina,
+    // UFix_OW_0, Round / Saturate), for n < 288 and n < (E+1)*D (the
+    // Simulink depth); every other word is 0. GENERIC RAM only.
+    function automatic logic [(1 << RAM_AW)*8*P-1:0] ram_init();
+        logic [(1 << RAM_AW)*8*P-1:0] m = '0;
+        for (int n = 0; n < 288 && n < (E + 1) * D; n++)
+            // n + 1 <= 288 < 2^9, so only OW < 9 can saturate
+            m[n * OW +: OW] = (OW < 9 && n + 1 > (1 << OW) - 1) ? OW'((1 << OW) - 1) : OW'(n + 1);
+        return m;
+    endfunction
+    localparam logic [(1 << RAM_AW)*8*P-1:0] RAM_INIT = (PLATFORM == "GENERIC") ? ram_init() : '0;
+
     initial begin
         if (N < 4 || N % 2 != 0)
             $fatal(1, "xeng_descramble: NUM_ANTS must be even and >= 4 (got %0d)", N);
@@ -159,7 +179,8 @@ module xeng_descramble #(
     assign ra_wide = RAM_AW'(raddr / D);
     assign ra_sub  = SUB_BITS'(raddr % D);
 
-    dual_port_ram #(.DATA_WIDTH(8 * P), .ADDR_WIDTH(RAM_AW), .PLATFORM(PLATFORM)) u_ram (
+    dual_port_ram #(.DATA_WIDTH(8 * P), .ADDR_WIDTH(RAM_AW), .INIT_MEM(RAM_INIT),
+                    .PLATFORM(PLATFORM)) u_ram (
         .clk(clk),
         .we_a(1'b0), .addr_a(ra_wide), .din_a('0), .dout_a(rdata),
         .we_b(we), .addr_b(RAM_AW'(waddr)), .din_b(wide_in), .dout_b());

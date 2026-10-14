@@ -37,16 +37,16 @@ AT_TESTS = [
     (P(AT, [5, 10, 2, 0, 1, 0, 10, 0, 0, 0]), "5 inputs, unsigned, carried values in stages 1 and 2"),
     (P(AT, [7, 18, 17, 1, 0, 0, 18, 0, 0, 0]), "7 inputs, combinational (latency 0)"),
     (P(AT, [8, 16, 8, 1, 1, 0, 16, 0, 0, 0]), "8 inputs: balanced tree"),
-    (P(AT, [6, 18, 17, 1, 1, 1, 18, 17, 0, 0]),
-     "6 inputs, every adder Fix_18_17 (output width = input width), truncate, wrap"),
-    (P(AT, [9, 24, 20, 1, 2, 1, 22, 17, 2, 1]),
-     "9 inputs (pfb-like), adders Fix_22_17, round even, saturate; carried input keeps Fix_24_20"),
     (dict(P(AT, [3, 8, 0, 1, 2, 0, 8, 0, 0, 0]), DVALID_EN=1),
      "set 2 with dvalid_en: random dv_in stalls the adders, the carried input is free"),
     (dict(P(AT, [8, 16, 8, 1, 1, 0, 16, 0, 0, 0]), DVALID_EN=1),
      "set 5 with dvalid_en: balanced tree, every adder stalled by dv_in"),
 ]
 AT_DEFAULTS = {"DVALID_EN": 0}
+# PRECISION = 1 sets are not listed: the mapping marks PRECISION != 0 unsupported
+# (no standalone Simulink reference); pfb_fir_real covers it. Sets 6 and 7 keep
+# the random seeds of their former numbers 8 and 9, so their data is unchanged.
+AT_SEED = {6: 8, 7: 9}
 
 
 def stages(n):
@@ -115,7 +115,7 @@ def check_exact_sum(p, st, out, w_out):
 def gen():
     sets = []
     for n, (p, desc) in enumerate(AT_TESTS):
-        rng = random.Random(f"adder_tree-{n}")
+        rng = random.Random(f"adder_tree-{AT_SEED.get(n, n)}")
         cycles, w, ni = 160, p["DATA_WIDTH"], p["N_INPUTS"]
         cs = corners(w)
         din = [[0] * ni]

@@ -23,10 +23,12 @@ flat, but each word is the one casper's cosin lookup produces:
   reads the wrong entry; this table holds the intended value instead.
 - Lists casper builds with a feedback_osc oscillator (coeff_generation on,
   bit-reversed and long enough), lists coeff_gen rejects, and in-order lists
-  with FFTSize - StepPeriod - log2(length) != 1 get the exactly rounded
-  formula values. For the last, casper's cosin uses the angles
-  2*pi*bit_rev(k, log2 N)/2^(FFTSize - StepPeriod), which are not the formula
-  (only the biplex case, FFTSize - StepPeriod - log2 N = 1, agrees).
+  whose cosin angles are not the formula (mlib_devel bug 20) get the exactly
+  rounded formula values. For an in-order list 0, d, 2d, ... (d = 2^a) casper's
+  cosin uses the angles 2*pi*bit_rev(k, log2 N)/2^(FFTSize - StepPeriod - a);
+  they equal the formula 2*pi*bit_rev(k*d, FFTSize-1)/2^FFTSize only for
+  FFTSize - StepPeriod - log2 N - 2a = 1 (the biplex stages: d = 1,
+  FFTSize - StepPeriod - log2 N = 1).
 - A one-entry list is coeff_gen's pair of Constants, which casper rounds to
   COEFF_BIT_WIDTH-2 fractional bits (coeff_gen_init.m:156-157).
 
@@ -44,6 +46,7 @@ Usage:
 import argparse
 import cmath
 import math
+from fractions import Fraction
 from pathlib import Path
 
 
@@ -196,13 +199,14 @@ def twiddle_table(coeffs, fft_size, coeff_bit_width, *, step_period, coeffs_bit_
                 for w in twiddle_values(coeffs, fft_size)]
     lay = cosin_layout(coeffs, fft_size, coeff_bit_width, step_period, coeffs_bit_limit,
                        coeff_sharing, coeff_decimation, coeff_generation, latency_sum, cal_bits)
-    if lay is None or (lay["inorder"] and lay["full_cycle_bits"] - lay["table_bits"] != 1):
-        # no cosin, or an in-order list whose cosin angles 2*pi*bit_rev(k)/2^(table_bits +
-        # multiple_bits) are not the Coeffs formula (only multiple_bits = 1, the biplex
-        # case, agrees): the formula values, exactly rounded
+    tb = lay and lay["table_bits"]
+    if lay is None or (lay["inorder"] and any(
+            Fraction(bit_rev(k, tb), 2 ** lay["full_cycle_bits"])
+            != Fraction(bit_rev(c, fft_size - 1), 2 ** fft_size) for k, c in enumerate(coeffs))):
+        # no cosin, or an in-order list whose cosin angles 2*pi*bit_rev(k)/2^full_cycle_bits
+        # are not the Coeffs formula (bug 20): the formula values, exactly rounded
         return [(quantize_coeff(w.real, coeff_bit_width), quantize_coeff(w.imag, coeff_bit_width))
                 for w in twiddle_values(coeffs, fft_size)]
-    tb = lay["table_bits"]
     table = []
     for k in range(len(coeffs)):
         theta = bit_rev(k, tb) if lay["inorder"] else k

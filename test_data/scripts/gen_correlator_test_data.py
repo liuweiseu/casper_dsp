@@ -691,11 +691,22 @@ def m_read_ctrl(q, start):
     return out
 
 
+def ram_init(q):
+    """SIMULINK-COMPAT: the library Dual Port RAM's initVector = [1:36*8]
+    (system_411.xml:369 / system_928.xml:369), quantized to the narrow dina
+    type UFix_OW_0 (Round / Saturate), truncated to the depth (E+1)*D: narrow
+    word n = i*D + j (wide word i, lane j at bits j*OW) holds
+    min(n+1, 2^OW-1) for n < 288, else 0. As RAM_INIT in xeng_descramble.sv."""
+    d, ow, top = q["D"], q["OW"], (1 << q["OW"]) - 1
+    return [sum((min(i * d + j + 1, top) if i * d + j < 288 else 0) << (j * ow) for j in range(d))
+            for i in range(q["E"] + 1)]
+
+
 def m_xeng_descramble(q, ram_lat, acc, valid, sync, win_valid, stats=None):
     wc = m_write_ctrl(q, sync, acc, valid, win_valid)
     rc = m_read_ctrl(q, wc["start_readout"])
     d, ow, p_ = q["D"], q["OW"], q["P"]
-    mem = [0] * (q["E"] + 1)
+    mem = ram_init(q)
     rdata, collisions = 0, 0
     pipe = [0] * (ram_lat - 1)
     subp = [0] * ram_lat
@@ -1007,8 +1018,9 @@ def gen_xeng_descramble():
              "checks every readout against the element table computed from (line, tap) "
              "arithmetic (the appendix D map, itself checked against the plan's tables for "
              "N = 4, 6, 8), and that reads never hit the wide word being written. Every set "
-             "shows the spontaneous power-on read pass (D*E valid words, RAM powers up to 0, "
-             "no sync_out).", sets, cycles)
+             "shows the spontaneous power-on read pass (D*E valid words, no sync_out). The RAM "
+             "powers up to the library initVector [1:36*8] (narrow word n = n+1, saturated "
+             "to the output width, 0 beyond 288), as in Simulink.", sets, cycles)
     return toml_block(CATEGORY, "xeng_descramble", sets)
 
 

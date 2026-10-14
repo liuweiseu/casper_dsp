@@ -54,7 +54,7 @@
 //
 // [[unsupported]]
 // when = 'ASYNC != 0 && BRAM_LATENCY == 1'
-// reason = 'delay_bram_init.m:131-157: with async = on the loop that creates the bram_latency-1 output Delays and the dout port runs zero times for bram_latency = 1, so the block has no output port (confirmed in MATLAB R2021a: delay_bram has 0 output port(s), not 1)'
+// reason = 'mlib_devel bug 14 (docs/bugs.md): delay_bram_init.m:131-157: with async = on the loop that creates the bram_latency-1 output Delays and the dout port runs zero times for bram_latency = 1, so the block has no output port (confirmed in MATLAB R2021a: delay_bram has 0 output port(s), not 1)'
 //
 // [params.BRAM_LATENCY]
 // mask = 'bram_latency'

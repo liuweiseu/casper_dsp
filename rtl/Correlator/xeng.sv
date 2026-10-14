@@ -74,7 +74,7 @@
 //   'MCNT_BITS (default 32) makes explicit the width that Simulink takes from mcnt_in. mcnt passes through sample_and_hold registers and one Delay, so its type and signedness do not matter.',
 //   "ACC_LEN that is not a power of 2: the taps' 8*N_BITS_OUT-bit words go to a descramble that slices fields of W = N_BITS_OUT-1 bits from the LSB. The write_ctrl/x_cast Slices are all 'LSB of Input' (system_478.xml, system_588.xml), so the output fields mix bits of neighbouring parts. The HDL reproduces this and issues a $warning. This rests on the diagram; no Simulink run confirmed it.",
 //   'Reproduced library property, not confirmed by a Simulink run: with N_ANTS = 8 and ACC_LEN*N_ANTS/(NV*DEMUX_FACTOR) = 1.6 (ship_el_del = 0), the readout is fast enough to read the last conjugated element (2,7) before the next window rewrites it. That element then comes from the previous frame (4 of 76 legal configurations; the default is unaffected).',
-//   "Power-on, matching the diagram: if window_valid is 1 from cycle 0, window_delay and write_ctrl see a rising edge at cycle 0, because the edge_detect Delay starts at 0. The descramble's spontaneous power-on read pass also appears on acc/valid. In the HDL that pass reads zeros; in Simulink it reads the descramble RAM initVector values (see xeng_descramble).",
+//   "Power-on, matching the diagram: if window_valid is 1 from cycle 0, window_delay and write_ctrl see a rising edge at cycle 0, because the edge_detect Delay starts at 0. The descramble's spontaneous power-on read pass also appears on acc/valid. It reads the descramble RAM initVector values in both (SIMULINK-COMPAT in xeng_descramble; GENERIC RAM only).",
 // ]
 //
 // [params.DEMUX_FACTOR]
@@ -89,7 +89,7 @@
 //
 // [[unsupported]]
 // when = 'USE_BRAM_DELAY != 0 && ACC_LEN * ((N_ANTS + 1) / 2) - N_ANTS / 2 > 0 && ACC_LEN * ((N_ANTS + 1) / 2) - N_ANTS / 2 <= (BRAM_LATENCY > 2 ? BRAM_LATENCY : 2) + 1'
-// reason = 'the auto_tap inside xeng gets the same n_ants / acc_len / bram_latency / use_bram_delay (xeng_init.m:84-92): auto_tap_init.m:61-68 gives its delay_bram DelayLen = (acc_len-1)*ceil(n_ants/2) + ceil(n_ants/2) - floor(n_ants/2) and sets DelayLen before bram_latency, so the check in delay_bram_init.m:40-42 (DelayLen > bram_latency + 1) runs first against the library default bram_latency 2 and then against BRAM_LATENCY: delay_bram_init: delay value must be greater than BRAM Latency + 1'
+// reason = 'mlib_devel bug 7 (docs/bugs.md): the auto_tap inside xeng gets the same n_ants / acc_len / bram_latency / use_bram_delay (xeng_init.m:84-92): auto_tap_init.m:61-68 gives its delay_bram DelayLen = (acc_len-1)*ceil(n_ants/2) + ceil(n_ants/2) - floor(n_ants/2) and sets DelayLen before bram_latency, so the check in delay_bram_init.m:40-42 (DelayLen > bram_latency + 1) runs first against the library default bram_latency 2 and then against BRAM_LATENCY: delay_bram_init: delay value must be greater than BRAM Latency + 1'
 //
 // [[unsupported]]
 // when = 'USE_BRAM_DELAY == 0'

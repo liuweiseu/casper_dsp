@@ -3187,7 +3187,7 @@ OUTPUT_WIDTH = 8
 dir = "Misc"
 top = "adder_tree"
 test_data_script = "gen_adder_tree_test_data.py"
-simulation_cycles = [160, 160, 160, 160, 160, 160, 160, 160, 160, 160]
+simulation_cycles = [160, 160, 160, 160, 160, 160, 160, 160]
 # 1 input: no stage, dout = din
 [[simulations.parameters]]
 N_INPUTS = 1
@@ -3260,30 +3260,6 @@ N_BITS_OUT = 16
 BIN_PT_OUT = 0
 QUANTIZATION = 0
 OVERFLOW = 0
-# 6 inputs, every adder Fix_18_17 (output width = input width), truncate, wrap
-[[simulations.parameters]]
-N_INPUTS = 6
-DATA_WIDTH = 18
-BIN_PT = 17
-TYPE = 1
-CSP_LATENCY = 1
-PRECISION = 1
-N_BITS_OUT = 18
-BIN_PT_OUT = 17
-QUANTIZATION = 0
-OVERFLOW = 0
-# 9 inputs (pfb-like), adders Fix_22_17, round even, saturate; carried input keeps Fix_24_20
-[[simulations.parameters]]
-N_INPUTS = 9
-DATA_WIDTH = 24
-BIN_PT = 20
-TYPE = 1
-CSP_LATENCY = 2
-PRECISION = 1
-N_BITS_OUT = 22
-BIN_PT_OUT = 17
-QUANTIZATION = 2
-OVERFLOW = 1
 # set 2 with dvalid_en: random dv_in stalls the adders, the carried input is free
 [[simulations.parameters]]
 N_INPUTS = 3

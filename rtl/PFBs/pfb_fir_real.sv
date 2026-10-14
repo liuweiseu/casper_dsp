@@ -158,6 +158,15 @@
 // type = 'edit'
 // note = 'same parameter; the mask name is camelCase'
 //
+// [params.N_POL_BLOCKS]
+// mask = 'n_pol_blocks'
+// type = 'edit'
+// note = 'the pfb_fir_real mask Initialization does not pass n_pol_blocks to pfb_fir_real_init.m, which then builds every tap delay for n_pol_blocks = 1 (mlib_devel bug 19, docs/bugs.md); only N_POL_BLOCKS = 1 has a Simulink reference (see unsupported)'
+//
+// [[unsupported]]
+// when = 'N_POL_BLOCKS != 1'
+// reason = 'mlib_devel bug 19 (docs/bugs.md): the casper_library_pfbs pfb_fir_real mask Initialization calls pfb_fir_real_init without n_pol_blocks, so get_var falls back to the default 1 (pfb_fir_real_init.m:63, 75) and the tap delay 2^(PFBSize-n_inputs)*n_pol_blocks (:222) is built for one pol block; the HDL delays by (1 << (PFB_SIZE - N_INPUTS)) * N_POL_BLOCKS as intended (confirmed in MATLAB R2021a: set 4 matches the golden model only with N_POL_BLOCKS = 1)'
+//
 // [hdl_only]
 // BIT_GROWTH = 'pfb_fir_real_init.m local variable (nextpow2 of the max sub-filter gain), exposed as a parameter; compute with gen_pfb_coeffs.py --bit-width-in'
 // ADDER_N_BITS_OUT = 'pfb_fir_real_init.m local variable, exposed as a parameter'

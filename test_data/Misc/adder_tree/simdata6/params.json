@@ -1,13 +1,14 @@
 {
-  "N_INPUTS": 6,
-  "DATA_WIDTH": 18,
-  "BIN_PT": 17,
+  "N_INPUTS": 3,
+  "DATA_WIDTH": 8,
+  "BIN_PT": 0,
   "TYPE": 1,
-  "CSP_LATENCY": 1,
-  "PRECISION": 1,
-  "N_BITS_OUT": 18,
-  "BIN_PT_OUT": 17,
+  "CSP_LATENCY": 2,
+  "PRECISION": 0,
+  "N_BITS_OUT": 8,
+  "BIN_PT_OUT": 0,
   "QUANTIZATION": 0,
   "OVERFLOW": 0,
-  "N_BITS_OUT_EFF": 18
+  "DVALID_EN": 1,
+  "N_BITS_OUT_EFF": 10
 }

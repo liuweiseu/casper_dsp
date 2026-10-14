@@ -35,7 +35,7 @@ The test-data generator checks this end to end for 4, 6, 8 and 10 antennas. One 
 
 **Tap output to descramble.** The taps produce 8 `N_BITS_OUT`-bit parts (`2·N_BITS + 1 + ceil(log2 ACC_LEN)`). The descramble slices `W`-bit fields (`2·N_BITS + floor(log2 ACC_LEN) + 1`) at offsets k·W from the LSB of whatever it receives, so feeding it the low 8W bits is equivalent. When `ACC_LEN` is a power of 2, W = N_BITS_OUT and nothing is lost. Otherwise W is one bit narrower and the fields are misaligned, each mixing bits of neighbouring parts, exactly as in the library; the module issues a `$warning` in that case.
 
-**Power-on.** If `window_valid` is high from power-on, `window_delay` still sees a rising edge at cycle 0 and its output rises at `XENG_DELAY` (see `window_delay`). The descramble's power-on read pass (`D·E` words of zeros) also appears on `acc`/`valid`.
+**Power-on.** If `window_valid` is high from power-on, `window_delay` still sees a rising edge at cycle 0 and its output rises at `XENG_DELAY` (see `window_delay`). The descramble's power-on read pass (`D·E` words of the library RAM `initVector`, see `xeng_descramble`) also appears on `acc`/`valid`.
 
 Built from `auto_tap`, `baseline_tap` ×K, `window_delay`, `xeng_descramble` / `xeng_descramble_4ant`, `sample_and_hold` ×3 and `delay`.
 
