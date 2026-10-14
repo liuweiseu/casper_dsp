@@ -8,6 +8,10 @@ The first 72 cycles walk every pair of per-part corner cases (0, 1, all-ones, MS
 
 Encodings: `TYPE` 0=unsigned, 1=signed; `QUANTIZATION` 0=truncate, 1=round half away from zero, 2=round half to even; `OVERFLOW` 0=wrap, 1=saturate.
 
+**CSV data exported from the corresponding MATLAB Simulink block.**
+
+Simulink data: the `sim_*.csv` files of sets 0–9, 11 were exported from Simulink models of the block (MATLAB R2021a, System Generator; plugins-demo2 export flow with its own random stimulus) and copied here on 2026-10-14; `params.json` (and any `.mem` files) are the generator's. The other sets keep the generated data (set 10: mlib_devel bug 13 (docs/bugs.md), Simulink differs from the intended behaviour). Regenerating the module with its script replaces the exported CSVs with the reference model's output.
+
 | Test # | Directory | N_BITS_A | BIN_PT_A | N_BITS_B | BIN_PT_B | N_BITS_AB | BIN_PT_AB | QUANTIZATION | OVERFLOW | MULT_LATENCY | ADD_LATENCY | CONV_LATENCY | IN_LATENCY | CONJUGATED | MULTIPLIER_IMPLEMENTATION | PIPELINE_CMULT_EN | PIPELINE_LATENCY | ASYNC | PIPELINED_ENABLE | Cycles | Description |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | `simdata0` | 18 | 17 | 18 | 17 | 37 | 14 | 0 | 0 | 3 | 1 | 1 | 0 | 0 | 0 | 0 | 2 | 0 | 1 | 128 | cmult_init.m defaults: Fix_18_17 → Fix_37_14, truncate + wrap |

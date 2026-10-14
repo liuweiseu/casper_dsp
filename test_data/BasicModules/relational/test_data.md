@@ -4,9 +4,11 @@ Each subdirectory corresponds to one parameter set. `COMP`: 0=eq, 1=ne, 2=lt, 3=
 
 **CSV data exported from the corresponding MATLAB Simulink block.**
 
-This applies to `simdata0`–`simdata7` (unsigned, `SIGNED` = 0). `simdata8`–`simdata16` test the `SIGNED` parameter, and `simdata17` tests the enable (`USE_ENABLE = 1`, `en` from `sim_en.csv`). They are generated from a Python model by `test_data/scripts/gen_basic_test_data.py`, which also writes a `params.json` for each set. The 4- and 5-bit sets cover every input pair in shuffled order. `USE_ENABLE` is 0 in every set except `simdata17`.
+Before 2026-10-14 this applied only to `simdata0`–`simdata7` (unsigned, `SIGNED` = 0). `simdata8`–`simdata16` test the `SIGNED` parameter, and `simdata17` tests the enable (`USE_ENABLE = 1`, `en` from `sim_en.csv`). They are generated from a Python model by `test_data/scripts/gen_basic_test_data.py`, which also writes a `params.json` for each set. The 4- and 5-bit sets cover every input pair in shuffled order. `USE_ENABLE` is 0 in every set except `simdata17`.
 
 Every `simdataN/` holds a `params.json` with the DUT parameters of that set; the testbench selects the set whose `params.json` matches the DUT (`find_data_dir` in `testbench/data_paths.py`).
+
+Simulink data: the `sim_*.csv` files of sets 0–17 were exported from Simulink models of the block (MATLAB R2021a, System Generator; plugins-demo2 export flow with its own random stimulus) and copied here on 2026-10-14; `params.json` (and any `.mem` files) are the generator's. Regenerating the module with its script replaces the exported CSVs with the reference model's output.
 
 | Test # | Directory | NBITS | COMP | LATENCY | SIGNED | USE_ENABLE | Cycles | Description |
 |--------|-----------|-------|------|---------|--------|------------|--------|-------------|

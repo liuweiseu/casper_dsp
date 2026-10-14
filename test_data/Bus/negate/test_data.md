@@ -8,6 +8,10 @@ The first cycles walk corner-case words (0, 1, all-ones, MSB only, MSB−1, MSB+
 
 Encodings: `TYPE` 0=unsigned, 1=signed; `QUANTIZATION` 0=truncate, 1=round half away from zero, 2=round half to even; `OVERFLOW` 0=wrap, 1=saturate.
 
+**CSV data exported from the corresponding MATLAB Simulink block.**
+
+Simulink data: the `sim_*.csv` files of sets 0–4 were exported from Simulink models of the block (MATLAB R2021a, System Generator; plugins-demo2 export flow with its own random stimulus) and copied here on 2026-10-14; `params.json` (and any `.mem` files) are the generator's. Regenerating the module with its script replaces the exported CSVs with the reference model's output.
+
 | Test # | Directory | N_BITS_IN | BIN_PT_IN | TYPE_IN | N_BITS_OUT | BIN_PT_OUT | TYPE_OUT | QUANTIZATION | OVERFLOW | CSP_LATENCY | MISC | MISC_WIDTH | Cycles | Description |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | `simdata0` | 8 | 4 | 1 | 8 | 4 | 1 | 0 | 0 | 0 | 0 | 1 | 128 | Fix_8_4 → Fix_8_4, wrap (−(−8) wraps to −8), combinational |

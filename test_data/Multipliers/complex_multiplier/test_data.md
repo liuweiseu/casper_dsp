@@ -8,6 +8,10 @@ The first cycles walk corner-case words (0, 1, all-ones, MSB only, MSB−1, MSB+
 
 Encodings: `TYPE` 0=unsigned, 1=signed; `QUANTIZATION` 0=truncate, 1=round half away from zero, 2=round half to even; `OVERFLOW` 0=wrap, 1=saturate.
 
+**CSV data exported from the corresponding MATLAB Simulink block.**
+
+Simulink data: the `sim_*.csv` files of sets 0, 1, 7 were exported from Simulink models of the block (MATLAB R2021a, System Generator; plugins-demo2 export flow with its own random stimulus) and copied here on 2026-10-14; `params.json` (and any `.mem` files) are the generator's. The other sets keep the generated data (sets 2–6: QUANTIZATION 1 / 2 have no Simulink equivalent, the Complex Multiplier 6.0 IP offers only Truncate and Random Rounding). Regenerating the module with its script replaces the exported CSVs with the reference model's output.
+
 | Test # | Directory | N_BITS_A | BIN_PT_A | TYPE_A | N_BITS_B | BIN_PT_B | TYPE_B | N_BITS_OUT | BIN_PT_OUT | TYPE_OUT | QUANTIZATION | OVERFLOW | MULT_SPEC | MULT_LATENCY | ADD_LATENCY | Cycles | Description |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | `simdata0` | 8 | 7 | 1 | 8 | 7 | 1 | 17 | 14 | 1 | 0 | 0 | 0 | 2 | 1 | 128 | Fix_8_7 × Fix_8_7 → Fix_17_14, exact, 4-mult |

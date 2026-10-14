@@ -6,9 +6,11 @@ one input file per element (`sim_din<j>.csv` = `din[j]`).
 
 **CSV data exported from the corresponding MATLAB Simulink block.**
 
-This applies to `simdata0`–`simdata3` (`USE_ENABLE` = 0). `simdata4` tests the enable (`en` from `sim_en.csv`). It is generated from a Python model of the Xilinx System Generator block (`data/sysgen/block_models/xl*.sgm`) by `test_data/scripts/gen_basic_test_data.py`, which also writes a `params.json` for each set (the testbench matches the DUT parameters against it).
+Before 2026-10-14 this applied only to `simdata0`–`simdata3` (`USE_ENABLE` = 0). `simdata4` tests the enable (`en` from `sim_en.csv`). It is generated from a Python model of the Xilinx System Generator block (`data/sysgen/block_models/xl*.sgm`) by `test_data/scripts/gen_basic_test_data.py`, which also writes a `params.json` for each set (the testbench matches the DUT parameters against it).
 
 Every `simdataN/` holds a `params.json` with the DUT parameters of that set; the testbench selects the set whose `params.json` matches the DUT (`find_data_dir` in `testbench/data_paths.py`).
+
+Simulink data: the `sim_*.csv` files of sets 0–4 were exported from Simulink models of the block (MATLAB R2021a, System Generator; plugins-demo2 export flow with its own random stimulus) and copied here on 2026-10-14; `params.json` (and any `.mem` files) are the generator's. Regenerating the module with its script replaces the exported CSVs with the reference model's output.
 
 | Test # | Directory | NBITS | NINPUTS | LATENCY | USE_ENABLE | Cycles | Description |
 |--------|-----------|-------|---------|---------|------------|--------|-------------|

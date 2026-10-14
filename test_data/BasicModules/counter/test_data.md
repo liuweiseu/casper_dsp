@@ -4,7 +4,7 @@ Each subdirectory corresponds to one parameter set. `COUNTER_TYPE`: 0 = free-run
 
 **CSV data exported from the corresponding MATLAB Simulink block.**
 
-This applies to `simdata0`–`simdata4`. `simdata5`–`simdata13` are generated from a Python model of the Xilinx Counter (`data/sysgen/block_models/xlCounter.sgm`) by `test_data/scripts/gen_basic_test_data.py`, which writes `params.json` and the stimulus and expected-output CSVs:
+Before 2026-10-14 this applied only to `simdata0`–`simdata4`. `simdata5`–`simdata13` are generated from a Python model of the Xilinx Counter (`data/sysgen/block_models/xlCounter.sgm`) by `test_data/scripts/gen_basic_test_data.py`, which writes `params.json` and the stimulus and expected-output CSVs:
 
 - `simdata5`–`simdata9` test the synchronous reset and the enable, with `sim_rst.csv` and `sim_enable.csv` as stimulus. All of them keep `RST_VAL` = `INIT_VAL`: the Xilinx Counter resets to `start_count`, so a separate reset value has no Simulink counterpart.
 - `simdata10`–`simdata13` test the up/down direction (`COUNT_DIR = 2`, `sim_up.csv`) and the load port (`ENABLE_LOAD = 1`, `sim_load.csv` and `sim_din.csv`). They also drive `rst` and `enable`.
@@ -12,6 +12,8 @@ This applies to `simdata0`–`simdata4`. `simdata5`–`simdata13` are generated 
 In `simdata12` a load is attempted while `enable` is low (ignored) and during a reset (the reset wins). In `simdata13` a load arrives while the counter sits at `COUNT_TO_VAL` (the wrap to `INIT_VAL` wins). In `simdata10`–`simdata13`, `simulation.toml` leaves `RST_VAL` at its default, `INIT_VAL`. In sets 0–4 `ENABLE_SYNC_RST` and `ENABLE_ENABLE` are 0, so `RST_VAL` (default `INIT_VAL`) has no effect.
 
 Every `simdataN/` holds a `params.json` with the DUT parameters of that set; the testbench selects the set whose `params.json` matches the DUT (`find_data_dir` in `testbench/data_paths.py`).
+
+Simulink data: the `sim_*.csv` files of sets 0–13 were exported from Simulink models of the block (MATLAB R2021a, System Generator; plugins-demo2 export flow with its own random stimulus) and copied here on 2026-10-14; `params.json` (and any `.mem` files) are the generator's. Regenerating the module with its script replaces the exported CSVs with the reference model's output.
 
 | Test # | Directory | NBITS | STEP | INIT_VAL | COUNT_TO_VAL | COUNTER_TYPE | COUNT_DIR | ENABLE_SYNC_RST | ENABLE_ENABLE | RST_VAL | ENABLE_LOAD | Cycles | Description |
 |--------|-----------|-------|------|----------|--------------|--------------|-----------|-----------------|---------------|---------|-------------|--------|-------------|

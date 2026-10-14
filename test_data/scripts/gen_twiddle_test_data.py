@@ -31,7 +31,7 @@ import sys
 from fractions import Fraction
 from pathlib import Path
 
-from common import TEST_DATA_ROOT, run_cli                  # also puts rtl/.../scripts on sys.path
+from common import TEST_DATA_ROOT, run_cli, write_test_data_md                  # also puts rtl/.../scripts on sys.path
 from gen_fixed_point_test_data import quantize, to_value
 from gen_twiddle_coeffs import COEFF_DEFAULTS, coeff_options, coeff_params, mem_lines, twiddle_table    # rtl/FFTs/Twiddle/scripts/
 
@@ -376,7 +376,7 @@ def write_module(name, spec):
         if params.get("ASYNC"):
             write_csv(d / f"sim_{en_name}.csv", st[en_name])
             write_csv(d / f"sim_{dv_name}.csv", delayed(st[en_name], dv_lat(params), 0))
-    (mdir / "test_data.md").write_text(test_data_md(name, spec))
+    write_test_data_md(mdir / "test_data.md", test_data_md(name, spec).rstrip("\n").split("\n"))
 
 
 def test_data_md(name, spec):

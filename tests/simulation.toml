@@ -3305,7 +3305,7 @@ ASYNC = 1
 dir = "FFTs/Twiddle"
 top = "twiddle_general"
 test_data_script = "gen_twiddle_test_data.py"
-simulation_cycles = [512, 512, 512, 512, 256, 1024]
+simulation_cycles = [512, 512, 512, 512, 256, 1024, 1024, 1024]
 # 16-point stage coefficients 0..3, casper defaults (round ±inf, wrap)
 [[simulations.parameters]]
 N_INPUTS = 1
@@ -3402,6 +3402,40 @@ BRAM_LATENCY = 2
 QUANTIZATION = 1
 OVERFLOW = 0
 INIT_FILE = "../../../../test_data/FFTs/Twiddle/twiddle_general/simdata5/twiddle.mem"
+# async, Simulink-exported data: set 2 (FFT_SIZE 5, STEP_PERIOD 1, 8 coefficients) with ASYNC = 1: coeff_gen counter on valid samples
+[[simulations.parameters]]
+N_INPUTS = 1
+FFT_SIZE = 5
+N_COEFFS = 8
+STEP_PERIOD = 1
+INPUT_BIT_WIDTH = 12
+BIN_PT_IN = 11
+COEFF_BIT_WIDTH = 10
+MULT_LATENCY = 1
+ADD_LATENCY = 1
+CONV_LATENCY = 0
+BRAM_LATENCY = 1
+QUANTIZATION = 0
+OVERFLOW = 1
+INIT_FILE = "../../../../test_data/FFTs/Twiddle/twiddle_general/simdata6/twiddle.mem"
+ASYNC = 1
+# async, Simulink-exported data: set 4 (single coefficient, 4 inputs) with ASYNC = 1: en straight to dvalid
+[[simulations.parameters]]
+N_INPUTS = 4
+FFT_SIZE = 3
+N_COEFFS = 1
+STEP_PERIOD = 0
+INPUT_BIT_WIDTH = 8
+BIN_PT_IN = 7
+COEFF_BIT_WIDTH = 8
+MULT_LATENCY = 0
+ADD_LATENCY = 0
+CONV_LATENCY = 0
+BRAM_LATENCY = 1
+QUANTIZATION = 1
+OVERFLOW = 1
+INIT_FILE = "../../../../test_data/FFTs/Twiddle/twiddle_general/simdata7/twiddle.mem"
+ASYNC = 1
 
 # test twiddle_pass_through
 [[simulations]]

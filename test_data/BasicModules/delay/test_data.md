@@ -4,6 +4,10 @@ Each subdirectory corresponds to one parameter set and has a `params.json`, whic
 
 `simdata0` is the original 8-cycle set: the output is the input delayed by 1 clock cycle. `simdata1`–`simdata4` test `LATENCY = 0`, the reset and the enable. They are generated from a Python model of the Xilinx System Generator Delay block (`data/sysgen/block_models/xlDelay.sgm`) by `test_data/scripts/gen_basic_test_data.py`. The model clears every stage on `rst` and then shifts on `en`. Each of these sets includes a cycle with `rst` and `en` high together (stage 0 takes `din`) and one with `rst` high while `en` is low.
 
+**CSV data exported from the corresponding MATLAB Simulink block.**
+
+Simulink data: the `sim_*.csv` files of sets 0–4 were exported from Simulink models of the block (MATLAB R2021a, System Generator; plugins-demo2 export flow with its own random stimulus) and copied here on 2026-10-14; `params.json` (and any `.mem` files) are the generator's. Regenerating the module with its script replaces the exported CSVs with the reference model's output.
+
 | Test # | Directory | LATENCY | BITWIDTH | USE_RST | USE_ENABLE | Cycles | Description |
 |--------|-----------|---------|----------|---------|------------|--------|-------------|
 | 0 | `simdata0` | 1 | 3 | 0 | 0 | 8 | Original set — one-cycle delay |
