@@ -24,7 +24,10 @@
 // the latency of the reorder in front of reo_in<i> (bi_real_unscr_4x passes
 // bram_latency + map_latency + 2 + fanout_latency).
 //
-// ASYNC (en / dvalid) is declared for traceability; must be 0.
+// ASYNC = 1 (mirror_spectrum_init.m:97-214): en, delayed freely as the sync
+// (en_delay0), enables the counter, so the frame count advances on valid
+// samples only (rst = sync wins); dvalid = en_delay0 delayed 1+REP
+// (en_delay1), aligned with sync_out and dout. The data path is not gated.
 //
 // ── HDL-Simulink Mapping ─────────────────────────────────────────────────────
 // Differences between this HDL and its Simulink block (casper_library
@@ -37,7 +40,7 @@
 // @simulink-mapping begin
 // block = 'casper_library_ffts_internal.slx/mirror_spectrum'
 // deviations = [
-//   "the library block's saved mask default is async='on' (casper_library_ffts_internal.slx system_root.xml, SID 15), so a freshly dropped block has en/dvalid ports and an enabled counter; the HDL supports only async='off' (ASYNC != 0 -> $fatal)",
+//   "the library block's saved mask default is async='on' (casper_library_ffts_internal.slx system_root.xml, SID 15), so a freshly dropped block has en/dvalid ports and an enabled counter; the HDL default is ASYNC = 0",
 //   "the complex_conj instances are hard-wired to overflow='Wrap' (mirror_spectrum_init.m, '%TODO Wrap really?'): the conjugate of a most-negative imaginary part stays most negative in both models",
 //   'both models require 1 + bram_latency + negate_latency >= ceil(log2(n_inputs)) (negative Delay latency in Simulink, $fatal in the HDL)',
 //   'test vectors in casper_dsp/test_data/FFTs/Internal/mirror_spectrum/test_data.md come from a Python reference model (not exported from MATLAB), so cycle/bit equivalence with the Simulink block is unverified',
@@ -54,8 +57,7 @@
 // [params.ASYNC]
 // mask = 'async'
 // type = 'checkbox'
-// hdl_unsupported = [1]
-// note = 'async=on (en/dvalid ports) is not implemented: elaboration stops with $fatal'
+// note = 'async = on: en delayed 1+bram_latency+negate_latency-ceil(log2(n_inputs)) (free) enables the counter; dvalid = that en delayed 1+ceil(log2(n_inputs)) more. The HDL ports always exist, dvalid = 0 when ASYNC = 0'
 // [params.ASYNC.values]
 // 0 = 'off'
 // 1 = 'on'
@@ -77,10 +79,9 @@
 //
 // [ports]
 // note = 'each Simulink complex port x is split into x_re / x_im; each port is an array over N_INPUTS'
+// order = 'Simulink: en is input 10 and dvalid output 6, async only (mirror_spectrum_init.m:134-145, 194-214)'
 // [ports.renamed]
 // [ports.missing]
-// en = 'async=on only (not implemented)'
-// dvalid = 'async=on only (not implemented)'
 // [ports.extra]
 // @simulink-mapping end
 
@@ -112,6 +113,7 @@ module mirror_spectrum #(
     input  logic [INPUT_BITWIDTH-1:0] din3_im    [N_INPUTS],
     input  logic [INPUT_BITWIDTH-1:0] reo_in3_re [N_INPUTS],
     input  logic [INPUT_BITWIDTH-1:0] reo_in3_im [N_INPUTS],
+    input  logic                       en = 1'b1,
     output logic                       sync_out,
     output logic [INPUT_BITWIDTH-1:0] dout0_re   [N_INPUTS],
     output logic [INPUT_BITWIDTH-1:0] dout0_im   [N_INPUTS],
@@ -120,7 +122,8 @@ module mirror_spectrum #(
     output logic [INPUT_BITWIDTH-1:0] dout2_re   [N_INPUTS],
     output logic [INPUT_BITWIDTH-1:0] dout2_im   [N_INPUTS],
     output logic [INPUT_BITWIDTH-1:0] dout3_re   [N_INPUTS],
-    output logic [INPUT_BITWIDTH-1:0] dout3_im   [N_INPUTS]
+    output logic [INPUT_BITWIDTH-1:0] dout3_im   [N_INPUTS],
+    output logic                       dvalid
 );
 
     localparam int BW   = INPUT_BITWIDTH;
@@ -129,7 +132,6 @@ module mirror_spectrum #(
     localparam int CC   = (NEGATE_MODE == 1) ? 3 : NEGATE_LATENCY;
     localparam int HALF = 1 << (FFT_SIZE - 1);
 
-    if (ASYNC != 0)    $fatal(1, "mirror_spectrum: ASYNC is not implemented");
     if (FFT_SIZE < 1)  $fatal(1, "mirror_spectrum: FFT_SIZE must be >= 1");
     if (DLY < REP)     $fatal(1, "mirror_spectrum: 1 + BRAM_LATENCY + NEGATE_LATENCY < ceil(log2(N_INPUTS))");
 
@@ -148,16 +150,21 @@ module mirror_spectrum #(
     assign dout3_re = out_re[3];  assign dout3_im = out_im[3];
 
     // ── select ───────────────────────────────────────────────────────────────
-    logic                sync0, upper, sel;
+    logic                sync0, upper, sel, en0, en1;
     logic [FFT_SIZE-1:0] cnt;
 
     pipeline #(.BITWIDTH(1), .CSP_LATENCY(DLY - REP)) u_sync_delay0 (.clk(clk), .din(sync), .dout(sync0));
     pipeline #(.BITWIDTH(1), .CSP_LATENCY(1 + REP)) u_sync_delay1 (.clk(clk), .din(sync0), .dout(sync_out));
 
+    // async: en_delay0 / en_delay1, free delays beside the sync delays
+    pipeline #(.BITWIDTH(1), .CSP_LATENCY(DLY - REP)) u_en_delay0 (.clk(clk), .din(en), .dout(en0));
+    pipeline #(.BITWIDTH(1), .CSP_LATENCY(1 + REP)) u_en_delay1 (.clk(clk), .din(en0), .dout(en1));
+    assign dvalid = (ASYNC != 0) ? en1 : 1'b0;
+
     counter #(
         .COUNTER_TYPE(0), .NBITS(FFT_SIZE), .COUNT_DIR(0), .INIT_VAL(0),
-        .STEP(1), .ENABLE_SYNC_RST(1), .ENABLE_ENABLE(0)
-    ) u_counter (.clk(clk), .rst(sync0), .enable(1'b1), .dout(cnt));
+        .STEP(1), .ENABLE_SYNC_RST(1), .ENABLE_ENABLE(ASYNC != 0 ? 1 : 0)
+    ) u_counter (.clk(clk), .rst(sync0), .enable((ASYNC != 0) ? en0 : 1'b1), .dout(cnt));
 
     // casper Relational a>b (a = count, b = 2^(FFT_SIZE-1)), latency 0
     relational #(.NBITS(FFT_SIZE), .COMP(3), .LATENCY(0)) u_relational (

@@ -29,7 +29,7 @@ import json
 import random
 from pathlib import Path
 
-from common import TEST_DATA_ROOT, run_cli                     # also puts rtl/.../scripts on sys.path
+from common import TEST_DATA_ROOT, run_cli, write_test_data_md  # also puts rtl/.../scripts on sys.path
 from gen_butterfly_test_data import delay, write_csv, P, toml
 from gen_fft_stage_test_data import m_sync_delay
 from gen_reorder_map import bi_real_map, compute_order, map_powers, mem_lines, unscrambler_map
@@ -261,7 +261,7 @@ def gen_reorder():
     for n, (full, desc, mname, cycles, frames) in enumerate(sets):
         lines.append(f"| {n} | `simdata{n}` | " + " | ".join(str(full[k]) for k in RO)
                      + f" | {mname} | {frames} | {cycles} | {desc} |")
-    (mdir / "test_data.md").write_text("\n".join(lines) + "\n")
+    write_test_data_md(mdir / "test_data.md", lines)
     return toml(CATEGORY, name, [(full, desc) for full, desc, *_ in sets], SCRIPT)
 
 
@@ -359,7 +359,7 @@ def gen_square_transposer():
     for n, (p, desc, cycles, blocks) in enumerate(sets):
         lines.append(f"| {n} | `simdata{n}` | {p['N_INPUTS']} | {p['DATA_WIDTH']} | "
                      f"{blocks} | {cycles} | {desc} |")
-    (mdir / "test_data.md").write_text("\n".join(lines) + "\n")
+    write_test_data_md(mdir / "test_data.md", lines)
     return toml(CATEGORY, name, [(p, desc) for p, desc, *_ in sets], SCRIPT)
 
 
@@ -407,7 +407,7 @@ def gen_barrel_switcher():
     for n, (p, desc, cycles) in enumerate(sets):
         lines.append(f"| {n} | `simdata{n}` | {p['N_INPUTS']} | {p['DATA_WIDTH']} | "
                      f"{p.get('ASYNC', 0)} | {cycles} | {desc} |")
-    (mdir / "test_data.md").write_text("\n".join(lines) + "\n")
+    write_test_data_md(mdir / "test_data.md", lines)
     return toml(CATEGORY, name, [(p, desc) for p, desc, _ in sets], SCRIPT)
 
 

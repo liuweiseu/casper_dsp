@@ -24,7 +24,7 @@ import sys
 from fractions import Fraction
 from pathlib import Path
 
-from common import TEST_DATA_ROOT as TEST_DATA, run_cli           # also puts rtl/.../scripts on sys.path
+from common import TEST_DATA_ROOT as TEST_DATA, run_cli, write_test_data_md  # also puts rtl/.../scripts on sys.path
 from gen_fixed_point_test_data import quantize, to_value
 from gen_twiddle_coeffs import COEFF_DEFAULTS, coeff_options, coeff_params, mem_lines, twiddle_table             # rtl/FFTs/Twiddle/scripts/
 import gen_twiddle_test_data as tw
@@ -126,7 +126,7 @@ def gen_convert_of():
     for n, (p, desc) in enumerate(CONVERT_OF_TESTS):
         lines.append(f"| {n} | `simdata{n}` | " + " | ".join(str(p[k]) for k in keys)
                      + f" | {cycles} | {desc} |")
-    (mdir / "test_data.md").write_text("\n".join(lines) + "\n")
+    write_test_data_md(mdir / "test_data.md", lines)
     return toml("Misc", name, [(p, desc) for p, desc in CONVERT_OF_TESTS], SCRIPT)
 
 
@@ -348,7 +348,7 @@ def gen_butterfly():
     for n, (full, desc, coeffs, cycles, kind) in enumerate(entries):
         lines.append(f"| {n} | `simdata{n}` | " + " | ".join(str(full[k]) for k in keys)
                      + f" | {coeffs} | {kind} | {cycles} | {desc} |")
-    (mdir / "test_data.md").write_text("\n".join(lines) + "\n")
+    write_test_data_md(mdir / "test_data.md", lines)
     return toml("FFTs", name, [(full, desc) for full, desc, *_ in entries], SCRIPT)
 
 

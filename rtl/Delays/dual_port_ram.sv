@@ -142,7 +142,7 @@ module dual_port_ram #(
     parameter        INIT_A     = 0,      // raw output-register word
     parameter        INIT_B     = 0,      // raw output-register word
     // raw power-on memory contents, word w at [w*DATA_WIDTH +: DATA_WIDTH]
-    parameter logic [(1<<ADDR_WIDTH)*DATA_WIDTH-1:0] INIT_MEM = '0,
+    parameter logic [(1<<ADDR_WIDTH)*DATA_WIDTH-1:0] INIT_MEM = 0,
     parameter string PLATFORM   = "GENERIC"
 )(
     input  logic                  clk,
@@ -191,7 +191,7 @@ module dual_port_ram #(
             assign dout_a = first ? INIT_A_W : dout_a_r;
             assign dout_b = first ? INIT_B_W : dout_b_r;
         end else if (RST_A != 0 || RST_B != 0 || EN_A != 0 || EN_B != 0
-                     || INIT_A_W != '0 || INIT_B_W != '0 || INIT_MEM != '0) begin : GEN_BAD_OPTIONS
+                     || INIT_A_W != '0 || INIT_B_W != '0 || (|INIT_MEM)) begin : GEN_BAD_OPTIONS
             $fatal(1, "dual_port_ram: RST_x / EN_x / INIT_x / INIT_MEM are implemented for PLATFORM \"GENERIC\" only");
         end else if (PLATFORM == "XILINX") begin : GEN_XILINX
             dual_port_ram_xilinx #(

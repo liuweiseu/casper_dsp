@@ -89,7 +89,12 @@ Element `k` of `din` / `dout` is casper's `in<s><n>` / `out<s><n>` with
 
 ### Not implemented
 
-`ASYNC` must be 0. `COEFFS_BIT_LIMIT`, `COEFF_SHARING`, `COEFF_DECIMATION`,
+With `ASYNC = 1` every butterfly is async; `en` goes to the stage-0
+butterflies and each butterfly's `dvalid` to the butterflies it feeds, like
+the sync; `dvalid` is the last-stage butterfly 0's. Verified against
+Simulink (MATLAB R2021a) with random `en`.
+
+`COEFFS_BIT_LIMIT`, `COEFF_SHARING`, `COEFF_DECIMATION`,
 `COEFF_GENERATION`, `CAL_BITS`, `N_BITS_ROTATION`, `MULT_SPEC`,
 `DSP48_ADDERS`, `ADD_PIPE_LATENCY` and `MULT_PIPE_LATENCY` are declared but
 ignored: the twiddles always come from tables, as in the rest of this
@@ -126,6 +131,8 @@ library.
 | `sync` | input | 1 | Sync; restarts the coefficient sequences |
 | `shift` | input | `FFT_SIZE` | Dynamic downshift per stage (bit `s` = stage `s`) |
 | `din_re`, `din_im` | input | `INPUT_BIT_WIDTH` × `N_STREAMS·2^FFT_SIZE` | Inputs, element `s·2^F + n` |
+| `en` | input | 1 | Async enable (used when `ASYNC = 1`; default 1) |
 | `sync_out` | output | 1 | Sync aligned with the outputs |
 | `dout_re`, `dout_im` | output | `N_BITS_OUT` × `N_STREAMS·2^FFT_SIZE` | FFT outputs in natural order |
 | `of` | output | `N_STREAMS` | Overflow per stream, stream 0 in the MSB (`of[N_STREAMS−1−s]` = stream `s`) |
+| `dvalid` | output | 1 | last-stage butterfly 0's `dvalid` when `ASYNC = 1`, else 0 |

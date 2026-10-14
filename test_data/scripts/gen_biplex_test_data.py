@@ -25,7 +25,7 @@ import random
 import sys
 from pathlib import Path
 
-from common import TEST_DATA_ROOT, run_cli                         # also puts rtl/.../scripts on sys.path
+from common import TEST_DATA_ROOT, run_cli, write_test_data_md  # also puts rtl/.../scripts on sys.path
 from gen_twiddle_coeffs import COEFF_DEFAULTS, coeff_options, coeff_params, mem_lines, twiddle_table             # rtl/FFTs/Twiddle/scripts/
 from gen_butterfly_test_data import write_csv, P, toml
 from gen_fft_stage_test_data import m_fft_stage, stage_coeffs
@@ -200,7 +200,7 @@ def gen_biplex():
     for n, (full, desc, cycles) in enumerate(sets):
         vals = [(bin(full[k]) if k == "SHIFT_SCHEDULE" else str(full[k])) for k in BC]
         lines.append(f"| {n} | `simdata{n}` | " + " | ".join(vals) + f" | {cycles} | {desc} |")
-    (MDIR / "test_data.md").write_text("\n".join(lines) + "\n")
+    write_test_data_md(MDIR / "test_data.md", lines)
     return toml("FFTs", "biplex_core", [(full, desc) for full, desc, _ in sets], SCRIPT)
 
 

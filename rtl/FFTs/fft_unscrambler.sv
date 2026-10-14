@@ -36,7 +36,10 @@
 // n_inputs >= FFTSize-2, and its square_transposer is empty for n_inputs = 0)
 // and 2·N_INPUTS <= FFT_SIZE (otherwise casper's part, and so its map,
 // is empty).
-// ASYNC is declared for traceability; must be 0.
+// ASYNC = 1 (fft_unscrambler_init.m:146-157, 180-247): en drives the
+// square_transposer en, its dvalid the reorder en; dvalid = reorder valid
+// and sync_out = reorder sync_out AND reorder valid. With ASYNC = 0 the
+// reorder en is 1 and sync_out = reorder sync_out.
 //
 // ── HDL-Simulink Mapping ─────────────────────────────────────────────────────
 // Differences between this HDL and its Simulink block (casper_library
@@ -55,8 +58,7 @@
 // [params.ASYNC]
 // mask = 'async'
 // type = 'checkbox'
-// hdl_unsupported = [1]
-// note = '$fatal unless 0 (en/dvalid handshake not implemented)'
+// note = "async = on: en -> square_transposer en, its dvalid -> reorder en; dvalid = reorder valid, sync_out = reorder sync_out AND valid (the init defaults list async = 'on', the mask value is 'off'). The HDL ports always exist, dvalid = 0 when ASYNC = 0"
 // [params.ASYNC.values]
 // 0 = 'off'
 // 1 = 'on'
@@ -80,14 +82,13 @@
 //
 // [ports]
 // note = 'element k = s*2^N_INPUTS + g of din / dout is Simulink in<s><g> / out<s><g> (casper port order); each Simulink complex port x is split into x_re / x_im'
+// order = 'Simulink: en is the last input ((2^n_inputs*n_streams)+2) and dvalid the last output (same number), async only (fft_unscrambler_init.m:146-157, 180-193)'
 // [ports.renamed]
 // din_re = 'in<s><n>'
 // din_im = 'in<s><n>'
 // dout_re = 'out<s><n>'
 // dout_im = 'out<s><n>'
 // [ports.missing]
-// en = 'async=on only (not implemented)'
-// dvalid = 'async=on only (not implemented)'
 // [ports.extra]
 // @simulink-mapping end
 
@@ -106,9 +107,11 @@ module fft_unscrambler #(
     input  logic                 sync,
     input  logic [N_BITS_IN-1:0] din_re  [N_STREAMS << N_INPUTS],
     input  logic [N_BITS_IN-1:0] din_im  [N_STREAMS << N_INPUTS],
+    input  logic                 en = 1'b1,
     output logic                 sync_out,
     output logic [N_BITS_IN-1:0] dout_re [N_STREAMS << N_INPUTS],
-    output logic [N_BITS_IN-1:0] dout_im [N_STREAMS << N_INPUTS]
+    output logic [N_BITS_IN-1:0] dout_im [N_STREAMS << N_INPUTS],
+    output logic                 dvalid
 );
 
     localparam int G       = 1 << N_INPUTS;
@@ -136,13 +139,12 @@ module fft_unscrambler #(
     localparam int FANOUT_RAW  = M + $clog2(B * N_INPUTS * 2) - 15 + 2;
     localparam int FANOUT      = (FANOUT_RAW > 0) ? FANOUT_RAW : 0;
 
-    if (ASYNC != 0) $fatal(1, "fft_unscrambler: ASYNC is not implemented");
     if (N_INPUTS < 1 || N_INPUTS >= FFT_SIZE - 2 || 2 * N_INPUTS > FFT_SIZE)
         $fatal(1, "fft_unscrambler: requires 1 <= N_INPUTS < FFT_SIZE-2 and 2*N_INPUTS <= FFT_SIZE");
 
     // ── group words: stream s of group g at bits [2·s·B +: 2·B] = {im, re} ──
     logic [WG-1:0] grp [G], trans [G], reo [G];
-    logic          trans_sync;
+    logic          trans_sync, trans_dvalid, reo_sync, reo_valid;
 
     for (genvar g = 0; g < G; g++) begin : GEN_GROUP
         for (genvar s = 0; s < N_STREAMS; s++) begin : GEN_STREAM
@@ -153,15 +155,19 @@ module fft_unscrambler #(
         end
     end
 
-    square_transposer #(.N_INPUTS(N_INPUTS), .DATA_WIDTH(WG)) u_square_transposer (
-        .clk(clk), .sync(sync), .din(grp), .sync_out(trans_sync), .dout(trans));
+    square_transposer #(.N_INPUTS(N_INPUTS), .DATA_WIDTH(WG), .ASYNC(ASYNC)) u_square_transposer (
+        .clk(clk), .sync(sync), .din(grp), .en(en), .sync_out(trans_sync), .dout(trans),
+        .dvalid(trans_dvalid));
 
     reorder #(
         .N_INPUTS(G), .N_BITS(WG), .MAP_LEN(MAP_LEN), .ORDER(ORDER),
         .MAP_INIT_FILE(MAP_INIT_FILE), .MAP_LATENCY(MAP_LATENCY),
         .BRAM_LATENCY(BRAM_LATENCY), .FANOUT_LATENCY(FANOUT), .BRAM_MAP(BRAM_MAP),
         .PLATFORM(PLATFORM)
-    ) u_reorder (.clk(clk), .sync(trans_sync), .din(trans), .sync_out(sync_out),
-                 .valid(), .dout(reo));
+    ) u_reorder (.clk(clk), .sync(trans_sync), .en((ASYNC != 0) ? trans_dvalid : 1'b1),
+                 .din(trans), .sync_out(reo_sync), .valid(reo_valid), .dout(reo));
+
+    assign sync_out = (ASYNC != 0) ? reo_sync & reo_valid : reo_sync;
+    assign dvalid   = (ASYNC != 0) ? reo_valid : 1'b0;
 
 endmodule

@@ -25,7 +25,11 @@
 // stage s), used only with HARDCODE_SHIFTS = 1; otherwise shift[s-1] is
 // stage s's dynamic downshift.
 //
-// Declared for traceability only: ASYNC and FLOATING_POINT must be 0;
+// ASYNC = 1 (biplex_core_init.m:141-147, 212, 242, 255-268): every stage
+// is async; en enters stage 1 and each stage's dvalid is the next stage's
+// en; dvalid = the last stage's dvalid.
+//
+// Declared for traceability only: FLOATING_POINT must be 0;
 // FLOAT_TYPE, EXP_WIDTH, FRAC_WIDTH, ADD_PIPE_LATENCY, MULT_PIPE_LATENCY,
 // COEFFS_BIT_LIMIT, COEFF_SHARING, COEFF_DECIMATION, MULT_SPEC and
 // DSP48_ADDERS are ignored.
@@ -88,8 +92,7 @@
 // [params.ASYNC]
 // mask = 'async'
 // type = 'checkbox'
-// hdl_unsupported = [1]
-// note = '$fatal unless 0 (en/dvalid handshake not implemented)'
+// note = 'async = on: every fft_stage_n is async, en -> stage 1 en, stage k dvalid -> stage k+1 en, dvalid = last stage dvalid. The HDL ports always exist, dvalid = 0 when ASYNC = 0'
 // [params.ASYNC.values]
 // 0 = 'off'
 // 1 = 'on'
@@ -156,12 +159,10 @@
 // [mask_missing]
 //
 // [ports]
-// order = 'Simulink inports sync, shift, pol1, pol2 and outports sync_out, out1, out2, of (biplex_core_init.m:141-144, 255-258); the HDL lists pol1/pol2 before sync/shift and sync_out last'
+// order = 'Simulink inports sync, shift, pol1, pol2 and outports sync_out, out1, out2, of (biplex_core_init.m:141-144, 255-258); the HDL lists pol1/pol2 before sync/shift and sync_out last; async only: en is input 5 and dvalid output 5 (biplex_core_init.m:141-147, 255-268)'
 // note = 'each Simulink complex port x is split into x_re / x_im; the Simulink bus pol1/pol2/out1/out2 carries N_INPUTS complex lanes, lane 0 in the MSBs, which become array element 0'
 // [ports.renamed]
 // [ports.missing]
-// en = 'async=on only (not implemented)'
-// dvalid = 'async=on only (not implemented)'
 // [ports.extra]
 // @simulink-mapping end
 
@@ -185,8 +186,8 @@ module biplex_core #(
     parameter int    SHIFT_SCHEDULE    = 3,
     parameter string COEFF_DIR         = "",
     parameter string PLATFORM          = "GENERIC",
+    parameter int    ASYNC             = 0,   // casper async: 1 = en / dvalid (see header)
     // declared, not implemented (see header)
-    parameter int    ASYNC             = 0,
     parameter int    FLOATING_POINT    = 0,
     parameter int    FLOAT_TYPE        = 1,
     parameter int    EXP_WIDTH         = 8,
@@ -208,12 +209,14 @@ module biplex_core #(
     input  logic [INPUT_BIT_WIDTH-1:0] pol2_im [N_INPUTS],
     input  logic                       sync,
     input  logic [FFT_SIZE-1:0]        shift,
+    input  logic                       en = 1'b1,
     output logic [N_BITS_OUT-1:0]      out1_re [N_INPUTS],
     output logic [N_BITS_OUT-1:0]      out1_im [N_INPUTS],
     output logic [N_BITS_OUT-1:0]      out2_re [N_INPUTS],
     output logic [N_BITS_OUT-1:0]      out2_im [N_INPUTS],
     output logic [N_INPUTS-1:0]        of,
-    output logic                       sync_out
+    output logic                       sync_out,
+    output logic                       dvalid
 );
 
     // input width of stage s (biplex_core_init.m)
@@ -240,7 +243,6 @@ module biplex_core #(
 
     localparam int WMAX = INPUT_BIT_WIDTH + FFT_SIZE;   // widest any stage can be
 
-    if (ASYNC != 0)          $fatal(1, "biplex_core: ASYNC is not implemented");
     if (FLOATING_POINT != 0) $fatal(1, "biplex_core: FLOATING_POINT is not implemented");
     if (FFT_SIZE < 2)        $fatal(1, "biplex_core: FFT_SIZE must be >= 2");
 
@@ -269,6 +271,7 @@ module biplex_core #(
 
         logic [W_IN-1:0]  i1_re [N_INPUTS], i1_im [N_INPUTS], i2_re [N_INPUTS], i2_im [N_INPUTS];
         logic [W_OUT-1:0] o1_re [N_INPUTS], o1_im [N_INPUTS], o2_re [N_INPUTS], o2_im [N_INPUTS];
+        logic             en_in, en_out;   // async: stage k dvalid -> stage k+1 en
 
         for (genvar n = 0; n < N_INPUTS; n++) begin : GEN_LANE
             assign i1_re[n] = d1_re[s-1][n][W_IN-1:0];
@@ -281,6 +284,12 @@ module biplex_core #(
             assign d2_im[s][n] = WMAX'(o2_im[n]);
         end
 
+        if (s == 1) begin : GEN_EN_FIRST
+            assign en_in = en;
+        end else begin : GEN_EN_NEXT
+            assign en_in = GEN_STAGE[s-1].en_out;
+        end
+
         fft_stage_n #(
             .N_INPUTS(N_INPUTS), .FFT_SIZE(FFT_SIZE), .FFT_STAGE(s),
             .INPUT_BIT_WIDTH(W_IN), .BIN_PT_IN(BIN_PT_IN), .COEFF_BIT_WIDTH(COEFF_BIT_WIDTH),
@@ -289,13 +298,13 @@ module biplex_core #(
             .BRAM_LATENCY(BRAM_LATENCY), .CONV_LATENCY(CONV_LATENCY),
             .QUANTIZATION(QUANTIZATION), .OVERFLOW(OVERFLOW),
             .DELAYS_BRAM(BRAM), .MAX_FANOUT(MAX_FANOUT),
-            .INIT_FILE(stage_file(COEFF_DIR, s)), .PLATFORM(PLATFORM)
+            .INIT_FILE(stage_file(COEFF_DIR, s)), .ASYNC(ASYNC), .PLATFORM(PLATFORM)
         ) u_stage (
             .clk(clk),
             .in1_re(i1_re), .in1_im(i1_im), .in2_re(i2_re), .in2_im(i2_im),
-            .of_in(of_c[s-1]), .sync(sync_c[s-1]), .shift(shift),
+            .of_in(of_c[s-1]), .sync(sync_c[s-1]), .shift(shift), .en(en_in),
             .out1_re(o1_re), .out1_im(o1_im), .out2_re(o2_re), .out2_im(o2_im),
-            .of(of_c[s]), .sync_out(sync_c[s]));
+            .of(of_c[s]), .sync_out(sync_c[s]), .dvalid(en_out));
     end
 
     for (genvar n = 0; n < N_INPUTS; n++) begin : GEN_OUT
@@ -306,5 +315,6 @@ module biplex_core #(
     end
     assign of       = of_c[FFT_SIZE];
     assign sync_out = sync_c[FFT_SIZE];
+    assign dvalid   = GEN_STAGE[FFT_SIZE].en_out;
 
 endmodule

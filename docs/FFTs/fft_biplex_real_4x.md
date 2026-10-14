@@ -57,7 +57,11 @@ Pass the module's coefficient options too (`--coeffs-bit-limit`, `--coeff-sharin
 - `of[N_INPUTS−1−n]` is lane `n`'s overflow (lane 0 in the MSB, as Simulink).
 - `FFT_SIZE ≥ 3` is needed for the outputs to be FFTs (bi_real_unscr_4x's
   casper behaviour at `FFT_SIZE = 2`).
-- `ASYNC` must be 0. `COEFF_SHARING`, `COEFF_DECIMATION`, `MULT_SPEC`,
+- `ASYNC = 1`: `en` drives biplex_core's `en`, its `dvalid`
+  bi_real_unscr_4x's `en`, whose `dvalid` is `dvalid` (one more cycle of
+  latency, from bi_real_unscr_4x). Verified against Simulink (MATLAB
+  R2021a) with random `en`.
+- `COEFF_SHARING`, `COEFF_DECIMATION`, `MULT_SPEC`,
   `DSP48_ADDERS`, `ADD_PIPE_LATENCY` and `MULT_PIPE_LATENCY` are declared
   but ignored.
 
@@ -88,6 +92,8 @@ Pass the module's coefficient options too (`--coeffs-bit-limit`, `--coeff-sharin
 | `sync` | input | 1 | Frame sync |
 | `shift` | input | `FFT_SIZE` | Dynamic downshift (bit `s−1` = stage `s`) |
 | `pol_in` | input | `INPUT_BIT_WIDTH` × `4·N_INPUTS` | Real inputs |
+| `en` | input | 1 | Async enable (used when `ASYNC = 1`; default 1) |
 | `sync_out` | output | 1 | Sync, one cycle before bin 0 |
 | `pol_out_re`, `pol_out_im` | output | `N_BITS_OUT` × `4·N_INPUTS` | Spectrum of each input, bins 0 … 2^F−1 |
 | `of` | output | `N_INPUTS` | biplex_core overflow per lane, lane 0 in the MSB (`of[N_INPUTS−1−n]` = lane `n`) |
+| `dvalid` | output | 1 | bi_real_unscr_4x `dvalid` when `ASYNC = 1`, else 0 |

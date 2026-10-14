@@ -22,8 +22,12 @@ A block starts the cycle after `sync`. Every path has latency
 later; casper syncs come once per frame, far apart. casper's
 `fft_unscrambler` uses it to regroup the outputs of parallel FFTs.
 
-`ASYNC` (casper's asynchronous variant) is declared for traceability and must
-be 0.
+With `ASYNC = 1` (casper `async`) the block works on the stream of valid
+samples: `en` enables the select counter and the input delays, the
+barrel_switcher's `dvalid` (`en` delayed `N_INPUTS`) enables the output and
+sync delays and is the `dvalid` output. A `sync` on an `en = 0` cycle still
+clears the counter but is not stored by the sync delay. Verified against
+Simulink (MATLAB R2021a) with random `en`.
 
 ## Parameters
 
@@ -31,7 +35,7 @@ be 0.
 |-----------|---------|-------------|
 | `N_INPUTS` | 1 | log2 of the number of lanes (≥ 1) |
 | `DATA_WIDTH` | 8 | Bits per lane |
-| `ASYNC` | 0 | Must be 0 |
+| `ASYNC` | 0 | casper `async`: `1` = gated delays and counter, `dvalid` output (see above) |
 
 ## Ports
 
@@ -40,5 +44,7 @@ be 0.
 | `clk` | input | 1 | Clock |
 | `sync` | input | 1 | Block sync: the block starts the next cycle |
 | `din` | input | `DATA_WIDTH` × 2^`N_INPUTS` | Input lanes |
+| `en` | input | 1 | Async enable (used when `ASYNC = 1`; default 1) |
 | `sync_out` | output | 1 | `sync` delayed `N_INPUTS + N − 1` cycles |
 | `dout` | output | `DATA_WIDTH` × 2^`N_INPUTS` | Transposed lanes |
+| `dvalid` | output | 1 | `en` delayed `N_INPUTS` (the barrel_switcher's `dvalid`) when `ASYNC = 1`, else 0 |

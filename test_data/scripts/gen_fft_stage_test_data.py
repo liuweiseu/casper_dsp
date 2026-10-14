@@ -22,7 +22,7 @@ import random
 import sys
 from pathlib import Path
 
-from common import TEST_DATA_ROOT as TEST_DATA, run_cli          # also puts rtl/.../scripts on sys.path
+from common import TEST_DATA_ROOT as TEST_DATA, run_cli, write_test_data_md  # also puts rtl/.../scripts on sys.path
 from gen_twiddle_coeffs import COEFF_DEFAULTS, coeff_options, coeff_params, mem_lines, twiddle_table            # rtl/FFTs/Twiddle/scripts/
 from gen_butterfly_test_data import delay, m_butterfly, write_csv, P, toml
 import gen_twiddle_test_data as tw
@@ -87,7 +87,7 @@ def gen_sync_delay():
     ]
     for n, (p, desc) in enumerate(sets):
         lines.append(f"| {n} | `simdata{n}` | {p['DELAY_LEN']} | {cycles} | {desc} |")
-    (mdir / "test_data.md").write_text("\n".join(lines) + "\n")
+    write_test_data_md(mdir / "test_data.md", lines)
     return toml("Delays", name, sets, SCRIPT)
 
 
@@ -265,7 +265,7 @@ def gen_fft_stage():
     for n, (full, desc, cycles, (pre, nd, mux, ub)) in enumerate(sets):
         lines.append(f"| {n} | `simdata{n}` | " + " | ".join(str(full[k]) for k in ST)
                      + f" | {pre} | {nd} | {mux} | {int(ub)} | {cycles} | {desc} |")
-    (mdir / "test_data.md").write_text("\n".join(lines) + "\n")
+    write_test_data_md(mdir / "test_data.md", lines)
     return toml("FFTs", name, [(full, desc) for full, desc, *_ in sets], SCRIPT)
 
 

@@ -36,6 +36,25 @@ for _p in [SCRIPTS_DIR, *MODULE_SCRIPTS]:
         sys.path.insert(0, str(_p))
 
 
+# Heading of a test_data.md section that lists sets whose CSVs were exported
+# from MATLAB Simulink (not written by the generator); write_test_data_md keeps
+# it, so regenerating a module does not drop them
+EXPORTED_HEADING = "## Sets exported from MATLAB Simulink"
+
+
+def write_test_data_md(path, lines):
+    """Write test_data.md from lines, keeping an existing EXPORTED_HEADING
+    section (and everything after it) at the end."""
+    path = Path(path)
+    text = "\n".join(lines) + "\n"
+    if path.exists():
+        old = path.read_text()
+        i = old.find(EXPORTED_HEADING)
+        if i >= 0:
+            text += "\n" + old[i:]
+    path.write_text(text)
+
+
 def run_cli(doc, generators, extra_args=None, after=None):
     """Command line shared by the generator scripts.
 

@@ -30,8 +30,13 @@
 //
 // of[N_INPUTS-1-n] is lane n's overflow (lane 0 in the MSB, as Simulink). The inputs need a
 // sync once per 2^FFT_SIZE-cycle frame (or a multiple), as bi_real_unscr_4x's
-// reorders require. Declared for traceability only: ASYNC must be 0;
-// COEFF_SHARING, COEFF_DECIMATION, MULT_SPEC, DSP48_ADDERS, ADD_PIPE_LATENCY
+// reorders require.
+//
+// ASYNC = 1 (fft_biplex_real_4x_init.m:205-244, 304, 335-338): en -> the
+// biplex_core en, its dvalid -> the bi_real_unscr_4x en, whose dvalid is
+// dvalid (both sub-blocks async).
+//
+// Declared for traceability only: COEFF_SHARING, COEFF_DECIMATION, MULT_SPEC, DSP48_ADDERS, ADD_PIPE_LATENCY
 // and MULT_PIPE_LATENCY are ignored.
 //
 // ── HDL-Simulink Mapping ─────────────────────────────────────────────────────
@@ -92,8 +97,7 @@
 // [params.ASYNC]
 // mask = 'async'
 // type = 'checkbox'
-// hdl_unsupported = [1]
-// note = '$fatal unless 0 (en/dvalid handshake not implemented)'
+// note = 'async = on: en -> biplex_core en, biplex_core dvalid -> bi_real_unscr_4x en, dvalid = bi_real_unscr_4x dvalid (one cycle more latency than async = off, from bi_real_unscr_4x). The HDL ports always exist, dvalid = 0 when ASYNC = 0'
 // [params.ASYNC.values]
 // 0 = 'off'
 // 1 = 'on'
@@ -137,6 +141,10 @@
 // [mask_set.floating_point]
 // value = 'off'
 //
+// [[unsupported]]
+// when = 'ASYNC != 0 && BRAM_LATENCY == 1 && FFT_SIZE >= 3 && 2 ** (FFT_SIZE - 1) * 2 * INPUT_BIT_WIDTH * N_INPUTS >= 2 ** DELAYS_BIT_LIMIT'
+// reason = 'mlib_devel bug 14 (docs/bugs.md): fft_biplex_real_4x_init.m:155-160 turns bram_delays on (BRAM_DELAYS above), so bi_real_unscr_4x passes bram_latency = 1 to its async delay_bram, which creates no dout (delay_bram_init.m:131-157; from source)'
+//
 // [hdl_only]
 // SHIFT_SCHEDULE = 'bit mask, bit s-1 = stage s (s = 1 .. FFT_SIZE), passed to biplex_core; set on the mask as the per-stage 0/1 vector shift_schedule = bitget(SHIFT_SCHEDULE, 1:FFT_SIZE) (mask_set)'
 // COEFF_DIR = 'implementation: memory initialization file'
@@ -151,13 +159,12 @@
 //
 // [ports]
 // note = 'element i of pol_in / pol_out_re / pol_out_im is Simulink pol<i>_in / pol<i>_out (i = 0 .. 4*N_INPUTS-1); each Simulink complex port pol<i>_out is split into _re / _im'
+// order = 'async only: en is input n_inputs*4+3 and dvalid output n_inputs*4+3 (fft_biplex_real_4x_init.m:205-244)'
 // [ports.renamed]
 // pol_in = 'pol<i>_in'
 // pol_out_re = 'pol<i>_out'
 // pol_out_im = 'pol<i>_out'
 // [ports.missing]
-// en = 'async=on only (not implemented)'
-// dvalid = 'async=on only (not implemented)'
 // [ports.extra]
 // @simulink-mapping end
 
@@ -183,8 +190,8 @@ module fft_biplex_real_4x #(
     parameter string COEFF_DIR         = "",
     parameter string MAP_DIR           = "",
     parameter string PLATFORM          = "GENERIC",
+    parameter int    ASYNC             = 0,   // casper async: 1 = en / dvalid (see header)
     // declared, not implemented (see header)
-    parameter int    ASYNC             = 0,
     parameter int    ADD_PIPE_LATENCY  = 0,
     parameter int    MULT_PIPE_LATENCY = 0,
     parameter int    COEFF_SHARING     = 1,
@@ -199,10 +206,12 @@ module fft_biplex_real_4x #(
     input  logic                       sync,
     input  logic [FFT_SIZE-1:0]        shift,
     input  logic [INPUT_BIT_WIDTH-1:0] pol_in     [4 * N_INPUTS],
+    input  logic                       en = 1'b1,
     output logic                       sync_out,
     output logic [N_BITS_OUT-1:0]      pol_out_re [4 * N_INPUTS],
     output logic [N_BITS_OUT-1:0]      pol_out_im [4 * N_INPUTS],
-    output logic [N_INPUTS-1:0] of
+    output logic [N_INPUTS-1:0] of,
+    output logic                       dvalid
 );
 
     localparam int NB          = N_INPUTS;
@@ -216,7 +225,7 @@ module fft_biplex_real_4x #(
     localparam int BRAM_MAP    = (HALF * STAGES >= (longint'(1) << COEFFS_BIT_LIMIT)
                                   && HALF >= BLAT) ? 1 : 0;
 
-    if (ASYNC != 0) $fatal(1, "fft_biplex_real_4x: ASYNC is not implemented");
+    logic b_dvalid;
 
     logic [IW-1:0]         ev_re [NB], ev_im [NB], od_re [NB], od_im [NB];
     logic [N_BITS_OUT-1:0] b1_re [NB], b1_im [NB], b2_re [NB], b2_im [NB];
@@ -237,20 +246,22 @@ module fft_biplex_real_4x #(
         .QUANTIZATION(QUANTIZATION), .OVERFLOW(OVERFLOW), .DELAYS_BIT_LIMIT(DELAYS_BIT_LIMIT),
         .MAX_FANOUT(MAX_FANOUT), .BITGROWTH(BITGROWTH), .MAX_BITS(MAX_BITS),
         .HARDCODE_SHIFTS(HARDCODE_SHIFTS), .SHIFT_SCHEDULE(SHIFT_SCHEDULE),
-        .COEFF_DIR(COEFF_DIR), .PLATFORM(PLATFORM), .COEFFS_BIT_LIMIT(COEFFS_BIT_LIMIT)
+        .COEFF_DIR(COEFF_DIR), .PLATFORM(PLATFORM), .COEFFS_BIT_LIMIT(COEFFS_BIT_LIMIT),
+        .ASYNC(ASYNC)
     ) u_biplex_core (
         .clk(clk),
         .pol1_re(ev_re), .pol1_im(ev_im), .pol2_re(od_re), .pol2_im(od_im),
-        .sync(sync), .shift(shift),
+        .sync(sync), .shift(shift), .en(en), .dvalid(b_dvalid),
         .out1_re(b1_re), .out1_im(b1_im), .out2_re(b2_re), .out2_im(b2_im),
         .of(of), .sync_out(b_sync));
 
     bi_real_unscr_4x #(
         .N_INPUTS(NB), .FFT_SIZE(FFT_SIZE), .N_BITS(N_BITS_OUT), .BIN_PT(BIN_PT_IN),
         .ADD_LATENCY(ADD_LATENCY), .CONV_LATENCY(CONV_LATENCY), .BRAM_LATENCY(BRAM_LATENCY),
-        .BRAM_MAP(BRAM_MAP), .BRAM_DELAYS(BRAM_DELAYS), .MAP_DIR(MAP_DIR), .PLATFORM(PLATFORM)
+        .BRAM_MAP(BRAM_MAP), .BRAM_DELAYS(BRAM_DELAYS), .MAP_DIR(MAP_DIR), .PLATFORM(PLATFORM),
+        .ASYNC(ASYNC)
     ) u_bi_real_unscr_4x (
-        .clk(clk), .sync(b_sync),
+        .clk(clk), .sync(b_sync), .en(b_dvalid), .dvalid(dvalid),
         .even_re(b1_re), .even_im(b1_im), .odd_re(b2_re), .odd_im(b2_im),
         .sync_out(sync_out),
         .pol1_out_re(p_re[0]), .pol1_out_im(p_im[0]), .pol2_out_re(p_re[1]), .pol2_out_im(p_im[1]),

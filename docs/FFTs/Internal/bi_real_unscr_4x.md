@@ -75,7 +75,12 @@ bit-exactly, including this case. Use `FFT_SIZE ≥ 3`.
 
 ### Not implemented
 
-`ASYNC` (casper's `en` / `dvalid`) must be 0. `DSP48_ADDERS` is ignored.
+With `ASYNC = 1` (casper `async`) the reorders, the 1-cycle delays, the
+count and the half-frame and sync delays operate on valid samples (`en`,
+the reorders' `valid` and its delayed copies), while the hilberts and muxes
+are free; `dvalid` is mirror_spectrum's. As in casper, the block then has
+one more cycle of latency (`d2` and the fan-out registers). Verified against
+Simulink (MATLAB R2021a) with random `en`. `DSP48_ADDERS` is ignored.
 Floating point is not implemented.
 
 Inside the reorders, the complex lanes are packed `{im, re}` per lane, lane 0
@@ -97,7 +102,7 @@ lowest.
 | `MAP_DIR` | `""` | Directory prefix of the three map files |
 | `PLATFORM` | `"GENERIC"` | Memory primitives: `GENERIC`, `XILINX`, `ALTERA` |
 | `DSP48_ADDERS` | 0 | Ignored |
-| `ASYNC` | 0 | Must be 0 |
+| `ASYNC` | 0 | casper `async`: `1` = `en` / `dvalid` handshake, one more cycle of latency (see above) |
 
 ## Ports
 
@@ -107,5 +112,7 @@ lowest.
 | `sync` | input | 1 | biplex_core `sync_out` |
 | `even_re`, `even_im` | input | `N_BITS` × `N_INPUTS` | biplex_core `out1` |
 | `odd_re`, `odd_im` | input | `N_BITS` × `N_INPUTS` | biplex_core `out2` |
+| `en` | input | 1 | Async enable (used when `ASYNC = 1`; default 1) |
 | `sync_out` | output | 1 | Sync, one cycle before bin 0 |
 | `pol<i>_out_re`, `pol<i>_out_im` (i = 1 … 4) | output | `N_BITS` × `N_INPUTS` | Spectrum of real signal i, bins 0 … N−1 |
+| `dvalid` | output | 1 | mirror_spectrum `dvalid` when `ASYNC = 1`, else 0 |

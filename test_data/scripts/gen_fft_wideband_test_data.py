@@ -36,7 +36,7 @@ import random
 import sys
 from pathlib import Path
 
-from common import TEST_DATA_ROOT, run_cli                     # also puts rtl/.../scripts on sys.path
+from common import TEST_DATA_ROOT, run_cli, write_test_data_md  # also puts rtl/.../scripts on sys.path
 from gen_butterfly_test_data import delay, write_csv, P, toml, m_butterfly
 from gen_biplex_test_data import BC, m_biplex_core, signed
 from gen_fft_internal_test_data import BR, m_bi_real_unscr_4x
@@ -547,8 +547,6 @@ WR_TESTS = [
      "casper defaults, 32-point, 4 samples / cycle, unscrambled"),
     (P(WR, [1, 6, 3, 16, 15, 18, 1, 1, 2, 2, 1, 0, 0, 1, 1, 8, 8, 4, 0, 19, 0, 63]),
      "64-point, 8 samples / cycle (2 biplex inputs), unscrambled"),
-    (P(WR, [2, 5, 1, 18, 17, 18, 1, 1, 2, 2, 0, 0, 0, 1, 1, 8, 8, 4, 0, 19, 0, 31]),
-     "2 streams, 2 samples / cycle: N_INPUTS 1 forces UNSCRAMBLE off"),
     (P(WR, [1, 6, 2, 12, 11, 18, 0, 1, 2, 2, 1, 1, 2, 2, 1, 8, 8, 4, 1, 22, 0, 63]),
      "no unscrambler, bit growth, input and biplex-direct pipelines"),
     (P(WR, [2, 6, 2, 16, 15, 16, 1, 2, 3, 1, 1, 0, 1, 2, 1, 4, 4, 2, 0, 19, 1, 0b111111]),
@@ -556,14 +554,18 @@ WR_TESTS = [
     (P(WR, [2, 5, 2, 10, 9, 18, 1, 1, 2, 2, 1, 0, 0, 1, 0, 8, 8, 4, 0, 19, 0, 31]),
      "full-scale data, random shift, wrap: overflow from both blocks (no FFT check)"),
 ]
-WR_FULL_SCALE = {5}
+WR_FULL_SCALE = {4}
+# Random seeds of sets renumbered when the former set 2 (N_STREAMS 2, FFT_SIZE 5,
+# N_INPUTS 1) was dropped: its fft_direct coeff_gen draws a feedback_osc that
+# Simulink cannot build (see the unsupported rules in rtl/FFTs/fft_wideband_real.sv)
+WR_SEED = {2: 3, 3: 4, 4: 5}
 
 
 def gen_fft_wideband_real():
     name, mdir, sets = "fft_wideband_real", TEST_DATA / "fft_wideband_real", []
     from gen_reorder_map import compute_order, unscrambler_map
     for n, (p, desc) in enumerate(WR_TESTS):
-        rng = random.Random(f"{name}-{n}")
+        rng = random.Random(f"{name}-{WR_SEED.get(n, n)}")
         dv = wideband_derived(p)
         f, ni, ns, iw = p["FFT_SIZE"], p["N_INPUTS"], p["N_STREAMS"], p["INPUT_BIT_WIDTH"]
         frame = 1 << dv["fb"]
@@ -628,7 +630,7 @@ def md(mdir, name, keys, sets, extra, prose):
     for n, (p, desc, cycles, *rest) in enumerate(sets):
         lines.append(f"| {n} | `simdata{n}` | " + " | ".join(str(p[k]) for k in keys)
                      + "".join(f" | {x}" for x in rest) + f" | {cycles} | {desc} |")
-    (mdir / "test_data.md").write_text("\n".join(lines) + "\n")
+    write_test_data_md(mdir / "test_data.md", lines)
 
 
 def main():

@@ -33,7 +33,17 @@
 //
 // LATENCY (data, sync) = 2·P + MUX_LATENCY + ND + butterfly latency.
 //
-// Declared for traceability only: ASYNC and FLOATING_POINT must be 0;
+// ASYNC = 1 (fft_stage_n_init.m:220-550) builds casper's async structure
+// instead of the merged delay lines (GEN_ASYNC): en, delayed P, enables
+// the select counter; the long delays store and advance on valid samples
+// only (BRAM: Free Running address counters and RAM we = en, the RAM always
+// reads, Read Before Write; registers: bus_delay Delays with en); dsync1 is
+// MUX_LATENCY, the frame sync goes through sync_delay_en (DelayLen ND, en =
+// en delayed P+MUX) and an AND with that en (latency P), and the butterfly en
+// is that en delayed P. The muxes, the short delays and the butterfly
+// arithmetic are free; dvalid = butterfly dvalid.
+//
+// Declared for traceability only: FLOATING_POINT must be 0;
 // FLOAT_TYPE, EXP_WIDTH, FRAC_WIDTH, ADD_PIPE_LATENCY, MULT_PIPE_LATENCY,
 // COEFFS_BIT_LIMIT, COEFF_SHARING, COEFF_DECIMATION, USE_HDL, USE_EMBEDDED,
 // DSP48_ADDERS and REG_RETIMING are ignored.
@@ -103,8 +113,7 @@
 // [params.ASYNC]
 // mask = 'async'
 // type = 'checkbox'
-// hdl_unsupported = [1]
-// note = '$fatal unless 0 (en/dvalid handshake not implemented)'
+// note = "async = on: casper's async structure (en gates the select counter and the long delays, sync through sync_delay_en and an AND with en, butterfly en = en delayed 2*P+MUX), dvalid = butterfly dvalid, aligned with sync_out. The HDL ports always exist, dvalid = 0 when ASYNC = 0"
 // [params.ASYNC.values]
 // 0 = 'off'
 // 1 = 'on'
@@ -190,10 +199,9 @@
 //
 // [ports]
 // note = 'each Simulink complex port x is split into x_re / x_im; the Simulink in1/in2/out1/out2 buses carry N_INPUTS complex lanes, lane 0 in the MSBs, which become array element 0'
+// order = 'Simulink: en is input 6 and dvalid output 5, async only (fft_stage_n_init.m:172-176, 531-550)'
 // [ports.renamed]
 // [ports.missing]
-// en = 'async=on only (not implemented)'
-// dvalid = 'async=on only (not implemented)'
 // [ports.extra]
 // @simulink-mapping end
 
@@ -217,8 +225,8 @@ module fft_stage_n #(
     parameter int    MAX_FANOUT        = 1,
     parameter string INIT_FILE         = "",
     parameter string PLATFORM          = "GENERIC",
+    parameter int    ASYNC             = 0,   // casper async: 1 = en / dvalid (see header)
     // declared, not implemented (see header)
-    parameter int    ASYNC             = 0,
     parameter int    FLOATING_POINT    = 0,
     parameter int    FLOAT_TYPE        = 1,
     parameter int    EXP_WIDTH         = 8,
@@ -243,12 +251,14 @@ module fft_stage_n #(
     input  logic [N_INPUTS-1:0]        of_in,
     input  logic                       sync,
     input  logic [FFT_SIZE-1:0]        shift,
+    input  logic                       en = 1'b1,
     output logic [N_BITS_OUT-1:0]      out1_re [N_INPUTS],
     output logic [N_BITS_OUT-1:0]      out1_im [N_INPUTS],
     output logic [N_BITS_OUT-1:0]      out2_re [N_INPUTS],
     output logic [N_BITS_OUT-1:0]      out2_im [N_INPUTS],
     output logic [N_INPUTS-1:0]        of,
-    output logic                       sync_out
+    output logic                       sync_out,
+    output logic                       dvalid
 );
 
     // ⌈log2(n) / max(1, log2(mf))⌉ without floating point: the smallest k
@@ -285,7 +295,6 @@ module fft_stage_n #(
     localparam int N_COEFFS     = (FFT_STAGE == 1) ? 1 : (1 << (FFT_STAGE - 1));
     localparam int STEP_PERIOD  = FFT_SIZE - FFT_STAGE;
 
-    if (ASYNC != 0)          $fatal(1, "fft_stage_n: ASYNC is not implemented");
     if (FLOATING_POINT != 0) $fatal(1, "fft_stage_n: FLOATING_POINT is not implemented");
     if (FFT_STAGE < 1 || FFT_STAGE > FFT_SIZE) $fatal(1, "fft_stage_n: need 1 <= FFT_STAGE <= FFT_SIZE");
 
@@ -299,55 +308,140 @@ module fft_stage_n #(
         assign in2_w[(2*n)*IW   +: IW] = in2_im[n];
     end
 
-    // ── input delays ─────────────────────────────────────────────────────────
-    logic sync_d, sync_bf_pre, sync_bf;
-
-    pipeline #(.BITWIDTH(LANES_W), .CSP_LATENCY(P)) u_x1 (.clk(clk), .din(in1_w), .dout(x1_w));
-    pipeline #(.BITWIDTH(1),       .CSP_LATENCY(P)) u_sync_d (.clk(clk), .din(sync), .dout(sync_d));
-
-    generate
-        if (USE_BRAM != 0) begin : GEN_BRAM
-            delay_bram #(.BITWIDTH(LANES_W), .DELAY_LEN(P + ND), .PLATFORM(PLATFORM)) u_x2 (
-                .clk(clk), .din(in2_w), .dout(x2_w));
-            delay_bram #(.BITWIDTH(LANES_W), .DELAY_LEN(P + ND), .PLATFORM(PLATFORM)) u_a (
-                .clk(clk), .din(mux1_w), .dout(a_w));
-        end else begin : GEN_REGS
-            pipeline #(.BITWIDTH(LANES_W), .CSP_LATENCY(P + ND)) u_x2 (
-                .clk(clk), .din(in2_w), .dout(x2_w));
-            pipeline #(.BITWIDTH(LANES_W), .CSP_LATENCY(P + ND)) u_a (
-                .clk(clk), .din(mux1_w), .dout(a_w));
-        end
-    endgenerate
-
-    // ── commutator ───────────────────────────────────────────────────────────
+    // ── input delays, commutator, sync ───────────────────────────────────────
+    logic                sync_bf, en_bf;
     logic [CNT_BITS-1:0] cnt;
 
-    counter #(
-        .COUNTER_TYPE   (0),
-        .NBITS          (CNT_BITS),
-        .COUNT_DIR      (0),
-        .INIT_VAL       (0),
-        .STEP           (1),
-        .ENABLE_SYNC_RST(1),
-        .ENABLE_ENABLE  (0)
-    ) u_counter (
-        .clk   (clk),
-        .rst   (sync_d),
-        .enable(1'b1),
-        .dout  (cnt)
-    );
+    generate
+        if (ASYNC == 0) begin : GEN_SYNC
+            logic sync_d, sync_bf_pre;
 
-    multiplexer #(.NBITS(LANES_W), .NINPUTS(2), .LATENCY(MUX_LATENCY)) u_mux1 (
-        .clk(clk), .din('{x1_w, x2_w}), .sel(cnt[CNT_BITS-1]), .dout(mux1_w));
-    multiplexer #(.NBITS(LANES_W), .NINPUTS(2), .LATENCY(MUX_LATENCY)) u_mux0 (
-        .clk(clk), .din('{x2_w, x1_w}), .sel(cnt[CNT_BITS-1]), .dout(mux0_w));
+            pipeline #(.BITWIDTH(LANES_W), .CSP_LATENCY(P)) u_x1 (.clk(clk), .din(in1_w), .dout(x1_w));
+            pipeline #(.BITWIDTH(1),       .CSP_LATENCY(P)) u_sync_d (.clk(clk), .din(sync), .dout(sync_d));
 
-    pipeline #(.BITWIDTH(LANES_W), .CSP_LATENCY(P)) u_b (.clk(clk), .din(mux0_w), .dout(b_w));
+            if (USE_BRAM != 0) begin : GEN_BRAM
+                delay_bram #(.BITWIDTH(LANES_W), .DELAY_LEN(P + ND), .PLATFORM(PLATFORM)) u_x2 (
+                    .clk(clk), .din(in2_w), .dout(x2_w));
+                delay_bram #(.BITWIDTH(LANES_W), .DELAY_LEN(P + ND), .PLATFORM(PLATFORM)) u_a (
+                    .clk(clk), .din(mux1_w), .dout(a_w));
+            end else begin : GEN_REGS
+                pipeline #(.BITWIDTH(LANES_W), .CSP_LATENCY(P + ND)) u_x2 (
+                    .clk(clk), .din(in2_w), .dout(x2_w));
+                pipeline #(.BITWIDTH(LANES_W), .CSP_LATENCY(P + ND)) u_a (
+                    .clk(clk), .din(mux1_w), .dout(a_w));
+            end
 
-    pipeline #(.BITWIDTH(1), .CSP_LATENCY(P + MUX_LATENCY)) u_sync_pre (
-        .clk(clk), .din(sync_d), .dout(sync_bf_pre));
-    sync_delay #(.DELAY_LEN(ND)) u_sync_delay (
-        .clk(clk), .din(sync_bf_pre), .dout(sync_bf));
+            counter #(
+                .COUNTER_TYPE   (0),
+                .NBITS          (CNT_BITS),
+                .COUNT_DIR      (0),
+                .INIT_VAL       (0),
+                .STEP           (1),
+                .ENABLE_SYNC_RST(1),
+                .ENABLE_ENABLE  (0)
+            ) u_counter (
+                .clk   (clk),
+                .rst   (sync_d),
+                .enable(1'b1),
+                .dout  (cnt)
+            );
+
+            multiplexer #(.NBITS(LANES_W), .NINPUTS(2), .LATENCY(MUX_LATENCY)) u_mux1 (
+                .clk(clk), .din('{x1_w, x2_w}), .sel(cnt[CNT_BITS-1]), .dout(mux1_w));
+            multiplexer #(.NBITS(LANES_W), .NINPUTS(2), .LATENCY(MUX_LATENCY)) u_mux0 (
+                .clk(clk), .din('{x2_w, x1_w}), .sel(cnt[CNT_BITS-1]), .dout(mux0_w));
+
+            pipeline #(.BITWIDTH(LANES_W), .CSP_LATENCY(P)) u_b (.clk(clk), .din(mux0_w), .dout(b_w));
+
+            pipeline #(.BITWIDTH(1), .CSP_LATENCY(P + MUX_LATENCY)) u_sync_pre (
+                .clk(clk), .din(sync_d), .dout(sync_bf_pre));
+            sync_delay #(.DELAY_LEN(ND)) u_sync_delay (
+                .clk(clk), .din(sync_bf_pre), .dout(sync_bf));
+            assign en_bf = 1'b1;
+        end else begin : GEN_ASYNC
+            logic sync_d, sync_m, sync_frame, en_p, en_pm;
+
+            // din0 (+ din1): in1 delayed P; dsync0 (+ dsync2): sync delayed P
+            pipeline #(.BITWIDTH(LANES_W), .CSP_LATENCY(P)) u_x1 (.clk(clk), .din(in1_w), .dout(x1_w));
+            pipeline #(.BITWIDTH(1),       .CSP_LATENCY(P)) u_sync_d (.clk(clk), .din(sync), .dout(sync_d));
+            // en_replicate0 (P) -> counter en; en_replicate1 (MUX) -> bus_expand1
+            pipeline #(.BITWIDTH(1), .CSP_LATENCY(P)) u_en_p (.clk(clk), .din(en), .dout(en_p));
+            pipeline #(.BITWIDTH(1), .CSP_LATENCY(MUX_LATENCY)) u_en_pm (.clk(clk), .din(en_p), .dout(en_pm));
+
+            counter #(
+                .COUNTER_TYPE(0), .NBITS(CNT_BITS), .COUNT_DIR(0), .INIT_VAL(0),
+                .STEP(1), .ENABLE_SYNC_RST(1), .ENABLE_ENABLE(1)
+            ) u_counter (.clk(clk), .rst(sync_d), .enable(en_p), .dout(cnt));
+
+            multiplexer #(.NBITS(LANES_W), .NINPUTS(2), .LATENCY(MUX_LATENCY)) u_mux1 (
+                .clk(clk), .din('{x1_w, x2_w}), .sel(cnt[CNT_BITS-1]), .dout(mux1_w));
+            multiplexer #(.NBITS(LANES_W), .NINPUTS(2), .LATENCY(MUX_LATENCY)) u_mux0 (
+                .clk(clk), .din('{x2_w, x1_w}), .sel(cnt[CNT_BITS-1]), .dout(mux0_w));
+
+            // dmux0: mux0 delayed P
+            pipeline #(.BITWIDTH(LANES_W), .CSP_LATENCY(P)) u_b (.clk(clk), .din(mux0_w), .dout(b_w));
+
+            if (USE_BRAM != 0) begin : GEN_BRAM
+                // delay0 / delay1: bus_single_port_ram (fan_latency input registers,
+                // bram_latency, Read Before Write, always reading) addressed by a
+                // Free Running counter of FFT_SIZE-FFT_STAGE bits; addr en = we = en
+                // (raw en for delay0, en delayed P+MUX for delay1)
+                logic [LANES_W-1:0] ram_d [2], ram_q [2];
+                logic               ram_en [2];
+                assign ram_d  = '{in2_w, mux1_w};
+                assign ram_en = '{en, en_pm};
+                for (genvar r = 0; r < 2; r++) begin : GEN_RAM
+                    logic [LANES_W-1:0]  d_f, q1;
+                    logic                we_f;
+                    logic [RIV-1:0]      addr, addr_f;
+                    counter #(
+                        .COUNTER_TYPE(0), .NBITS(RIV), .COUNT_DIR(0), .INIT_VAL(0),
+                        .STEP(1), .ENABLE_SYNC_RST(0), .ENABLE_ENABLE(1)
+                    ) u_addr (.clk(clk), .rst(1'b0), .enable(ram_en[r]), .dout(addr));
+                    pipeline #(.BITWIDTH(RIV),     .CSP_LATENCY(FAN_LATENCY)) u_addr_f (.clk(clk), .din(addr), .dout(addr_f));
+                    pipeline #(.BITWIDTH(LANES_W), .CSP_LATENCY(FAN_LATENCY)) u_din_f (.clk(clk), .din(ram_d[r]), .dout(d_f));
+                    pipeline #(.BITWIDTH(1),       .CSP_LATENCY(FAN_LATENCY)) u_we_f (.clk(clk), .din(ram_en[r]), .dout(we_f));
+                    single_port_ram #(.DATA_WIDTH(LANES_W), .ADDR_WIDTH(RIV), .PLATFORM(PLATFORM)) u_ram (
+                        .clk(clk), .we(we_f), .addr(addr_f), .din(d_f), .dout(q1));
+                    pipeline #(.BITWIDTH(LANES_W), .CSP_LATENCY(BRAM_LATENCY - 1)) u_q (.clk(clk), .din(q1), .dout(ram_q[r]));
+                end
+                assign x2_w = ram_q[0];
+                assign a_w  = ram_q[1];
+            end else begin : GEN_REGS
+                // din2 / dmux1 (P) then bus_delay of ND with en = den0 / den1 (en delayed P)
+                logic [LANES_W-1:0] in2_p, mux1_p;
+                logic               en_f, en_pmf;
+                pipeline #(.BITWIDTH(LANES_W), .CSP_LATENCY(P)) u_din2  (.clk(clk), .din(in2_w), .dout(in2_p));
+                pipeline #(.BITWIDTH(LANES_W), .CSP_LATENCY(P)) u_dmux1 (.clk(clk), .din(mux1_w), .dout(mux1_p));
+                pipeline #(.BITWIDTH(1), .CSP_LATENCY(P)) u_den0 (.clk(clk), .din(en), .dout(en_f));
+                pipeline #(.BITWIDTH(1), .CSP_LATENCY(P)) u_den1 (.clk(clk), .din(en_pm), .dout(en_pmf));
+                delay_srl #(.BITWIDTH(LANES_W), .DELAY_LEN(ND), .USE_ENABLE(1), .USE_RST(0)) u_delay0 (
+                    .clk(clk), .rst(1'b0), .en(en_f), .din(in2_p), .dout(x2_w));
+                delay_srl #(.BITWIDTH(LANES_W), .DELAY_LEN(ND), .USE_ENABLE(1), .USE_RST(0)) u_delay1 (
+                    .clk(clk), .rst(1'b0), .en(en_pmf), .din(mux1_p), .dout(a_w));
+            end
+
+            // dsync1 (MUX) -> sync_delay_en (ND, en = en delayed P+MUX): a down
+            // counter loaded with ND by the sync (whatever en) and decremented on
+            // en; out = (count == 1)
+            pipeline #(.BITWIDTH(1), .CSP_LATENCY(MUX_LATENCY)) u_dsync1 (.clk(clk), .din(sync_d), .dout(sync_m));
+            localparam int SB = ($clog2(ND + 1) > 2) ? $clog2(ND + 1) : 2;
+            logic [SB-1:0] scnt, scnt_next;
+            always_comb begin
+                if (sync_m)                    scnt_next = SB'(ND);
+                else if (en_pm && scnt != '0)  scnt_next = scnt - 1'b1;
+                else                           scnt_next = scnt;
+            end
+            register #(.BITWIDTH(SB), .USE_RST(0), .USE_ENABLE(0), .INIT_VAL(0)) u_scnt (
+                .clk(clk), .rst(1'b0), .en(1'b1), .d(scnt_next), .q(scnt));
+            assign sync_frame = (scnt == SB'(1));
+
+            // logical0: AND with en delayed P+MUX, latency P; delay4: that en delayed P
+            logical #(.NBITS(1), .NINPUTS(2), .LATENCY(P), .FUNC(0)) u_logical0 (
+                .clk(clk), .din('{sync_frame, en_pm}), .dout(sync_bf));
+            pipeline #(.BITWIDTH(1), .CSP_LATENCY(P)) u_delay4 (.clk(clk), .din(en_pm), .dout(en_bf));
+        end
+    endgenerate
 
     // ── butterfly ────────────────────────────────────────────────────────────
     logic [IW-1:0]      a_re [N_INPUTS], a_im [N_INPUTS], b_re [N_INPUTS], b_im [N_INPUTS];
@@ -369,10 +463,10 @@ module fft_stage_n #(
         .ADD_LATENCY(ADD_LATENCY), .MULT_LATENCY(MULT_LATENCY),
         .BRAM_LATENCY(BRAM_LATENCY), .CONV_LATENCY(CONV_LATENCY),
         .QUANTIZATION(QUANTIZATION), .OVERFLOW(OVERFLOW),
-        .MAX_FANOUT(MAX_FANOUT), .PLATFORM(PLATFORM)
+        .MAX_FANOUT(MAX_FANOUT), .ASYNC(ASYNC), .PLATFORM(PLATFORM)
     ) u_butterfly (
         .clk(clk), .a_re(a_re), .a_im(a_im), .b_re(b_re), .b_im(b_im),
-        .sync_in(sync_bf), .shift(shift[FFT_STAGE-1]),
+        .sync_in(sync_bf), .shift(shift[FFT_STAGE-1]), .en(en_bf), .dvalid(dvalid),
         .apbw_re(out1_re), .apbw_im(out1_im), .ambw_re(out2_re), .ambw_im(out2_im),
         .of(bf_of), .sync_out(sync_out));
 

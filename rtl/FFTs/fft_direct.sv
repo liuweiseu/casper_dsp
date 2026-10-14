@@ -47,7 +47,12 @@
 // Port order: element k of din / dout is in<s><n> / out<s><n> with
 // k = s·2^F + n (casper port order).
 //
-// Declared for traceability only: ASYNC must be 0; COEFFS_BIT_LIMIT,
+// ASYNC = 1 (fft_direct_init.m:200-212, 395, 434-447): every butterfly is
+// async; en goes to the stage-0 butterflies and each butterfly's dvalid to
+// the en of the next-stage butterflies it feeds (the sync tree); dvalid =
+// the last-stage butterfly 0's dvalid.
+//
+// Declared for traceability only: COEFFS_BIT_LIMIT,
 // COEFF_SHARING, COEFF_DECIMATION, COEFF_GENERATION, CAL_BITS,
 // N_BITS_ROTATION, MULT_SPEC, DSP48_ADDERS, ADD_PIPE_LATENCY and
 // MULT_PIPE_LATENCY are ignored.
@@ -118,8 +123,7 @@
 // [params.ASYNC]
 // mask = 'async'
 // type = 'checkbox'
-// hdl_unsupported = [1]
-// note = '$fatal unless 0 (en/dvalid handshake not implemented)'
+// note = 'async = on: every butterfly_direct is async, en -> stage-0 butterflies, each butterfly dvalid -> en of the butterflies it feeds, dvalid = last-stage butterfly 0 dvalid. The HDL ports always exist, dvalid = 0 when ASYNC = 0'
 // [params.ASYNC.values]
 // 0 = 'off'
 // 1 = 'on'
@@ -180,7 +184,7 @@
 //
 // [[unsupported]]
 // when = 'MAP_TAIL != 0 && COEFF_GENERATION != 0 && LARGER_FFT_SIZE - FFT_SIZE > $clog2(MULT_LATENCY + (DSP48_ADDERS != 0 ? 2 : ADD_LATENCY) + CONV_LATENCY + 1) + CAL_BITS && LARGER_FFT_SIZE - FFT_SIZE <= $clog2(MULT_LATENCY + CONV_LATENCY + 5) + CAL_BITS'
-// reason = 'coeff_gen draws a feedback_osc for the bit-reversed 2^(LARGER_FFT_SIZE-FFT_SIZE)-entry twiddle lists of fft_direct when log2(length) > ceil(log2(mult+add+conv+1)) + cal_bits (coeff_gen_init.m:260, 496-544), and feedback_osc_init.m:63-73 then errors when ceil(log2(5+mult+conv)) + cal_bits >= log2(length): The number of calibration values requested is the same or larger than the number of output values requested (derived from the init scripts; matches all sets, fft_wideband_real set 2 confirmed in MATLAB R2021a); exact for START_STAGE = LARGER_FFT_SIZE - FFT_SIZE + 1 (as fft_wideband_real uses it)'
+// reason = 'coeff_gen draws a feedback_osc for the bit-reversed 2^(LARGER_FFT_SIZE-FFT_SIZE)-entry twiddle lists of fft_direct when log2(length) > ceil(log2(mult+add+conv+1)) + cal_bits (coeff_gen_init.m:260, 496-544), and feedback_osc_init.m:63-73 then errors when ceil(log2(5+mult+conv)) + cal_bits >= log2(length): The number of calibration values requested is the same or larger than the number of output values requested (derived from the init scripts; matches all sets; confirmed in MATLAB R2021a with a former fft_wideband_real set: N_STREAMS 2, FFT_SIZE 5, N_INPUTS 1); exact for START_STAGE = LARGER_FFT_SIZE - FFT_SIZE + 1 (as fft_wideband_real uses it)'
 //
 // [[unsupported]]
 // when = 'MAP_TAIL != 0 && LARGER_FFT_SIZE == FFT_SIZE + 1 && FFT_SIZE >= 2'
@@ -191,7 +195,7 @@
 //
 // [[unsupported]]
 // when = 'BITGROWTH != 0 && (INPUT_BIT_WIDTH * FFT_SIZE < MAX_BITS ? INPUT_BIT_WIDTH * FFT_SIZE : MAX_BITS) != (INPUT_BIT_WIDTH + FFT_SIZE < MAX_BITS ? INPUT_BIT_WIDTH + FFT_SIZE : MAX_BITS)'
-// reason = 'mlib_devel bug 4 (docs/bugs.md): fft_direct_init.m:228 sizes the output bus_expand blocks (<a|b>debus<FFTSize-1>_*) with min(max_bits, input_bit_width*FFTSize) instead of the data width min(max_bits, input_bit_width+FFTSize); when the two differ the slices do not match the bus (wider: Incorrect slice end point, confirmed in MATLAB R2021a through fft_wideband_real set 3; narrower, FFT_SIZE = 1: the MSBs are dropped, from source)'
+// reason = 'mlib_devel bug 4 (docs/bugs.md): fft_direct_init.m:228 sizes the output bus_expand blocks (<a|b>debus<FFTSize-1>_*) with min(max_bits, input_bit_width*FFTSize) instead of the data width min(max_bits, input_bit_width+FFTSize); when the two differ the slices do not match the bus (wider: Incorrect slice end point, confirmed in MATLAB R2021a through fft_wideband_real set 2; narrower, FFT_SIZE = 1: the MSBs are dropped, from source)'
 //
 // [hdl_only]
 // SHIFT_SCHEDULE = 'bit mask, bit s = stage s+1 (s = 0 .. FFT_SIZE-1); set on the mask as the per-stage 0/1 vector shift_schedule = bitget(SHIFT_SCHEDULE, 1:FFT_SIZE) (mask_set)'
@@ -206,14 +210,13 @@
 //
 // [ports]
 // note = 'array element s*2^FFT_SIZE + n; each Simulink complex port x is split into x_re / x_im'
+// order = 'async only: en is input n_streams*2^FFTSize+3 and dvalid the last output (fft_direct_init.m:200-212)'
 // [ports.renamed]
 // din_re = 'in<s><n>'
 // din_im = 'in<s><n>'
 // dout_re = 'out<s><n>'
 // dout_im = 'out<s><n>'
 // [ports.missing]
-// en = 'async=on only (not implemented)'
-// dvalid = 'async=on only (not implemented)'
 // [ports.extra]
 // @simulink-mapping end
 
@@ -239,8 +242,8 @@ module fft_direct #(
     parameter int    SHIFT_SCHEDULE    = 3,
     parameter string COEFF_DIR         = "",
     parameter string PLATFORM          = "GENERIC",
+    parameter int    ASYNC             = 0,   // casper async: 1 = en / dvalid (see header)
     // declared, not implemented (see header)
-    parameter int    ASYNC             = 0,
     parameter int    ADD_PIPE_LATENCY  = 0,
     parameter int    MULT_PIPE_LATENCY = 0,
     parameter int    COEFFS_BIT_LIMIT  = 9,
@@ -259,10 +262,12 @@ module fft_direct #(
     input  logic [FFT_SIZE-1:0]        shift,
     input  logic [INPUT_BIT_WIDTH-1:0] din_re  [N_STREAMS << FFT_SIZE],
     input  logic [INPUT_BIT_WIDTH-1:0] din_im  [N_STREAMS << FFT_SIZE],
+    input  logic                       en = 1'b1,
     output logic                       sync_out,
     output logic [N_BITS_OUT-1:0]      dout_re [N_STREAMS << FFT_SIZE],
     output logic [N_BITS_OUT-1:0]      dout_im [N_STREAMS << FFT_SIZE],
-    output logic [N_STREAMS-1:0]       of
+    output logic [N_STREAMS-1:0]       of,
+    output logic                       dvalid
 );
 
     // ── elaboration-time helpers ────────────────────────────────────────────
@@ -313,7 +318,6 @@ module fft_direct #(
     localparam int N_COEFFS = (MAP_TAIL != 0) ? 1 << (LARGER_FFT_SIZE - FFT_SIZE) : 1;
     localparam int TW_SIZE  = (MAP_TAIL != 0) ? LARGER_FFT_SIZE : FFT_SIZE;
 
-    if (ASYNC != 0) $fatal(1, "fft_direct: ASYNC is not implemented");
     if (F < 1)      $fatal(1, "fft_direct: FFT_SIZE must be >= 1");
     if (MAP_TAIL != 0 && LARGER_FFT_SIZE < FFT_SIZE)
         $fatal(1, "fft_direct: LARGER_FFT_SIZE must be >= FFT_SIZE");
@@ -337,7 +341,7 @@ module fft_direct #(
             logic [W_IN-1:0]  a_re [L], a_im [L], b_re [L], b_im [L];
             logic [W_OUT-1:0] o1_re [L], o1_im [L], o2_re [L], o2_im [L];
             logic [L-1:0]     o_of;
-            logic             s_in, s_out;
+            logic             s_in, s_out, e_in, e_out;
 
             for (genvar l = 0; l < L; l++) begin : GEN_LANE
                 if (s == 0) begin : GEN_FIRST
@@ -360,10 +364,13 @@ module fft_direct #(
             end
 
             // sync chain: stage 0 gets sync, butterfly 2u+c the sync_out of u
+            // async en follows the same tree (butterfly dvalid -> en)
             if (s == 0) begin : GEN_SYNC_IN
                 assign s_in = sync;
+                assign e_in = en;
             end else begin : GEN_SYNC_CHAIN
                 assign s_in = GEN_STAGE[s-1].GEN_BF[u/2].s_out;
+                assign e_in = GEN_STAGE[s-1].GEN_BF[u/2].e_out;
             end
             assign bf_of[s][u] = L0'(o_of);
 
@@ -376,13 +383,13 @@ module fft_direct #(
                 .ADD_LATENCY(ADD_LATENCY), .MULT_LATENCY(MULT_LATENCY),
                 .BRAM_LATENCY(BRAM_LATENCY), .CONV_LATENCY(CONV_LATENCY),
                 .QUANTIZATION(QUANTIZATION), .OVERFLOW(OVERFLOW), .MAX_FANOUT(MAX_FANOUT),
-                .PLATFORM(PLATFORM)
+                .ASYNC(ASYNC), .PLATFORM(PLATFORM)
             ) u_butterfly (
                 .clk(clk),
                 .a_re(a_re), .a_im(a_im), .b_re(b_re), .b_im(b_im),
-                .sync_in(s_in), .shift(shift[s]),
+                .sync_in(s_in), .shift(shift[s]), .en(e_in),
                 .apbw_re(o1_re), .apbw_im(o1_im), .ambw_re(o2_re), .ambw_im(o2_im),
-                .of(o_of), .sync_out(s_out));
+                .of(o_of), .sync_out(s_out), .dvalid(e_out));
         end
     end
 
@@ -400,6 +407,7 @@ module fft_direct #(
         end
     end
     assign sync_out = GEN_STAGE[F-1].GEN_BF[0].s_out;
+    assign dvalid   = GEN_STAGE[F-1].GEN_BF[0].e_out;
 
     // ── overflow ─────────────────────────────────────────────────────────────
     if (F == 1) begin : GEN_OF_SINGLE

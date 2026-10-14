@@ -217,7 +217,7 @@ with bit growth on, when the width is not capped by `max_bits` (with the
 mask default `max_bits = 19` and 18-bit data the width is capped and the
 bug has no effect).
 
-**Confirmed in MATLAB R2021a:** `fft_wideband_real` set 3
+**Confirmed in MATLAB R2021a:** `fft_wideband_real` set 2
 (`FFT_SIZE = 6`, `N_INPUTS = 2`, `INPUT_BIT_WIDTH = 12`, `BITGROWTH = 1`,
 `MAX_BITS = 22`). Its `fft_direct` gets `FFTSize = 2` and
 `input_bit_width = min(22, 12 + 4) = 16`, so the final butterflies carry
@@ -709,7 +709,10 @@ sets that trigger the bug are excluded from the Simulink comparison.
 
 **Trigger:** `async = 'on'` with `bram_latency = 1`.
 
-**HDL trigger:** `Delays/delay_bram`: `ASYNC != 0 && BRAM_LATENCY == 1`
+**HDL trigger:** `Delays/delay_bram`: `ASYNC != 0 && BRAM_LATENCY == 1`;
+`FFTs/Internal/bi_real_unscr_4x`: `ASYNC != 0 && BRAM_DELAYS != 0 && BRAM_LATENCY == 1`;
+`FFTs/fft_biplex_real_4x`: `ASYNC != 0 && BRAM_LATENCY == 1 && FFT_SIZE >= 3 && 2 ** (FFT_SIZE - 1) * 2 * INPUT_BIT_WIDTH * N_INPUTS >= 2 ** DELAYS_BIT_LIMIT`;
+`FFTs/fft_wideband_real`: `ASYNC != 0 && BRAM_LATENCY == 1 && FFT_SIZE - N_INPUTS >= 3 && 2 ** (FFT_SIZE - N_INPUTS - 1) * 2 * INPUT_BIT_WIDTH * (N_STREAMS * 2 ** N_INPUTS / 4) >= 2 ** DELAYS_BIT_LIMIT`
 
 **Root cause:** in the async branch the RAM has latency 1, followed by
 `bram_latency − 1` gated Delays. The loop that creates those Delays also
@@ -717,7 +720,10 @@ creates and wires the `dout` port (`:131-157`); for `bram_latency = 1` it
 runs zero times, so `dout` is never created.
 
 **Impact on casper designs:** `delay_bram` with `async` on and
-`bram_latency = 1`.
+`bram_latency = 1`, also inside `bi_real_unscr_4x` with `bram_delays` on
+(which passes its `bram_latency` to the half-frame `delay_bram` delays,
+`bi_real_unscr_4x_init.m:508-520`) and so inside `fft_biplex_real_4x` and
+`fft_wideband_real` when they turn `bram_delays` on (from source).
 
 **Confirmed in MATLAB R2021a:** async batch 1, `delay_bram` set 2
 (`DelayLen 16`, `bram_latency 1`).
@@ -776,7 +782,7 @@ entry one past the stored quarter, i.e. the quadrant boundary (±1.0).
 any `twiddle_general` with a quarter-cycle table.
 
 **Confirmed in MATLAB R2021a:** `butterfly_direct` set 6, `fft_direct`
-sets 0, 1, 2, 4, 5 and `fft_wideband_real` sets 0, 1, 5. A coefficient
+sets 0, 1, 2, 4, 5 and `fft_wideband_real` sets 0, 1, 4. A coefficient
 model with the saturated address matches every port of these sets bit
 exactly; the HDL table (±1.0 at address 0) does not.
 
@@ -1011,7 +1017,7 @@ are excluded from the Simulink comparison.
   `rtl/FFTs/fft_wideband_real.sv` (the same rule for the inner
   `fft_direct`: `FFTSize = N_INPUTS`, input width
   `min(MAX_BITS, INPUT_BIT_WIDTH + FFT_SIZE − N_INPUTS)`). They skip
-  `fft_wideband_real` set 3; no `fft_direct` set is affected.
+  `fft_wideband_real` set 2; no `fft_direct` set is affected.
 - **Test configurations** (`tests/simulation.toml`): no parameter set
   hits bugs 1–3.
   - `butterfly_direct` set 2 (formerly `Coeffs = [1]`) is now a
@@ -1117,7 +1123,7 @@ are excluded from the Simulink comparison.
 
   They skip `twiddle_stage_2` set 2, `auto_tap` set 3, `tap_real` set 3,
   `twiddle_general` sets 1 and 3, `xeng_descramble` set 2,
-  `adder_subtractor` set 4, `convert` set 4 and `fft_wideband_real` set 2;
+  `adder_subtractor` set 4 and `convert` set 4;
   the HDL tests of these sets still run.
 - **HDL-only configurations:** HDL extensions without a Simulink
   counterpart are `unsupported` entries, and `tests/simulation.toml` lists

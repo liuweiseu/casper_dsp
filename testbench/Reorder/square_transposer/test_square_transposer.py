@@ -19,13 +19,19 @@ SCALAR_IN = ['sync']
 LANE_OUT = {'dout': 'dout'}
 SCALAR_OUT = {'sync_out': 'sync_out'}
 
+# casper async options: parameters (default when missing from params.json) and
+# ports (driven / checked only when their sim_<name>.csv exists)
+OPTION_DEFAULTS = {'ASYNC': 0}
+OPTIONAL_IN = ['en']
+OPTIONAL_OUT = {'dvalid': 'dvalid'}
+
 
 def find_datadir(dut):
     """Return the simdataN directory whose integer parameters match the DUT."""
-    dut_params = {name: int(getattr(dut, name).value) for name in PARAMS}
+    dut_params = {name: int(getattr(dut, name).value) for name in PARAMS + list(OPTION_DEFAULTS)}
     for d in sorted(testdatadir.glob("simdata*")):
-        p = json.loads((d / "params.json").read_text())
-        if {k: p[k] for k in PARAMS} == dut_params:
+        p = dict(OPTION_DEFAULTS, **json.loads((d / "params.json").read_text()))
+        if {k: p[k] for k in dut_params} == dut_params:
             return d, dut_params
     return None, dut_params
 
@@ -53,8 +59,10 @@ async def module_test(dut):
         return
 
     lanes = 1 << int(dut.N_INPUTS.value)
-    stim = {k: load(datadir, k) for k in LANE_IN + SCALAR_IN}
-    expected = {k: load(datadir, k) for k in list(LANE_OUT) + list(SCALAR_OUT)}
+    scalar_in = SCALAR_IN + [k for k in OPTIONAL_IN if (datadir / f"sim_{k}.csv").exists()]
+    scalar_out = dict(SCALAR_OUT, **{k: v for k, v in OPTIONAL_OUT.items() if (datadir / f"sim_{k}.csv").exists()})
+    stim = {k: load(datadir, k) for k in LANE_IN + scalar_in}
+    expected = {k: load(datadir, k) for k in list(LANE_OUT) + list(scalar_out)}
     cycles = len(next(iter(expected.values())))
     cocotb.log.info(f"Loaded {cycles} cycles from {datadir.name}")
 
@@ -62,7 +70,7 @@ async def module_test(dut):
         for k in LANE_IN:
             for n in range(lanes):
                 getattr(dut, k)[n].value = stim[k][i][n]
-        for k in SCALAR_IN:
+        for k in scalar_in:
             getattr(dut, k).value = stim[k][i][0]
         await RisingEdge(dut.clk)
         for k, port in LANE_OUT.items():
@@ -71,7 +79,7 @@ async def module_test(dut):
                 assert actual == expected[k][i][n], (
                     f"Index {i} lane {n}: expected {port}={expected[k][i][n]}, got {actual}"
                 )
-        for k, port in SCALAR_OUT.items():
+        for k, port in scalar_out.items():
             actual = int(getattr(dut, port).value)
             assert actual == expected[k][i][0], (
                 f"Index {i}: expected {port}={expected[k][i][0]}, got {actual}"

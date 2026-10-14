@@ -79,7 +79,15 @@ The butterfly's dynamic downshift is `shift[FFT_STAGE−1]`. The stage's
 | `INIT_FILE`       | `""`        | `twiddle_general` table (stages ≥ 3) |
 | `PLATFORM`        | `"GENERIC"` | Passed to the RAMs / ROM |
 
-**Declared but not implemented:** `ASYNC` and `FLOATING_POINT` must be 0. These
+**Async:** with `ASYNC = 1` the HDL builds casper's async structure: `en`
+enables the select counter and the long delays (BRAM: address counters and
+write enable; registers: enabled delays), so the commutator works on valid
+samples; the frame sync goes through casper's `sync_delay_en` and an AND
+with the aligned `en`, and the butterfly gets that `en`; `dvalid` is the
+butterfly's. The latency is unchanged. Verified against Simulink (MATLAB
+R2021a) with random `en`.
+
+**Declared but not implemented:** `FLOATING_POINT` must be 0. These
 are ignored: `FLOAT_TYPE`, `EXP_WIDTH`, `FRAC_WIDTH`, `ADD_PIPE_LATENCY`,
 `MULT_PIPE_LATENCY`, `COEFFS_BIT_LIMIT`, `COEFF_SHARING`, `COEFF_DECIMATION`,
 `USE_HDL`, `USE_EMBEDDED`, `DSP48_ADDERS`, `REG_RETIMING`. `N_BITS_OUT` is
@@ -96,6 +104,8 @@ Lane ports are unpacked arrays of `N_INPUTS` words.
 | `of_in` | input | `N_INPUTS` | Overflow flags from the previous stage, lane 0 in the MSB |
 | `sync` | input | 1 | Frame sync |
 | `shift` | input | `FFT_SIZE` | Shift bus; bit `FFT_STAGE−1` is used |
+| `en` | input | 1 | Async enable (used when `ASYNC = 1`; default 1) |
 | `out1_re`, `out1_im`, `out2_re`, `out2_im` | output | `N_BITS_OUT` × `N_INPUTS` | Butterfly outputs `a + bw` / `a − bw` |
 | `of` | output | `N_INPUTS` | `butterfly of | of_in`, registered; lane 0 in the MSB (`of[N_INPUTS−1−n]` = lane `n`) |
 | `sync_out` | output | 1 | Sync aligned with the outputs |
+| `dvalid` | output | 1 | butterfly `dvalid` when `ASYNC = 1`, else 0 |

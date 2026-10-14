@@ -41,8 +41,12 @@ sync ─► delay 1+BRAM_LATENCY+NEGATE_LATENCY−REP ─► counter rst ─► 
   [`bi_real_unscr_4x`](bi_real_unscr_4x.md) passes `bram_latency +
   map_latency + 2 + fanout_latency` and negate latency 0.
 
-`ASYNC` (casper's `en` / `dvalid` ports) is declared for traceability and must
-be 0. Floating point is not implemented.
+With `ASYNC = 1` (casper `async`), `en`, delayed like the sync, enables the
+frame counter, so the select advances on valid samples only (the sync
+reset wins); `dvalid` is `en` delayed `2 + BRAM_LATENCY + NEGATE_LATENCY`,
+aligned with `sync_out` and the data. The data path is not gated. Verified
+against Simulink (MATLAB R2021a) with random `en`. Floating point is not
+implemented.
 
 ## Parameters
 
@@ -55,7 +59,7 @@ be 0. Floating point is not implemented.
 | `BRAM_LATENCY` | 2 | Latency of the reorder feeding `reo_in<i>` (see above) |
 | `NEGATE_LATENCY` | 1 | complex_conj latency (`NEGATE_MODE = 0`) |
 | `NEGATE_MODE` | 0 | `0` = logic, `1` = dsp48e (complex_conj latency 3) |
-| `ASYNC` | 0 | Must be 0 |
+| `ASYNC` | 0 | casper `async`: `1` = counter enabled by `en`, `dvalid` output (see above) |
 
 `1 + BRAM_LATENCY + NEGATE_LATENCY ≥ REP` is required.
 
@@ -67,5 +71,7 @@ be 0. Floating point is not implemented.
 | `sync` | input | 1 | Frame sync |
 | `din<i>_re`, `din<i>_im` (i = 0 … 3) | input | `INPUT_BITWIDTH` × `N_INPUTS` | Bins in order |
 | `reo_in<i>_re`, `reo_in<i>_im` (i = 0 … 3) | input | `INPUT_BITWIDTH` × `N_INPUTS` | Bins in reverse order |
+| `en` | input | 1 | Async enable (used when `ASYNC = 1`; default 1) |
 | `sync_out` | output | 1 | Sync, one cycle before the first output sample |
 | `dout<i>_re`, `dout<i>_im` (i = 0 … 3) | output | `INPUT_BITWIDTH` × `N_INPUTS` | Full spectra |
+| `dvalid` | output | 1 | `en` delayed `2 + BRAM_LATENCY + NEGATE_LATENCY` when `ASYNC = 1`, else 0 |

@@ -29,7 +29,7 @@ import random
 import sys
 from pathlib import Path
 
-from common import TEST_DATA_ROOT, run_cli                     # also puts rtl/.../scripts on sys.path
+from common import TEST_DATA_ROOT, run_cli, write_test_data_md  # also puts rtl/.../scripts on sys.path
 from gen_butterfly_test_data import delay, write_csv, P, toml
 from gen_fixed_point_test_data import corners, quantize, to_value
 from gen_fft_stage_test_data import m_sync_delay
@@ -473,7 +473,7 @@ def md_table(mdir, name, keys, sets, prose, extra=None):
     for n, (p, desc, cycles, *rest) in enumerate(sets):
         lines.append(f"| {n} | `simdata{n}` | " + " | ".join(str(p[k]) for k in keys)
                      + "".join(f" | {x}" for x in rest) + f" | {cycles} | {desc} |")
-    (mdir / "test_data.md").write_text("\n".join(lines) + "\n")
+    write_test_data_md(mdir / "test_data.md", lines)
 
 
 def main():

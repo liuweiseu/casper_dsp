@@ -42,7 +42,14 @@
 // Port order: element k of din is in<s><n> with k = s·2^NI + n, element k of
 // dout is out<s><n> with k = s·2^(NI-1) + n (casper port order).
 //
-// Declared for traceability only: ASYNC and FLOATING_POINT must be 0;
+// ASYNC = 1 (fft_wideband_real_init.m:262-278, 576-630): every sub-block is
+// async; en is delayed INPUT_LATENCY (in_del_en_4x) to the
+// fft_biplex_real_4x en, its dvalid BIPLEX_DIRECT_LATENCY (out_del_en_4x) to
+// the fft_direct en and, with the unscrambler, the fft_direct dvalid
+// BIPLEX_DIRECT_LATENCY again (fft_direct_dvalid_delay) to the unscrambler
+// en; dvalid = the unscrambler's dvalid, or fft_direct's without it.
+//
+// Declared for traceability only: FLOATING_POINT must be 0;
 // FLOAT_TYPE, EXP_WIDTH, FRAC_WIDTH, ADD_PIPE_LATENCY, MULT_PIPE_LATENCY,
 // COEFF_SHARING, COEFF_DECIMATION, COEFF_GENERATION, CAL_BITS,
 // N_BITS_ROTATION, MULT_SPEC and DSP48_ADDERS are ignored.
@@ -115,8 +122,7 @@
 // [params.ASYNC]
 // mask = 'async'
 // type = 'checkbox'
-// hdl_unsupported = [1]
-// note = '$fatal unless 0 (en/dvalid handshake not implemented)'
+// note = "async = on: every sub-block is async; en -> (INPUT_LATENCY) fft_biplex_real_4x -> (BIPLEX_DIRECT_LATENCY) fft_direct -> (BIPLEX_DIRECT_LATENCY) fft_unscrambler; dvalid = the last block's dvalid. The HDL ports always exist, dvalid = 0 when ASYNC = 0"
 // [params.ASYNC.values]
 // 0 = 'off'
 // 1 = 'on'
@@ -184,11 +190,15 @@
 //
 // [[unsupported]]
 // when = 'COEFF_GENERATION != 0 && FFT_SIZE - N_INPUTS > $clog2(MULT_LATENCY + (DSP48_ADDERS != 0 ? 2 : ADD_LATENCY) + CONV_LATENCY + 1) + CAL_BITS && FFT_SIZE - N_INPUTS <= $clog2(MULT_LATENCY + CONV_LATENCY + 5) + CAL_BITS'
-// reason = 'coeff_gen draws a feedback_osc for the bit-reversed 2^(FFT_SIZE-N_INPUTS)-entry twiddle lists of fft_direct when log2(length) > ceil(log2(mult+add+conv+1)) + cal_bits (coeff_gen_init.m:260, 496-544), and feedback_osc_init.m:63-73 then errors when ceil(log2(5+mult+conv)) + cal_bits >= log2(length): The number of calibration values requested is the same or larger than the number of output values requested (derived from the init scripts; matches all sets, set 2 confirmed in MATLAB R2021a)'
+// reason = 'coeff_gen draws a feedback_osc for the bit-reversed 2^(FFT_SIZE-N_INPUTS)-entry twiddle lists of fft_direct when log2(length) > ceil(log2(mult+add+conv+1)) + cal_bits (coeff_gen_init.m:260, 496-544), and feedback_osc_init.m:63-73 then errors when ceil(log2(5+mult+conv)) + cal_bits >= log2(length): The number of calibration values requested is the same or larger than the number of output values requested (derived from the init scripts; matches all sets; confirmed in MATLAB R2021a with a former set 2: N_STREAMS 2, FFT_SIZE 5, N_INPUTS 1)'
 //
 // [[unsupported]]
 // when = 'BITGROWTH != 0 && ((INPUT_BIT_WIDTH + FFT_SIZE - N_INPUTS < MAX_BITS ? INPUT_BIT_WIDTH + FFT_SIZE - N_INPUTS : MAX_BITS) * N_INPUTS < MAX_BITS ? (INPUT_BIT_WIDTH + FFT_SIZE - N_INPUTS < MAX_BITS ? INPUT_BIT_WIDTH + FFT_SIZE - N_INPUTS : MAX_BITS) * N_INPUTS : MAX_BITS) != ((INPUT_BIT_WIDTH + FFT_SIZE - N_INPUTS < MAX_BITS ? INPUT_BIT_WIDTH + FFT_SIZE - N_INPUTS : MAX_BITS) + N_INPUTS < MAX_BITS ? (INPUT_BIT_WIDTH + FFT_SIZE - N_INPUTS < MAX_BITS ? INPUT_BIT_WIDTH + FFT_SIZE - N_INPUTS : MAX_BITS) + N_INPUTS : MAX_BITS)'
-// reason = 'mlib_devel bug 4 (docs/bugs.md): the inner fft_direct gets FFTSize = n_inputs and input_bit_width = min(max_bits, input_bit_width + FFTSize - n_inputs) (fft_wideband_real_init.m:382-393) with bitgrowth and max_bits passed on, and fft_direct_init.m:228 then sizes its output bus_expand with min(max_bits, width*n_inputs) instead of min(max_bits, width+n_inputs): Width of slice / Incorrect slice end point in fft_direct/adebus1_0/slice1 (confirmed in MATLAB R2021a, set 3: 44-bit slices of a 36-bit bus)'
+// reason = 'mlib_devel bug 4 (docs/bugs.md): the inner fft_direct gets FFTSize = n_inputs and input_bit_width = min(max_bits, input_bit_width + FFTSize - n_inputs) (fft_wideband_real_init.m:382-393) with bitgrowth and max_bits passed on, and fft_direct_init.m:228 then sizes its output bus_expand with min(max_bits, width*n_inputs) instead of min(max_bits, width+n_inputs): Width of slice / Incorrect slice end point in fft_direct/adebus1_0/slice1 (confirmed in MATLAB R2021a, set 2: 44-bit slices of a 36-bit bus)'
+//
+// [[unsupported]]
+// when = 'ASYNC != 0 && BRAM_LATENCY == 1 && FFT_SIZE - N_INPUTS >= 3 && 2 ** (FFT_SIZE - N_INPUTS - 1) * 2 * INPUT_BIT_WIDTH * (N_STREAMS * 2 ** N_INPUTS / 4) >= 2 ** DELAYS_BIT_LIMIT'
+// reason = 'mlib_devel bug 14 (docs/bugs.md): the inner fft_biplex_real_4x (FFTSize = FFT_SIZE - N_INPUTS, n_inputs = N_STREAMS*2^N_INPUTS/4) turns bram_delays on, so its bi_real_unscr_4x passes bram_latency = 1 to an async delay_bram, which creates no dout (delay_bram_init.m:131-157; from source)'
 //
 // [hdl_only]
 // SHIFT_SCHEDULE = 'bit mask, bit k = stage k+1; the low FFT_SIZE-N_INPUTS bits go to the biplex part, the rest to fft_direct; set on the mask as the per-stage 0/1 vector shift_schedule = bitget(SHIFT_SCHEDULE, 1:FFT_SIZE) (mask_set)'
@@ -201,13 +211,12 @@
 //
 // [ports]
 // note = 'din element s*2^N_INPUTS + n is in<s><n>, dout element s*2^(N_INPUTS-1) + n is out<s><n>; each Simulink complex port x is split into x_re / x_im; of is the LSB-aligned OR of the biplex and direct of vectors with lane / stream 0 in the MSB, as in Simulink'
+// order = 'async only: en is input n_streams*2^n_inputs+3 and dvalid output n_streams*2^(n_inputs-1)+3 (fft_wideband_real_init.m:262-278)'
 // [ports.renamed]
 // din = 'in<s><n>'
 // dout_re = 'out<s><n>'
 // dout_im = 'out<s><n>'
 // [ports.missing]
-// en = 'async=on only (not implemented)'
-// dvalid = 'async=on only (not implemented)'
 // [ports.extra]
 // @simulink-mapping end
 
@@ -236,8 +245,8 @@ module fft_wideband_real #(
     parameter int    SHIFT_SCHEDULE        = 31,
     parameter string MEM_DIR               = "",
     parameter string PLATFORM              = "GENERIC",
+    parameter int    ASYNC                 = 0,   // casper async: 1 = en / dvalid (see header)
     // declared, not implemented (see header)
-    parameter int    ASYNC                 = 0,
     parameter int    FLOATING_POINT        = 0,
     parameter int    FLOAT_TYPE            = 1,
     parameter int    EXP_WIDTH             = 8,
@@ -261,10 +270,12 @@ module fft_wideband_real #(
     input  logic                       sync,
     input  logic [FFT_SIZE-1:0]        shift,
     input  logic [INPUT_BIT_WIDTH-1:0] din     [N_STREAMS << N_INPUTS],
+    input  logic                       en = 1'b1,
     output logic                       sync_out,
     output logic [N_BITS_OUT-1:0]      dout_re [N_STREAMS << (N_INPUTS - 1)],
     output logic [N_BITS_OUT-1:0]      dout_im [N_STREAMS << (N_INPUTS - 1)],
-    output logic [OF_WIDTH-1:0]        of
+    output logic [OF_WIDTH-1:0]        of,
+    output logic                       dvalid
 );
 
     localparam int F      = FFT_SIZE;
@@ -278,7 +289,6 @@ module fft_wideband_real #(
     localparam int W_DIR  = (BITGROWTH != 0) ? ((INPUT_BIT_WIDTH + FB < MAX_BITS)
                             ? INPUT_BIT_WIDTH + FB : MAX_BITS) : INPUT_BIT_WIDTH;
 
-    if (ASYNC != 0)          $fatal(1, "fft_wideband_real: ASYNC is not implemented");
     if (FLOATING_POINT != 0) $fatal(1, "fft_wideband_real: FLOATING_POINT is not implemented");
     if (NI < 1)              $fatal(1, "fft_wideband_real: N_INPUTS must be >= 1");
     if ((NIN % 4) != 0)
@@ -287,10 +297,12 @@ module fft_wideband_real #(
 
     // ── input pipelines ─────────────────────────────────────────────────────
     logic [INPUT_BIT_WIDTH-1:0] din_d [NIN];
-    logic                       sync_d;
+    logic                       sync_d, en_d, bx_dv, bxd_dv, fd_dv;
 
     pipeline #(.BITWIDTH(1), .CSP_LATENCY(INPUT_LATENCY)) u_in_del_sync_4x (
         .clk(clk), .din(sync), .dout(sync_d));
+    pipeline #(.BITWIDTH(1), .CSP_LATENCY(INPUT_LATENCY)) u_in_del_en_4x (
+        .clk(clk), .din(en), .dout(en_d));
     for (genvar k = 0; k < NIN; k++) begin : GEN_IN_DEL
         pipeline #(.BITWIDTH(INPUT_BIT_WIDTH), .CSP_LATENCY(INPUT_LATENCY)) u_in_del_4x_pol (
             .clk(clk), .din(din[k]), .dout(din_d[k]));
@@ -309,13 +321,15 @@ module fft_wideband_real #(
         .DELAYS_BIT_LIMIT(DELAYS_BIT_LIMIT), .COEFFS_BIT_LIMIT(COEFFS_BIT_LIMIT),
         .MAX_FANOUT(MAX_FANOUT), .BITGROWTH(BITGROWTH), .MAX_BITS(MAX_BITS),
         .HARDCODE_SHIFTS(HARDCODE_SHIFTS), .SHIFT_SCHEDULE(SHIFT_SCHEDULE & ((1 << FB) - 1)),
-        .COEFF_DIR(MEM_DIR), .MAP_DIR(MEM_DIR), .PLATFORM(PLATFORM)
+        .COEFF_DIR(MEM_DIR), .MAP_DIR(MEM_DIR), .ASYNC(ASYNC), .PLATFORM(PLATFORM)
     ) u_fft_biplex_real_4x (
-        .clk(clk), .sync(sync_d), .shift(shift[FB-1:0]), .pol_in(din_d),
+        .clk(clk), .sync(sync_d), .shift(shift[FB-1:0]), .pol_in(din_d), .en(en_d), .dvalid(bx_dv),
         .sync_out(bx_sync), .pol_out_re(bx_re), .pol_out_im(bx_im), .of(bx_of));
 
     pipeline #(.BITWIDTH(1), .CSP_LATENCY(BIPLEX_DIRECT_LATENCY)) u_del_sync_4x (
         .clk(clk), .din(bx_sync), .dout(bxd_sync));
+    pipeline #(.BITWIDTH(1), .CSP_LATENCY(BIPLEX_DIRECT_LATENCY)) u_out_del_en_4x (
+        .clk(clk), .din(bx_dv), .dout(bxd_dv));
     for (genvar k = 0; k < NIN; k++) begin : GEN_BX_DEL
         pipeline #(.BITWIDTH(2 * W_DIR), .CSP_LATENCY(BIPLEX_DIRECT_LATENCY)) u_del_4x_pol (
             .clk(clk), .din({bx_im[k], bx_re[k]}), .dout({bxd_im[k], bxd_re[k]}));
@@ -333,9 +347,10 @@ module fft_wideband_real #(
         .CONV_LATENCY(CONV_LATENCY), .QUANTIZATION(QUANTIZATION), .OVERFLOW(OVERFLOW),
         .MAX_FANOUT(MAX_FANOUT), .BITGROWTH(BITGROWTH), .MAX_BITS(MAX_BITS),
         .HARDCODE_SHIFTS(HARDCODE_SHIFTS), .SHIFT_SCHEDULE(SHIFT_SCHEDULE >> FB),
-        .COEFFS_BIT_LIMIT(COEFFS_BIT_LIMIT), .COEFF_DIR(MEM_DIR), .PLATFORM(PLATFORM)
+        .COEFFS_BIT_LIMIT(COEFFS_BIT_LIMIT), .COEFF_DIR(MEM_DIR), .ASYNC(ASYNC), .PLATFORM(PLATFORM)
     ) u_fft_direct (
         .clk(clk), .sync(bxd_sync), .shift(shift[F-1:FB]), .din_re(bxd_re), .din_im(bxd_im),
+        .en(bxd_dv), .dvalid(fd_dv),
         .sync_out(fd_sync), .dout_re(fd_re), .dout_im(fd_im), .of(fd_of));
 
     // lower half of each stream's outputs (casper terminates the upper half)
@@ -350,10 +365,12 @@ module fft_wideband_real #(
     // ── optional unscrambler ─────────────────────────────────────────────────
     if (UNSCR != 0) begin : GEN_UNSCRAMBLE
         logic [N_BITS_OUT-1:0] kd_re [NOUT], kd_im [NOUT];
-        logic                  fd_sync_d;
+        logic                  fd_sync_d, fd_dv_d;
 
         pipeline #(.BITWIDTH(1), .CSP_LATENCY(BIPLEX_DIRECT_LATENCY)) u_fft_direct_sync_delay (
             .clk(clk), .din(fd_sync), .dout(fd_sync_d));
+        pipeline #(.BITWIDTH(1), .CSP_LATENCY(BIPLEX_DIRECT_LATENCY)) u_fft_direct_dvalid_delay (
+            .clk(clk), .din(fd_dv), .dout(fd_dv_d));
         for (genvar k = 0; k < NOUT; k++) begin : GEN_DEL_DIRECT
             pipeline #(.BITWIDTH(2 * N_BITS_OUT), .CSP_LATENCY(BIPLEX_DIRECT_LATENCY)) u_del_direct (
                 .clk(clk), .din({kept_im[k], kept_re[k]}), .dout({kd_im[k], kd_re[k]}));
@@ -362,12 +379,13 @@ module fft_wideband_real #(
         fft_unscrambler #(
             .N_STREAMS(NS), .FFT_SIZE(F - 1), .N_INPUTS(NI - 1), .N_BITS_IN(N_BITS_OUT),
             .BRAM_LATENCY(BRAM_LATENCY), .COEFFS_BIT_LIMIT(COEFFS_BIT_LIMIT),
-            .MAP_INIT_FILE({MEM_DIR, "map_unscrambler.mem"}), .PLATFORM(PLATFORM)
+            .MAP_INIT_FILE({MEM_DIR, "map_unscrambler.mem"}), .ASYNC(ASYNC), .PLATFORM(PLATFORM)
         ) u_fft_unscrambler (
-            .clk(clk), .sync(fd_sync_d), .din_re(kd_re), .din_im(kd_im),
-            .sync_out(sync_out), .dout_re(dout_re), .dout_im(dout_im));
+            .clk(clk), .sync(fd_sync_d), .din_re(kd_re), .din_im(kd_im), .en(fd_dv_d),
+            .sync_out(sync_out), .dout_re(dout_re), .dout_im(dout_im), .dvalid(dvalid));
     end else begin : GEN_DIRECT_OUT
         assign sync_out = fd_sync;
+        assign dvalid   = fd_dv;
         assign dout_re  = kept_re;
         assign dout_im  = kept_im;
     end

@@ -22,7 +22,7 @@ import json
 import random
 from pathlib import Path
 
-from common import TEST_DATA_ROOT, run_cli                     # also puts rtl/.../scripts on sys.path
+from common import TEST_DATA_ROOT, run_cli, write_test_data_md  # also puts rtl/.../scripts on sys.path
 from gen_butterfly_test_data import write_csv, P, toml
 from gen_reorder_test_data import m_reorder, m_square_transposer
 from gen_reorder_map import compute_order, mem_lines, unscrambler_map
@@ -169,7 +169,7 @@ def gen():
     for n, (full, desc, cycles, order, bm, ml, fo, frames) in enumerate(sets):
         lines.append(f"| {n} | `simdata{n}` | " + " | ".join(str(full[k]) for k in FU)
                      + f" | {order} | {bm} | {ml} | {fo} | {frames} | {cycles} | {desc} |")
-    (MDIR / "test_data.md").write_text("\n".join(lines) + "\n")
+    write_test_data_md(MDIR / "test_data.md", lines)
     return toml("FFTs", "fft_unscrambler", [(full, desc) for full, desc, *_ in sets], SCRIPT)
 
 

@@ -36,8 +36,17 @@
 // N cycles (one per frame), as biplex_core provides.
 //
 // Complex lanes are packed {im, re} per lane, lane 0 lowest, inside the
-// reorders. Declared for traceability only: DSP48_ADDERS (ignored); ASYNC must
-// be 0.
+// reorders. Declared for traceability only: DSP48_ADDERS (ignored).
+//
+// ASYNC = 1 (bi_real_unscr_4x_init.m:140-650): en drives the reorder_even /
+// reorder_odd en; reorder_even valid enables count (rst = its sync_out AND
+// valid) and, delayed 1, rides the hilberts' misc path; reorder_odd valid
+// gates d0. The hilbert outputs and misco get one fan-out register each
+// (dd*, den*); den gates the HALF delays and the sync delay (delay_srl /
+// delay_bram / sync_delay_en with en), the sync is ANDed with den (l1), den
+// is the reorder_out and mirror_spectrum en, reorder_out valid gates
+// d3..d6, and dvalid = mirror_spectrum dvalid. d2 is one cycle longer, so
+// the block has one more cycle of latency than with ASYNC = 0.
 //
 // ── HDL-Simulink Mapping ─────────────────────────────────────────────────────
 // Differences between this HDL and its Simulink block (casper_library
@@ -81,8 +90,7 @@
 // [params.ASYNC]
 // mask = 'async'
 // type = 'checkbox'
-// hdl_unsupported = [1]
-// note = 'async=on (en/dvalid ports) is not implemented: elaboration stops with $fatal'
+// note = 'async = on: reorders, d0/d3..d6, count and the HALF / sync delays operate on valid samples, the arithmetic is free, dvalid = mirror_spectrum dvalid; one more cycle of latency than async = off (d2 and the dd/den fan-out registers, bi_real_unscr_4x_init.m:335-343, 461-504). The HDL ports always exist, dvalid = 0 when ASYNC = 0'
 // [params.ASYNC.values]
 // 0 = 'off'
 // 1 = 'on'
@@ -95,6 +103,10 @@
 // [mask_set.floating_point]
 // value = 'off'
 //
+// [[unsupported]]
+// when = 'ASYNC != 0 && BRAM_DELAYS != 0 && BRAM_LATENCY == 1'
+// reason = 'mlib_devel bug 14 (docs/bugs.md): with bram_delays on, bi_real_unscr_4x_init.m:508-520 passes bram_latency to the async delay_bram half-frame delays, and delay_bram_init.m:131-157 creates no dout for bram_latency = 1 (from source; delay_bram confirmed in MATLAB R2021a)'
+//
 // [hdl_only]
 // MAP_DIR = 'implementation: memory initialization file'
 // PLATFORM = 'implementation: memory / primitive vendor (GENERIC, XILINX, ALTERA)'
@@ -106,10 +118,9 @@
 //
 // [ports]
 // note = 'each Simulink complex port x is split into x_re / x_im'
+// order = 'async only: en is input 4 and dvalid output 6 (bi_real_unscr_4x_init.m:140-162)'
 // [ports.renamed]
 // [ports.missing]
-// en = 'async=on only (not implemented)'
-// dvalid = 'async=on only (not implemented)'
 // [ports.extra]
 // @simulink-mapping end
 
@@ -127,7 +138,7 @@ module bi_real_unscr_4x #(
     parameter string PLATFORM     = "GENERIC",
     // declared, not implemented (see header)
     parameter int    DSP48_ADDERS = 0,
-    parameter int    ASYNC        = 0
+    parameter int    ASYNC        = 0      // casper async: 1 = en / dvalid (see header)
 )(
     input  logic              clk,
     input  logic              sync,
@@ -135,6 +146,7 @@ module bi_real_unscr_4x #(
     input  logic [N_BITS-1:0] even_im     [N_INPUTS],
     input  logic [N_BITS-1:0] odd_re      [N_INPUTS],
     input  logic [N_BITS-1:0] odd_im      [N_INPUTS],
+    input  logic              en = 1'b1,
     output logic              sync_out,
     output logic [N_BITS-1:0] pol1_out_re [N_INPUTS],
     output logic [N_BITS-1:0] pol1_out_im [N_INPUTS],
@@ -143,7 +155,8 @@ module bi_real_unscr_4x #(
     output logic [N_BITS-1:0] pol3_out_re [N_INPUTS],
     output logic [N_BITS-1:0] pol3_out_im [N_INPUTS],
     output logic [N_BITS-1:0] pol4_out_re [N_INPUTS],
-    output logic [N_BITS-1:0] pol4_out_im [N_INPUTS]
+    output logic [N_BITS-1:0] pol4_out_im [N_INPUTS],
+    output logic              dvalid
 );
 
     localparam int B           = N_BITS;
@@ -156,7 +169,7 @@ module bi_real_unscr_4x #(
     // bit_rev over FFT_SIZE-1 bits is the identity for FFT_SIZE = 2
     localparam int ORDER_EVEN  = (FFT_SIZE == 2) ? 1 : 2;
 
-    if (ASYNC != 0)   $fatal(1, "bi_real_unscr_4x: ASYNC is not implemented");
+    localparam int AS          = (ASYNC != 0) ? 1 : 0;   // extra async fan-out latency
     if (FFT_SIZE < 2) $fatal(1, "bi_real_unscr_4x: FFT_SIZE must be >= 2");
 
     // ── pack / unpack complex lanes ──────────────────────────────────────────
@@ -176,34 +189,38 @@ module bi_real_unscr_4x #(
 
     // ── reorder even / odd ───────────────────────────────────────────────────
     logic [W-1:0] reo_e [1], reo_o [1], odd_d, mux [4];
-    logic         reo_sync;
+    logic         reo_sync, val_e, val_o;
 
     reorder #(
         .N_INPUTS(1), .N_BITS(W), .MAP_LEN(HALF), .ORDER(ORDER_EVEN),
         .MAP_INIT_FILE({MAP_DIR, "map_even.mem"}), .MAP_LATENCY(MAP_LATENCY),
         .BRAM_LATENCY(BRAM_LATENCY), .FANOUT_LATENCY(FANOUT), .BRAM_MAP(BRAM_MAP),
         .PLATFORM(PLATFORM)
-    ) u_reorder_even (.clk(clk), .sync(sync), .din('{even_w}), .sync_out(reo_sync),
-                      .valid(), .dout(reo_e));
+    ) u_reorder_even (.clk(clk), .sync(sync), .en((AS != 0) ? en : 1'b1), .din('{even_w}),
+                      .sync_out(reo_sync), .valid(val_e), .dout(reo_e));
 
     reorder #(
         .N_INPUTS(1), .N_BITS(W), .MAP_LEN(HALF), .ORDER(2),
         .MAP_INIT_FILE({MAP_DIR, "map_odd.mem"}), .MAP_LATENCY(MAP_LATENCY),
         .BRAM_LATENCY(BRAM_LATENCY), .FANOUT_LATENCY(FANOUT), .BRAM_MAP(BRAM_MAP),
         .PLATFORM(PLATFORM)
-    ) u_reorder_odd (.clk(clk), .sync(sync), .din('{odd_w}), .sync_out(), .valid(),
-                     .dout(reo_o));
+    ) u_reorder_odd (.clk(clk), .sync(sync), .en((AS != 0) ? en : 1'b1), .din('{odd_w}),
+                     .sync_out(), .valid(val_o), .dout(reo_o));
 
-    pipeline #(.BITWIDTH(W), .CSP_LATENCY(1)) u_d0 (.clk(clk), .din(reo_o[0]), .dout(odd_d));
+    // d0: en = reorder_odd valid (async)
+    delay_srl #(.BITWIDTH(W), .DELAY_LEN(1), .USE_ENABLE(1), .USE_RST(0)) u_d0 (
+        .clk(clk), .rst(1'b0), .en((AS != 0) ? val_o : 1'b1), .din(reo_o[0]), .dout(odd_d));
 
     // ── bin 0 / bin N/2 selects ──────────────────────────────────────────────
     logic [FFT_SIZE-1:0] count;
     logic                r0, r1;
 
+    // async: rst = l0 = reorder_even sync AND valid, en = reorder_even valid
     counter #(
         .COUNTER_TYPE(0), .NBITS(FFT_SIZE), .COUNT_DIR(0), .INIT_VAL(0),
-        .STEP(1), .ENABLE_SYNC_RST(1), .ENABLE_ENABLE(0)
-    ) u_count (.clk(clk), .rst(reo_sync), .enable(1'b1), .dout(count));
+        .STEP(1), .ENABLE_SYNC_RST(1), .ENABLE_ENABLE(AS)
+    ) u_count (.clk(clk), .rst((AS != 0) ? reo_sync & val_e : reo_sync),
+               .enable((AS != 0) ? val_e : 1'b1), .dout(count));
 
     relational #(.NBITS(FFT_SIZE), .COMP(0), .LATENCY(0)) u_r0 (
         .clk(clk), .a(FFT_SIZE'(HALF)), .b(count), .out(r0));
@@ -224,6 +241,10 @@ module bi_real_unscr_4x #(
     // h_re[h][o][n]: hilbert h, output o (0 = even, 1 = odd), lane n
     logic [B-1:0] m_re [4][N_INPUTS], m_im [4][N_INPUTS];
     logic [B-1:0] h_re [2][2][N_INPUTS], h_im [2][2][N_INPUTS];
+    logic         d1, h_misc [2], den;
+
+    // d1: reorder_even valid delayed 1, the hilberts' misci (async)
+    pipeline #(.BITWIDTH(1), .CSP_LATENCY(1)) u_d1 (.clk(clk), .din(val_e), .dout(d1));
 
     for (genvar i = 0; i < 4; i++) begin : GEN_UNPACK
         for (genvar n = 0; n < N_INPUTS; n++) begin : GEN_LANE
@@ -233,14 +254,26 @@ module bi_real_unscr_4x #(
     end
 
     for (genvar h = 0; h < 2; h++) begin : GEN_HILBERT
+        logic [B-1:0] e_re [N_INPUTS], e_im [N_INPUTS], o_re_h [N_INPUTS], o_im_h [N_INPUTS];
         hilbert #(
             .N_INPUTS(N_INPUTS), .BIT_WIDTH(B), .BIN_PT_IN(BIN_PT),
-            .ADD_LATENCY(ADD_LATENCY), .CONV_LATENCY(CONV_LATENCY)
+            .ADD_LATENCY(ADD_LATENCY), .CONV_LATENCY(CONV_LATENCY), .MISC(AS)
         ) u_hilbert (
             .clk(clk),
             .a_re(m_re[2*h]), .a_im(m_im[2*h]), .b_re(m_re[2*h+1]), .b_im(m_im[2*h+1]),
-            .even_re(h_re[h][0]), .even_im(h_im[h][0]), .odd_re(h_re[h][1]), .odd_im(h_im[h][1]), .misco());
+            .misci(d1),
+            .even_re(e_re), .even_im(e_im), .odd_re(o_re_h), .odd_im(o_im_h), .misco(h_misc[h]));
+        // dd*: one fan-out register per hilbert output (async only)
+        for (genvar n = 0; n < N_INPUTS; n++) begin : GEN_DD
+            pipeline #(.BITWIDTH(4 * B), .CSP_LATENCY(AS)) u_dd (
+                .clk(clk), .din({e_re[n], e_im[n], o_re_h[n], o_im_h[n]}),
+                .dout({h_re[h][0][n], h_im[h][0][n], h_re[h][1][n], h_im[h][1][n]}));
+        end
     end
+
+    // den0..den5: hilbert misco (the en) delayed 1; all equal
+    pipeline #(.BITWIDTH(1), .CSP_LATENCY(1)) u_den (.clk(clk), .din(h_misc[0]), .dout(den));
+    wire den_en = (AS != 0) ? den : 1'b1;
 
     // ── half-frame delays of hilbert0 and of the sync ───────────────────────
     logic [W-1:0] h0_w [2], dly_w [2], ch_w [4];
@@ -248,30 +281,51 @@ module bi_real_unscr_4x #(
 
     for (genvar o = 0; o < 2; o++) begin : GEN_DELAY
         assign h0_w[o] = pack(h_re[0][o], h_im[0][o]);
+        // casper passes bram_latency only with bram_delays on (else the
+        // delay_bram mask default, 2)
         if (BRAM_DELAYS != 0 || HALF > 52) begin : GEN_BRAM
-            delay_bram #(.BITWIDTH(W), .DELAY_LEN(HALF), .PLATFORM(PLATFORM)) u_delay (
-                .clk(clk), .din(h0_w[o]), .dout(dly_w[o]));
+            delay_bram #(.BITWIDTH(W), .DELAY_LEN(HALF), .BRAM_LATENCY((BRAM_DELAYS != 0) ? BRAM_LATENCY : 2),
+                         .ASYNC(AS), .PLATFORM(PLATFORM)) u_delay (
+                .clk(clk), .din(h0_w[o]), .en(den_en), .dout(dly_w[o]));
         end else begin : GEN_SRL
-            delay_srl #(.BITWIDTH(W), .DELAY_LEN(HALF), .USE_ENABLE(0), .USE_RST(0)) u_delay (
-                .clk(clk), .rst(1'b0), .en(1'b1), .din(h0_w[o]), .dout(dly_w[o]));
+            delay_srl #(.BITWIDTH(W), .DELAY_LEN(HALF), .USE_ENABLE(1), .USE_RST(0)) u_delay (
+                .clk(clk), .rst(1'b0), .en(den_en), .din(h0_w[o]), .dout(dly_w[o]));
         end
     end
 
-    pipeline #(.BITWIDTH(1), .CSP_LATENCY(ADD_LATENCY + CONV_LATENCY + 1)) u_d2 (
+    // d2: add+conv+1, one more in async
+    pipeline #(.BITWIDTH(1), .CSP_LATENCY(ADD_LATENCY + CONV_LATENCY + 1 + AS)) u_d2 (
         .clk(clk), .din(reo_sync), .dout(sync_d2));
 
-    if (HALF > 52) begin : GEN_SYNC_DELAY
-        sync_delay #(.DELAY_LEN(HALF)) u_sync_delay (.clk(clk), .din(sync_d2), .dout(ms_sync));
+    logic sync_dl;
+    if (HALF > 52 && AS == 0) begin : GEN_SYNC_DELAY
+        sync_delay #(.DELAY_LEN(HALF)) u_sync_delay (.clk(clk), .din(sync_d2), .dout(sync_dl));
+    end else if (HALF > 52) begin : GEN_SYNC_DELAY_EN
+        // casper sync_delay_en (DelayLen HALF, en = den): a down counter loaded
+        // by the sync whatever en, decremented on en; out = (count == 1)
+        localparam int SB = ($clog2(HALF + 1) > 2) ? $clog2(HALF + 1) : 2;
+        logic [SB-1:0] scnt, scnt_next;
+        always_comb begin
+            if (sync_d2)                 scnt_next = SB'(HALF);
+            else if (den && scnt != '0)  scnt_next = scnt - 1'b1;
+            else                         scnt_next = scnt;
+        end
+        register #(.BITWIDTH(SB), .USE_RST(0), .USE_ENABLE(0), .INIT_VAL(0)) u_scnt (
+            .clk(clk), .rst(1'b0), .en(1'b1), .d(scnt_next), .q(scnt));
+        assign sync_dl = (scnt == SB'(1));
     end else begin : GEN_SYNC_SRL
-        delay_srl #(.BITWIDTH(1), .DELAY_LEN(HALF), .USE_ENABLE(0), .USE_RST(0)) u_sync_delay (
-            .clk(clk), .rst(1'b0), .en(1'b1), .din(sync_d2), .dout(ms_sync));
+        delay_srl #(.BITWIDTH(1), .DELAY_LEN(HALF), .USE_ENABLE(1), .USE_RST(0)) u_sync_delay (
+            .clk(clk), .rst(1'b0), .en(den_en), .din(sync_d2), .dout(sync_dl));
     end
+    // l1: sync AND den (async)
+    assign ms_sync = (AS != 0) ? sync_dl & den : sync_dl;
 
     // channels: pol1 / pol2 = delayed hilbert0, pol3 / pol4 = hilbert1
     assign ch_w = '{dly_w[0], dly_w[1], pack(h_re[1][0], h_im[1][0]), pack(h_re[1][1], h_im[1][1])};
 
     // ── reorder_out and mirror_spectrum ─────────────────────────────────────
     logic [W-1:0] reo_out [4], reo_out_d [4];
+    logic         val_out;
     logic [B-1:0] c_re [4][N_INPUTS], c_im [4][N_INPUTS];
     logic [B-1:0] r_re [4][N_INPUTS], r_im [4][N_INPUTS];
     logic [B-1:0] o_re [4][N_INPUTS], o_im [4][N_INPUTS];
@@ -281,11 +335,13 @@ module bi_real_unscr_4x #(
         .MAP_INIT_FILE({MAP_DIR, "map_out.mem"}), .MAP_LATENCY(MAP_LATENCY),
         .BRAM_LATENCY(BRAM_LATENCY), .FANOUT_LATENCY(FANOUT), .BRAM_MAP(BRAM_MAP),
         .PLATFORM(PLATFORM)
-    ) u_reorder_out (.clk(clk), .sync(ms_sync), .din(ch_w), .sync_out(), .valid(),
-                     .dout(reo_out));
+    ) u_reorder_out (.clk(clk), .sync(ms_sync), .en(den_en), .din(ch_w), .sync_out(),
+                     .valid(val_out), .dout(reo_out));
 
     for (genvar i = 0; i < 4; i++) begin : GEN_CH
-        pipeline #(.BITWIDTH(W), .CSP_LATENCY(1)) u_d (.clk(clk), .din(reo_out[i]), .dout(reo_out_d[i]));
+        // d3..d6: en = reorder_out valid (async)
+        delay_srl #(.BITWIDTH(W), .DELAY_LEN(1), .USE_ENABLE(1), .USE_RST(0)) u_d (
+            .clk(clk), .rst(1'b0), .en((AS != 0) ? val_out : 1'b1), .din(reo_out[i]), .dout(reo_out_d[i]));
         for (genvar n = 0; n < N_INPUTS; n++) begin : GEN_LANE
             assign c_re[i][n] = ch_w[i][2*n*B +: B];
             assign c_im[i][n] = ch_w[i][(2*n+1)*B +: B];
@@ -296,16 +352,16 @@ module bi_real_unscr_4x #(
 
     mirror_spectrum #(
         .N_INPUTS(N_INPUTS), .FFT_SIZE(FFT_SIZE), .INPUT_BITWIDTH(B), .BIN_PT_IN(BIN_PT),
-        .BRAM_LATENCY(MS_BRAM), .NEGATE_LATENCY(0), .NEGATE_MODE(0), .ASYNC(0)
+        .BRAM_LATENCY(MS_BRAM), .NEGATE_LATENCY(0), .NEGATE_MODE(0), .ASYNC(ASYNC)
     ) u_mirror_spectrum (
-        .clk(clk), .sync(ms_sync),
+        .clk(clk), .sync(ms_sync), .en(den_en),
         .din0_re(c_re[0]), .din0_im(c_im[0]), .reo_in0_re(r_re[0]), .reo_in0_im(r_im[0]),
         .din1_re(c_re[1]), .din1_im(c_im[1]), .reo_in1_re(r_re[1]), .reo_in1_im(r_im[1]),
         .din2_re(c_re[2]), .din2_im(c_im[2]), .reo_in2_re(r_re[2]), .reo_in2_im(r_im[2]),
         .din3_re(c_re[3]), .din3_im(c_im[3]), .reo_in3_re(r_re[3]), .reo_in3_im(r_im[3]),
         .sync_out(sync_out),
         .dout0_re(o_re[0]), .dout0_im(o_im[0]), .dout1_re(o_re[1]), .dout1_im(o_im[1]),
-        .dout2_re(o_re[2]), .dout2_im(o_im[2]), .dout3_re(o_re[3]), .dout3_im(o_im[3]));
+        .dout2_re(o_re[2]), .dout2_im(o_im[2]), .dout3_re(o_re[3]), .dout3_im(o_im[3]), .dvalid(dvalid));
 
     assign pol1_out_re = o_re[0];  assign pol1_out_im = o_im[0];
     assign pol2_out_re = o_re[1];  assign pol2_out_im = o_im[1];

@@ -63,7 +63,11 @@ unscramblers.
 | `COEFF_DIR`        | `""`        | Directory prefix of the `twiddle_stage<s>.mem` files (include the trailing `/`) |
 | `PLATFORM`         | `"GENERIC"` | Passed to the RAMs / ROMs |
 
-**Declared but not implemented:** `ASYNC` and `FLOATING_POINT` must be 0. These
+**Async:** with `ASYNC = 1` every stage is async; `en` enters stage 1 and
+each stage's `dvalid` is the next stage's `en`. Verified against Simulink
+(MATLAB R2021a) with random `en`.
+
+**Declared but not implemented:** `FLOATING_POINT` must be 0. These
 are ignored: `FLOAT_TYPE`, `EXP_WIDTH`, `FRAC_WIDTH`, `ADD_PIPE_LATENCY`,
 `MULT_PIPE_LATENCY`, `COEFFS_BIT_LIMIT`, `COEFF_SHARING`, `COEFF_DECIMATION`,
 `MULT_SPEC`, `DSP48_ADDERS`. `N_BITS_OUT` is derived (the last stage's
@@ -79,6 +83,8 @@ Lane ports are unpacked arrays of `N_INPUTS` words.
 | `pol1_re`, `pol1_im`, `pol2_re`, `pol2_im` | input | `INPUT_BIT_WIDTH` × `N_INPUTS` | The two input streams |
 | `sync` | input | 1 | Frame sync (one pulse per `2^FFT_SIZE`-sample frame, the cycle before the frame) |
 | `shift` | input | `FFT_SIZE` | Dynamic downshift per stage (bit `s−1` = stage `s`) |
+| `en` | input | 1 | Async enable (used when `ASYNC = 1`; default 1) |
 | `out1_re`, `out1_im`, `out2_re`, `out2_im` | output | `N_BITS_OUT` × `N_INPUTS` | FFT outputs (order above) |
 | `of` | output | `N_INPUTS` | Overflow flags ORed over the stages, lane 0 in the MSB (`of[N_INPUTS−1−n]` = lane `n`) |
 | `sync_out` | output | 1 | Sync, the cycle before the first output of a frame |
+| `dvalid` | output | 1 | last stage's `dvalid` when `ASYNC = 1`, else 0 |

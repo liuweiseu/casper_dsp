@@ -1842,7 +1842,7 @@ DELAY = 12
 dir = "FFTs"
 top = "biplex_core"
 test_data_script = "gen_biplex_test_data.py"
-simulation_cycles = [256, 512, 512, 1024]
+simulation_cycles = [256, 512, 512, 1024, 768, 1536]
 # 8-point, casper defaults, dynamic shift
 [[simulations.parameters]]
 N_INPUTS = 1
@@ -1923,13 +1923,56 @@ MAX_BITS = 20
 HARDCODE_SHIFTS = 1
 SHIFT_SCHEDULE = 21
 COEFF_DIR = "../../../test_data/FFTs/biplex_core/simdata3/"
+# async, Simulink-exported data: set 0 (FFT_SIZE 3) with ASYNC = 1: every stage gated
+[[simulations.parameters]]
+N_INPUTS = 1
+FFT_SIZE = 3
+INPUT_BIT_WIDTH = 18
+BIN_PT_IN = 17
+COEFF_BIT_WIDTH = 18
+ADD_LATENCY = 1
+MULT_LATENCY = 2
+BRAM_LATENCY = 2
+CONV_LATENCY = 1
+QUANTIZATION = 1
+OVERFLOW = 0
+DELAYS_BIT_LIMIT = 8
+MAX_FANOUT = 4
+BITGROWTH = 0
+MAX_BITS = 20
+HARDCODE_SHIFTS = 0
+SHIFT_SCHEDULE = 3
+COEFF_DIR = "../../../test_data/FFTs/biplex_core/simdata4/"
+ASYNC = 1
+# async, Simulink-exported data: set 2 (FFT_SIZE 4, 2 inputs, bitgrowth) with ASYNC = 1
+[[simulations.parameters]]
+N_INPUTS = 2
+FFT_SIZE = 4
+INPUT_BIT_WIDTH = 12
+BIN_PT_IN = 11
+COEFF_BIT_WIDTH = 12
+ADD_LATENCY = 1
+MULT_LATENCY = 1
+BRAM_LATENCY = 1
+CONV_LATENCY = 0
+QUANTIZATION = 1
+OVERFLOW = 0
+DELAYS_BIT_LIMIT = 8
+MAX_FANOUT = 4
+BITGROWTH = 1
+MAX_BITS = 14
+HARDCODE_SHIFTS = 0
+SHIFT_SCHEDULE = 0
+COEFF_DIR = "../../../test_data/FFTs/biplex_core/simdata5/"
+ASYNC = 1
 
 # test butterfly_direct
+
 [[simulations]]
 dir = "FFTs"
 top = "butterfly_direct"
 test_data_script = "gen_butterfly_test_data.py"
-simulation_cycles = [256, 256, 256, 256, 512, 512, 256, 256]
+simulation_cycles = [256, 256, 256, 256, 512, 512, 256, 256, 768, 1536, 768]
 # pass_through (biplex stage 1), dynamic shift, round + wrap
 [[simulations.parameters]]
 N_INPUTS = 1
@@ -2110,13 +2153,85 @@ CONV_LATENCY = 0
 QUANTIZATION = 0
 OVERFLOW = 0
 MAX_FANOUT = 4
+# async, Simulink-exported data: set 3 (twiddle_stage_2 butterfly, FFT_SIZE 4) with ASYNC = 1: coefficient counter on valid samples
+[[simulations.parameters]]
+N_INPUTS = 1
+BIPLEX = 1
+FFT_SIZE = 4
+N_COEFFS = 2
+COEFF_0 = 0
+COEFF_1 = 1
+STEP_PERIOD = 2
+COEFF_BIT_WIDTH = 18
+INPUT_BIT_WIDTH = 18
+BIN_PT_IN = 17
+BITGROWTH = 0
+DOWNSHIFT = 0
+HARDCODE_SHIFTS = 0
+ADD_LATENCY = 1
+MULT_LATENCY = 2
+BRAM_LATENCY = 1
+CONV_LATENCY = 1
+QUANTIZATION = 1
+OVERFLOW = 0
+MAX_FANOUT = 4
+ASYNC = 1
+# async, Simulink-exported data: set 4 (twiddle_general, 4 coefficients, STEP_PERIOD 1) with ASYNC = 1: coeff_gen counter on valid samples
+[[simulations.parameters]]
+N_INPUTS = 1
+BIPLEX = 1
+FFT_SIZE = 4
+N_COEFFS = 4
+COEFF_0 = 0
+COEFF_1 = 1
+STEP_PERIOD = 1
+COEFF_BIT_WIDTH = 18
+INPUT_BIT_WIDTH = 18
+BIN_PT_IN = 17
+BITGROWTH = 0
+DOWNSHIFT = 0
+HARDCODE_SHIFTS = 0
+ADD_LATENCY = 1
+MULT_LATENCY = 2
+BRAM_LATENCY = 1
+CONV_LATENCY = 1
+QUANTIZATION = 1
+OVERFLOW = 1
+MAX_FANOUT = 4
+INIT_FILE = "../../../test_data/FFTs/butterfly_direct/simdata9/twiddle.mem"
+ASYNC = 1
+# async, Simulink-exported data: set 2 (twiddle_general, single coefficient 3) with ASYNC = 1: en straight to dvalid inside the twiddle
+[[simulations.parameters]]
+N_INPUTS = 1
+BIPLEX = 0
+FFT_SIZE = 5
+N_COEFFS = 1
+COEFF_0 = 3
+COEFF_1 = 0
+STEP_PERIOD = 4
+COEFF_BIT_WIDTH = 18
+INPUT_BIT_WIDTH = 16
+BIN_PT_IN = 15
+BITGROWTH = 0
+DOWNSHIFT = 0
+HARDCODE_SHIFTS = 0
+ADD_LATENCY = 2
+MULT_LATENCY = 1
+BRAM_LATENCY = 1
+CONV_LATENCY = 2
+QUANTIZATION = 2
+OVERFLOW = 1
+MAX_FANOUT = 1
+INIT_FILE = "../../../test_data/FFTs/butterfly_direct/simdata10/twiddle.mem"
+ASYNC = 1
 
 # test fft_biplex_real_4x
+
 [[simulations]]
 dir = "FFTs"
 top = "fft_biplex_real_4x"
 test_data_script = "gen_fft_wideband_test_data.py"
-simulation_cycles = [187, 243, 355, 187]
+simulation_cycles = [187, 243, 355, 187, 561, 1065]
 # casper defaults, 8-point
 [[simulations.parameters]]
 N_INPUTS = 1
@@ -2205,13 +2320,60 @@ HARDCODE_SHIFTS = 0
 SHIFT_SCHEDULE = 0
 COEFF_DIR = "../../../test_data/FFTs/fft_biplex_real_4x/simdata3/"
 MAP_DIR = "../../../test_data/FFTs/fft_biplex_real_4x/simdata3/"
+# async, Simulink-exported data: set 0 (FFT_SIZE 3) with ASYNC = 1
+[[simulations.parameters]]
+N_INPUTS = 1
+FFT_SIZE = 3
+INPUT_BIT_WIDTH = 18
+BIN_PT_IN = 17
+COEFF_BIT_WIDTH = 18
+ADD_LATENCY = 1
+MULT_LATENCY = 2
+BRAM_LATENCY = 2
+CONV_LATENCY = 1
+QUANTIZATION = 1
+OVERFLOW = 1
+DELAYS_BIT_LIMIT = 8
+COEFFS_BIT_LIMIT = 8
+MAX_FANOUT = 4
+BITGROWTH = 0
+MAX_BITS = 19
+HARDCODE_SHIFTS = 0
+SHIFT_SCHEDULE = 0
+COEFF_DIR = "../../../test_data/FFTs/fft_biplex_real_4x/simdata4/"
+MAP_DIR = "../../../test_data/FFTs/fft_biplex_real_4x/simdata4/"
+ASYNC = 1
+# async, Simulink-exported data: set 2 (FFT_SIZE 5, delays/coeffs bit limit 4, bram_latency 2) with ASYNC = 1
+[[simulations.parameters]]
+N_INPUTS = 1
+FFT_SIZE = 5
+INPUT_BIT_WIDTH = 16
+BIN_PT_IN = 15
+COEFF_BIT_WIDTH = 18
+ADD_LATENCY = 2
+MULT_LATENCY = 3
+BRAM_LATENCY = 2
+CONV_LATENCY = 1
+QUANTIZATION = 1
+OVERFLOW = 1
+DELAYS_BIT_LIMIT = 4
+COEFFS_BIT_LIMIT = 4
+MAX_FANOUT = 2
+BITGROWTH = 0
+MAX_BITS = 19
+HARDCODE_SHIFTS = 0
+SHIFT_SCHEDULE = 0
+COEFF_DIR = "../../../test_data/FFTs/fft_biplex_real_4x/simdata5/"
+MAP_DIR = "../../../test_data/FFTs/fft_biplex_real_4x/simdata5/"
+ASYNC = 1
 
 # test fft_direct
+
 [[simulations]]
 dir = "FFTs"
 top = "fft_direct"
 test_data_script = "gen_fft_wideband_test_data.py"
-simulation_cycles = [91, 91, 91, 139, 67, 139]
+simulation_cycles = [91, 91, 91, 139, 67, 139, 417, 417]
 # MAP_TAIL: last 2 stages of a 32-point FFT, 1 stream, 8 coefficients
 [[simulations.parameters]]
 N_STREAMS = 1
@@ -2344,13 +2506,61 @@ MAX_BITS = 19
 HARDCODE_SHIFTS = 0
 SHIFT_SCHEDULE = 0
 COEFF_DIR = "../../../test_data/FFTs/fft_direct/simdata5/"
+# async, Simulink-exported data: set 3 (FFT_SIZE 1, 3 streams) with ASYNC = 1
+[[simulations.parameters]]
+N_STREAMS = 3
+FFT_SIZE = 1
+INPUT_BIT_WIDTH = 12
+BIN_PT_IN = 11
+COEFF_BIT_WIDTH = 18
+MAP_TAIL = 0
+LARGER_FFT_SIZE = 0
+START_STAGE = 0
+ADD_LATENCY = 1
+MULT_LATENCY = 2
+BRAM_LATENCY = 2
+CONV_LATENCY = 1
+QUANTIZATION = 1
+OVERFLOW = 0
+MAX_FANOUT = 4
+BITGROWTH = 0
+MAX_BITS = 19
+HARDCODE_SHIFTS = 0
+SHIFT_SCHEDULE = 0
+COEFF_DIR = "../../../test_data/FFTs/fft_direct/simdata6/"
+ASYNC = 1
+# async, Simulink-exported data: set 5 with COEFFS_BIT_LIMIT 4 (coefficients in BRAM, clear of bug 15; the fft_direct of fft_wideband_real set 3) with ASYNC = 1
+[[simulations.parameters]]
+N_STREAMS = 1
+FFT_SIZE = 2
+INPUT_BIT_WIDTH = 18
+BIN_PT_IN = 17
+COEFF_BIT_WIDTH = 18
+MAP_TAIL = 1
+LARGER_FFT_SIZE = 6
+START_STAGE = 5
+ADD_LATENCY = 1
+MULT_LATENCY = 2
+BRAM_LATENCY = 2
+CONV_LATENCY = 1
+QUANTIZATION = 1
+OVERFLOW = 1
+MAX_FANOUT = 4
+BITGROWTH = 0
+MAX_BITS = 19
+HARDCODE_SHIFTS = 0
+SHIFT_SCHEDULE = 0
+COEFF_DIR = "../../../test_data/FFTs/fft_direct/simdata7/"
+COEFFS_BIT_LIMIT = 4
+ASYNC = 1
 
 # test fft_stage_n
+
 [[simulations]]
 dir = "FFTs"
 top = "fft_stage_n"
 test_data_script = "gen_fft_stage_test_data.py"
-simulation_cycles = [512, 512, 512, 512, 512, 512]
+simulation_cycles = [512, 512, 512, 512, 512, 512, 1536, 1536, 1536]
 # 16-point stage 1 (pass_through), register delays, fan latency 1
 [[simulations.parameters]]
 N_INPUTS = 1
@@ -2469,13 +2679,75 @@ OVERFLOW = 1
 DELAYS_BRAM = 1
 MAX_FANOUT = 1
 INIT_FILE = "../../../test_data/FFTs/fft_stage_n/simdata5/twiddle.mem"
+# async, Simulink-exported data: set 0 (stage 1, register delays) with ASYNC = 1: gated bus_delay + select counter
+[[simulations.parameters]]
+N_INPUTS = 1
+FFT_SIZE = 4
+FFT_STAGE = 1
+INPUT_BIT_WIDTH = 18
+BIN_PT_IN = 17
+COEFF_BIT_WIDTH = 18
+BITGROWTH = 0
+DOWNSHIFT = 0
+HARDCODE_SHIFTS = 0
+ADD_LATENCY = 1
+MULT_LATENCY = 2
+BRAM_LATENCY = 1
+CONV_LATENCY = 1
+QUANTIZATION = 1
+OVERFLOW = 0
+DELAYS_BRAM = 0
+MAX_FANOUT = 1
+ASYNC = 1
+# async, Simulink-exported data: set 1 (stage 2, BRAM delays, 2 inputs) with ASYNC = 1: RAM we/addr on valid samples
+[[simulations.parameters]]
+N_INPUTS = 2
+FFT_SIZE = 4
+FFT_STAGE = 2
+INPUT_BIT_WIDTH = 18
+BIN_PT_IN = 17
+COEFF_BIT_WIDTH = 18
+BITGROWTH = 0
+DOWNSHIFT = 0
+HARDCODE_SHIFTS = 0
+ADD_LATENCY = 1
+MULT_LATENCY = 2
+BRAM_LATENCY = 1
+CONV_LATENCY = 1
+QUANTIZATION = 1
+OVERFLOW = 0
+DELAYS_BRAM = 1
+MAX_FANOUT = 1
+ASYNC = 1
+# async, Simulink-exported data: set 5 (stage 4 of 5, BRAM delays, 4 inputs) with ASYNC = 1
+[[simulations.parameters]]
+N_INPUTS = 4
+FFT_SIZE = 5
+FFT_STAGE = 4
+INPUT_BIT_WIDTH = 26
+BIN_PT_IN = 25
+COEFF_BIT_WIDTH = 18
+BITGROWTH = 0
+DOWNSHIFT = 1
+HARDCODE_SHIFTS = 1
+ADD_LATENCY = 2
+MULT_LATENCY = 2
+BRAM_LATENCY = 1
+CONV_LATENCY = 1
+QUANTIZATION = 1
+OVERFLOW = 1
+DELAYS_BRAM = 1
+MAX_FANOUT = 1
+INIT_FILE = "../../../test_data/FFTs/fft_stage_n/simdata8/twiddle.mem"
+ASYNC = 1
 
 # test fft_unscrambler
+
 [[simulations]]
 dir = "FFTs"
 top = "fft_unscrambler"
 test_data_script = "gen_fft_unscrambler_test_data.py"
-simulation_cycles = [227, 163, 579, 2115, 227]
+simulation_cycles = [227, 163, 579, 2115, 227, 681, 489]
 # 2 groups, order 4, distributed map (map latency 1)
 [[simulations.parameters]]
 N_STREAMS = 1
@@ -2521,13 +2793,34 @@ N_BITS_IN = 8
 BRAM_LATENCY = 1
 COEFFS_BIT_LIMIT = 6
 MAP_INIT_FILE = "../../../test_data/FFTs/fft_unscrambler/simdata4/map.mem"
+# async, Simulink-exported data: set 0 (FFT_SIZE 5, 1 input) with ASYNC = 1: square_transposer + reorder on valid samples
+[[simulations.parameters]]
+N_STREAMS = 1
+FFT_SIZE = 5
+N_INPUTS = 1
+N_BITS_IN = 8
+BRAM_LATENCY = 2
+COEFFS_BIT_LIMIT = 8
+MAP_INIT_FILE = "../../../test_data/FFTs/fft_unscrambler/simdata5/map.mem"
+ASYNC = 1
+# async, Simulink-exported data: set 1 (FFT_SIZE 6, 2 inputs, 2 streams) with ASYNC = 1
+[[simulations.parameters]]
+N_STREAMS = 2
+FFT_SIZE = 6
+N_INPUTS = 2
+N_BITS_IN = 12
+BRAM_LATENCY = 2
+COEFFS_BIT_LIMIT = 4
+MAP_INIT_FILE = "../../../test_data/FFTs/fft_unscrambler/simdata6/map.mem"
+ASYNC = 1
 
 # test fft_wideband_real
+
 [[simulations]]
 dir = "FFTs"
 top = "fft_wideband_real"
 test_data_script = "gen_fft_wideband_test_data.py"
-simulation_cycles = [403, 403, 259, 259, 931, 403]
+simulation_cycles = [403, 403, 259, 931, 403, 1209, 2793]
 # casper defaults, 32-point, 4 samples / cycle, unscrambled
 [[simulations.parameters]]
 N_STREAMS = 1
@@ -2578,31 +2871,6 @@ MAX_BITS = 19
 HARDCODE_SHIFTS = 0
 SHIFT_SCHEDULE = 63
 MEM_DIR = "../../../test_data/FFTs/fft_wideband_real/simdata1/"
-# 2 streams, 2 samples / cycle: N_INPUTS 1 forces UNSCRAMBLE off
-[[simulations.parameters]]
-N_STREAMS = 2
-FFT_SIZE = 5
-N_INPUTS = 1
-INPUT_BIT_WIDTH = 18
-BIN_PT_IN = 17
-COEFF_BIT_WIDTH = 18
-UNSCRAMBLE = 1
-ADD_LATENCY = 1
-MULT_LATENCY = 2
-BRAM_LATENCY = 2
-CONV_LATENCY = 0
-INPUT_LATENCY = 0
-BIPLEX_DIRECT_LATENCY = 0
-QUANTIZATION = 1
-OVERFLOW = 1
-DELAYS_BIT_LIMIT = 8
-COEFFS_BIT_LIMIT = 8
-MAX_FANOUT = 4
-BITGROWTH = 0
-MAX_BITS = 19
-HARDCODE_SHIFTS = 0
-SHIFT_SCHEDULE = 31
-MEM_DIR = "../../../test_data/FFTs/fft_wideband_real/simdata2/"
 # no unscrambler, bit growth, input and biplex-direct pipelines
 [[simulations.parameters]]
 N_STREAMS = 1
@@ -2627,7 +2895,7 @@ BITGROWTH = 1
 MAX_BITS = 22
 HARDCODE_SHIFTS = 0
 SHIFT_SCHEDULE = 63
-MEM_DIR = "../../../test_data/FFTs/fft_wideband_real/simdata3/"
+MEM_DIR = "../../../test_data/FFTs/fft_wideband_real/simdata2/"
 # 2 streams, hardcoded shifts, BRAM delays / maps, unscrambled
 [[simulations.parameters]]
 N_STREAMS = 2
@@ -2652,7 +2920,7 @@ BITGROWTH = 0
 MAX_BITS = 19
 HARDCODE_SHIFTS = 1
 SHIFT_SCHEDULE = 63
-MEM_DIR = "../../../test_data/FFTs/fft_wideband_real/simdata4/"
+MEM_DIR = "../../../test_data/FFTs/fft_wideband_real/simdata3/"
 # full-scale data, random shift, wrap: overflow from both blocks (no FFT check)
 [[simulations.parameters]]
 N_STREAMS = 2
@@ -2677,16 +2945,69 @@ BITGROWTH = 0
 MAX_BITS = 19
 HARDCODE_SHIFTS = 0
 SHIFT_SCHEDULE = 31
+MEM_DIR = "../../../test_data/FFTs/fft_wideband_real/simdata4/"
+# async, Simulink-exported data: set 0 with COEFFS_BIT_LIMIT 4 (fft_direct coefficients in BRAM, clear of bug 15) with ASYNC = 1
+[[simulations.parameters]]
+N_STREAMS = 1
+FFT_SIZE = 5
+N_INPUTS = 2
+INPUT_BIT_WIDTH = 18
+BIN_PT_IN = 17
+COEFF_BIT_WIDTH = 18
+UNSCRAMBLE = 1
+ADD_LATENCY = 1
+MULT_LATENCY = 2
+BRAM_LATENCY = 2
+CONV_LATENCY = 0
+INPUT_LATENCY = 0
+BIPLEX_DIRECT_LATENCY = 0
+QUANTIZATION = 1
+OVERFLOW = 1
+DELAYS_BIT_LIMIT = 8
+COEFFS_BIT_LIMIT = 4
+MAX_FANOUT = 4
+BITGROWTH = 0
+MAX_BITS = 19
+HARDCODE_SHIFTS = 0
+SHIFT_SCHEDULE = 31
 MEM_DIR = "../../../test_data/FFTs/fft_wideband_real/simdata5/"
+ASYNC = 1
+# async, Simulink-exported data: set 3 with BRAM_LATENCY 2 (bram_latency 1 would hit bug 14 in the bi_real_unscr_4x delay_bram) with ASYNC = 1
+[[simulations.parameters]]
+N_STREAMS = 2
+FFT_SIZE = 6
+N_INPUTS = 2
+INPUT_BIT_WIDTH = 16
+BIN_PT_IN = 15
+COEFF_BIT_WIDTH = 16
+UNSCRAMBLE = 1
+ADD_LATENCY = 2
+MULT_LATENCY = 3
+BRAM_LATENCY = 2
+CONV_LATENCY = 1
+INPUT_LATENCY = 0
+BIPLEX_DIRECT_LATENCY = 1
+QUANTIZATION = 2
+OVERFLOW = 1
+DELAYS_BIT_LIMIT = 4
+COEFFS_BIT_LIMIT = 4
+MAX_FANOUT = 2
+BITGROWTH = 0
+MAX_BITS = 19
+HARDCODE_SHIFTS = 1
+SHIFT_SCHEDULE = 63
+MEM_DIR = "../../../test_data/FFTs/fft_wideband_real/simdata6/"
+ASYNC = 1
 
 # ── FFTs/Internal ────────────────────────────────────────────────────────────
 
 # test bi_real_unscr_4x
+
 [[simulations]]
 dir = "FFTs/Internal"
 top = "bi_real_unscr_4x"
 test_data_script = "gen_fft_internal_test_data.py"
-simulation_cycles = [188, 244, 356, 160, 1924]
+simulation_cycles = [188, 244, 356, 160, 1924, 564, 732, 1068]
 # casper defaults
 [[simulations.parameters]]
 N_INPUTS = 1
@@ -2747,8 +3068,48 @@ BRAM_LATENCY = 2
 BRAM_MAP = 0
 BRAM_DELAYS = 0
 MAP_DIR = "../../../../test_data/FFTs/Internal/bi_real_unscr_4x/simdata4/"
+# async, Simulink-exported data: set 0 (FFT_SIZE 3, srl delays) with ASYNC = 1
+[[simulations.parameters]]
+N_INPUTS = 1
+FFT_SIZE = 3
+N_BITS = 18
+BIN_PT = 17
+ADD_LATENCY = 1
+CONV_LATENCY = 1
+BRAM_LATENCY = 2
+BRAM_MAP = 0
+BRAM_DELAYS = 0
+MAP_DIR = "../../../../test_data/FFTs/Internal/bi_real_unscr_4x/simdata5/"
+ASYNC = 1
+# async, Simulink-exported data: set 1 (FFT_SIZE 4, 2 inputs, BRAM map) with ASYNC = 1
+[[simulations.parameters]]
+N_INPUTS = 2
+FFT_SIZE = 4
+N_BITS = 12
+BIN_PT = 11
+ADD_LATENCY = 2
+CONV_LATENCY = 1
+BRAM_LATENCY = 1
+BRAM_MAP = 1
+BRAM_DELAYS = 0
+MAP_DIR = "../../../../test_data/FFTs/Internal/bi_real_unscr_4x/simdata6/"
+ASYNC = 1
+# async, Simulink-exported data: set 2 (FFT_SIZE 5, BRAM delays, bram_latency 2) with ASYNC = 1: stalled delay_bram
+[[simulations.parameters]]
+N_INPUTS = 1
+FFT_SIZE = 5
+N_BITS = 16
+BIN_PT = 15
+ADD_LATENCY = 1
+CONV_LATENCY = 2
+BRAM_LATENCY = 2
+BRAM_MAP = 0
+BRAM_DELAYS = 1
+MAP_DIR = "../../../../test_data/FFTs/Internal/bi_real_unscr_4x/simdata7/"
+ASYNC = 1
 
 # test complex_conj
+
 [[simulations]]
 dir = "FFTs/Internal"
 top = "complex_conj"
@@ -2832,7 +3193,7 @@ MISC_WIDTH = 3
 dir = "FFTs/Internal"
 top = "mirror_spectrum"
 test_data_script = "gen_fft_internal_test_data.py"
-simulation_cycles = [128, 128, 128]
+simulation_cycles = [128, 128, 128, 384, 384, 384]
 # casper defaults
 [[simulations.parameters]]
 N_INPUTS = 1
@@ -2860,10 +3221,41 @@ BIN_PT_IN = 7
 BRAM_LATENCY = 1
 NEGATE_LATENCY = 0
 NEGATE_MODE = 1
+# async, Simulink-exported data: set 0 (FFT_SIZE 3) with ASYNC = 1: select counter on valid samples
+[[simulations.parameters]]
+N_INPUTS = 1
+FFT_SIZE = 3
+INPUT_BITWIDTH = 18
+BIN_PT_IN = 17
+BRAM_LATENCY = 2
+NEGATE_LATENCY = 1
+NEGATE_MODE = 0
+ASYNC = 1
+# async, Simulink-exported data: set 1 (FFT_SIZE 4, 2 inputs, bram_latency 5) with ASYNC = 1
+[[simulations.parameters]]
+N_INPUTS = 2
+FFT_SIZE = 4
+INPUT_BITWIDTH = 12
+BIN_PT_IN = 11
+BRAM_LATENCY = 5
+NEGATE_LATENCY = 0
+NEGATE_MODE = 0
+ASYNC = 1
+# async, Simulink-exported data: set 2 (FFT_SIZE 2, 4 inputs, negate mode 1) with ASYNC = 1
+[[simulations.parameters]]
+N_INPUTS = 4
+FFT_SIZE = 2
+INPUT_BITWIDTH = 8
+BIN_PT_IN = 7
+BRAM_LATENCY = 1
+NEGATE_LATENCY = 0
+NEGATE_MODE = 1
+ASYNC = 1
 
 # ── FFTs/Twiddle ─────────────────────────────────────────────────────────────
 
 # test twiddle_coeff_0
+
 [[simulations]]
 dir = "FFTs/Twiddle"
 top = "twiddle_coeff_0"
@@ -4249,7 +4641,7 @@ MAP_INIT_FILE = "../../../test_data/Reorder/reorder/simdata11/map.mem"
 dir = "Reorder"
 top = "square_transposer"
 test_data_script = "gen_reorder_test_data.py"
-simulation_cycles = [256, 256, 256]
+simulation_cycles = [256, 256, 256, 768, 768]
 # 2 lanes
 [[simulations.parameters]]
 N_INPUTS = 1
@@ -4262,10 +4654,21 @@ DATA_WIDTH = 36
 [[simulations.parameters]]
 N_INPUTS = 3
 DATA_WIDTH = 12
+# async, Simulink-exported data: set 1 (2 inputs) with ASYNC = 1: gated delay_slr skew/deskew
+[[simulations.parameters]]
+N_INPUTS = 2
+DATA_WIDTH = 36
+ASYNC = 1
+# async, Simulink-exported data: set 2 (3 inputs) with ASYNC = 1
+[[simulations.parameters]]
+N_INPUTS = 3
+DATA_WIDTH = 12
+ASYNC = 1
 
 # ── Templates ────────────────────────────────────────────────────────────────
 
 # test simple_adder
+
 [[simulations]]
 dir = "Templates"
 top = "simple_adder"

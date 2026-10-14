@@ -104,9 +104,17 @@ Pass the module's coefficient options too (`--coeffs-bit-limit`, `--coeff-sharin
 - Element `k` of `din` is `in<s><n>` with `k = s·2^NI + n`.
 - Element `k` of `dout` is `out<s><n>` with `k = s·2^(NI−1) + n`.
 
+### Async
+
+With `ASYNC = 1` every sub-block is async: `en` is delayed `INPUT_LATENCY`
+to fft_biplex_real_4x's `en`, its `dvalid` `BIPLEX_DIRECT_LATENCY` to
+fft_direct's `en` and, with the unscrambler, fft_direct's `dvalid`
+`BIPLEX_DIRECT_LATENCY` again to the unscrambler's `en`; `dvalid` is the last
+block's. Verified against Simulink (MATLAB R2021a) with random `en`.
+
 ### Not implemented
 
-`ASYNC` and `FLOATING_POINT` must be 0. `FLOAT_TYPE`, `EXP_WIDTH`,
+`FLOATING_POINT` must be 0. `FLOAT_TYPE`, `EXP_WIDTH`,
 `FRAC_WIDTH`, `ADD_PIPE_LATENCY`, `MULT_PIPE_LATENCY`, `COEFF_SHARING`,
 `COEFF_DECIMATION`, `COEFF_GENERATION`, `CAL_BITS`, `N_BITS_ROTATION`,
 `MULT_SPEC` and `DSP48_ADDERS` are declared but ignored.
@@ -142,6 +150,8 @@ Pass the module's coefficient options too (`--coeffs-bit-limit`, `--coeff-sharin
 | `sync` | input | 1 | Frame sync |
 | `shift` | input | `FFT_SIZE` | Dynamic downshift (bit `k` = stage `k+1`) |
 | `din` | input | `INPUT_BIT_WIDTH` × `N_STREAMS·2^N_INPUTS` | Real inputs |
+| `en` | input | 1 | Async enable (used when `ASYNC = 1`; default 1) |
 | `sync_out` | output | 1 | Sync, one cycle before the first output of a frame |
 | `dout_re`, `dout_im` | output | `N_BITS_OUT` × `N_STREAMS·2^(N_INPUTS−1)` | Lower half of the spectrum |
 | `of` | output | `max(N_STREAMS, NB)`, NB = N_STREAMS·2^(N_INPUTS−2) | Overflow (see above) |
+| `dvalid` | output | 1 | the unscrambler's (else fft_direct's) `dvalid` when `ASYNC = 1`, else 0 |

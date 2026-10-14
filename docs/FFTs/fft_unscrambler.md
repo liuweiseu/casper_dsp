@@ -63,8 +63,10 @@ not `2^n_inputs`; this module does the same.
   for `n_inputs = 0`.
 - `2·N_INPUTS ≤ FFT_SIZE` is also required; otherwise casper's `part`,
   and so its map, is empty.
-- `ASYNC` (casper's `en` / `dvalid`) must be 0. Floating point is not
-  implemented.
+- `ASYNC = 1` (casper `async`): `en` drives the square_transposer's `en`,
+  its `dvalid` the reorder's `en`; `dvalid` = reorder `valid` and
+  `sync_out` = reorder `sync_out` AND `valid`. Verified against Simulink
+  (MATLAB R2021a) with random `en`. Floating point is not implemented.
 
 ## Parameters
 
@@ -78,7 +80,7 @@ not `2^n_inputs`; this module does the same.
 | `COEFFS_BIT_LIMIT` | 8 | Threshold for a BRAM map (see above) |
 | `MAP_INIT_FILE` | `""` | Unscrambler map (from `gen_reorder_map.py --unscrambler`) |
 | `PLATFORM` | `"GENERIC"` | Memory primitives: `GENERIC`, `XILINX`, `ALTERA` |
-| `ASYNC` | 0 | Must be 0 |
+| `ASYNC` | 0 | casper `async`: `1` = `en` / `dvalid` handshake (see above) |
 
 ## Ports
 
@@ -87,5 +89,7 @@ not `2^n_inputs`; this module does the same.
 | `clk` | input | 1 | Clock |
 | `sync` | input | 1 | Frame sync |
 | `din_re`, `din_im` | input | `N_BITS_IN` × `N_STREAMS·G` | Inputs, element `s·G + g` |
+| `en` | input | 1 | Async enable (used when `ASYNC = 1`; default 1) |
 | `sync_out` | output | 1 | Sync of the reorder output |
 | `dout_re`, `dout_im` | output | `N_BITS_IN` × `N_STREAMS·G` | Unscrambled outputs, element `s·G + g` |
+| `dvalid` | output | 1 | reorder `valid` when `ASYNC = 1`, else 0 |

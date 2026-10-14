@@ -49,7 +49,13 @@
 // and MULT+ADD+CONV for twiddle_general with one coefficient. The shift select
 // is not delayed with the twiddle (FAN_LATENCY only), as in casper.
 //
-// Declared for traceability only (not implemented in v1): ASYNC and
+// ASYNC = 1 (butterfly_direct_init.m:268-281, 662-669): en drives the
+// twiddle's en / dvi, which gates its coefficient counter (if any); the
+// twiddle's dvalid / dvo then goes through a free Delay of the butterfly
+// latency (ADD+MUX+CONV, as the sync) to dvalid. The adders, converts and
+// shift muxes are not gated.
+//
+// Declared for traceability only (not implemented in v1):
 // FLOATING_POINT must be 0; FLOAT_TYPE, EXP_WIDTH, FRAC_WIDTH,
 // ADD_PIPE_LATENCY, MULT_PIPE_LATENCY, COEFFS_BIT_LIMIT, COEFF_SHARING,
 // COEFF_DECIMATION, COEFF_GENERATION, CAL_BITS, N_BITS_ROTATION, USE_HDL,
@@ -125,8 +131,7 @@
 // [params.ASYNC]
 // mask = 'async'
 // type = 'checkbox'
-// hdl_unsupported = [1]
-// note = '$fatal unless 0 (en/dvalid handshake not implemented)'
+// note = 'async = on: en -> twiddle en/dvi (gates its coefficient counter); dvalid = twiddle dvalid delayed add+mux+conv latency (free), aligned with sync_out. The HDL ports always exist, dvalid = 0 when ASYNC = 0'
 // [params.ASYNC.values]
 // 0 = 'off'
 // 1 = 'on'
@@ -231,14 +236,13 @@
 //
 // [ports]
 // note = 'each Simulink complex port x is split into x_re / x_im; the Simulink names are not legal HDL identifiers; the Simulink a, b, a+bw, a-bw buses carry N_INPUTS complex lanes, lane 0 in the MSBs, which become array element 0'
+// order = 'Simulink: en is input 5 and dvalid output 5, async only (butterfly_direct_init.m:268-281)'
 // [ports.renamed]
 // apbw_re = 'a+bw'
 // apbw_im = 'a+bw'
 // ambw_re = 'a-bw'
 // ambw_im = 'a-bw'
 // [ports.missing]
-// en = 'async=on only (not implemented)'
-// dvalid = 'async=on only (not implemented)'
 // [ports.extra]
 // @simulink-mapping end
 
@@ -265,8 +269,8 @@ module butterfly_direct #(
     parameter int    OVERFLOW          = 0,
     parameter int    MAX_FANOUT        = 4,
     parameter string PLATFORM          = "GENERIC",
+    parameter int    ASYNC             = 0,   // casper async: 1 = en / dvalid (see header)
     // declared, not implemented (see header)
-    parameter int    ASYNC             = 0,
     parameter int    FLOATING_POINT    = 0,
     parameter int    FLOAT_TYPE        = 1,
     parameter int    EXP_WIDTH         = 6,
@@ -292,12 +296,14 @@ module butterfly_direct #(
     input  logic [INPUT_BIT_WIDTH-1:0] b_im    [N_INPUTS],
     input  logic                       sync_in,
     input  logic                       shift,
+    input  logic                       en = 1'b1,
     output logic [N_BITS_OUT-1:0]      apbw_re [N_INPUTS],
     output logic [N_BITS_OUT-1:0]      apbw_im [N_INPUTS],
     output logic [N_BITS_OUT-1:0]      ambw_re [N_INPUTS],
     output logic [N_BITS_OUT-1:0]      ambw_im [N_INPUTS],
     output logic [N_INPUTS-1:0]        of,
-    output logic                       sync_out
+    output logic                       sync_out,
+    output logic                       dvalid
 );
 
     // ── twiddle selection (butterfly_direct_init.m) ──────────────────────────
@@ -344,49 +350,48 @@ module butterfly_direct #(
     localparam int CONV_IN_BP  = (DYNAMIC != 0 || (HARDCODE_SHIFTS != 0 && DOWNSHIFT != 0 && BITGROWTH == 0))
                                  ? BP + 1 : BP;
 
-    if (ASYNC != 0)          $fatal(1, "butterfly_direct: ASYNC is not implemented");
     if (FLOATING_POINT != 0) $fatal(1, "butterfly_direct: FLOATING_POINT is not implemented");
 
     // ── twiddle ──────────────────────────────────────────────────────────────
     logic [IW-1:0]   ao_re  [N_INPUTS], ao_im  [N_INPUTS];
     logic [BW_W-1:0] bwo_re [N_INPUTS], bwo_im [N_INPUTS];
-    logic            tw_sync;
+    logic            tw_sync, tw_dv;
 
     generate
         if (TWIDDLE_TYPE == TW_PASS_THROUGH) begin : GEN_TW_PASS
             twiddle_pass_through #(
-                .N_INPUTS(N_INPUTS), .INPUT_BIT_WIDTH(IW)
+                .N_INPUTS(N_INPUTS), .INPUT_BIT_WIDTH(IW), .ASYNC(ASYNC)
             ) u_twiddle (
                 .clk(clk), .ai_re(a_re), .ai_im(a_im), .bi_re(b_re), .bi_im(b_im),
                 .sync_in(sync_in), .ao_re(ao_re), .ao_im(ao_im),
-                .bwo_re(bwo_re), .bwo_im(bwo_im), .sync_out(tw_sync), .dvo());
+                .bwo_re(bwo_re), .bwo_im(bwo_im), .dvi(en), .sync_out(tw_sync), .dvo(tw_dv));
         end else if (TWIDDLE_TYPE == TW_COEFF_0) begin : GEN_TW_COEFF_0
             twiddle_coeff_0 #(
                 .N_INPUTS(N_INPUTS), .INPUT_BIT_WIDTH(IW),
                 .MULT_LATENCY(MULT_LATENCY), .ADD_LATENCY(ADD_LATENCY),
-                .BRAM_LATENCY(BRAM_LATENCY), .CONV_LATENCY(CONV_LATENCY)
+                .BRAM_LATENCY(BRAM_LATENCY), .CONV_LATENCY(CONV_LATENCY), .ASYNC(ASYNC)
             ) u_twiddle (
                 .clk(clk), .ai_re(a_re), .ai_im(a_im), .bi_re(b_re), .bi_im(b_im),
                 .sync_in(sync_in), .ao_re(ao_re), .ao_im(ao_im),
-                .bwo_re(bwo_re), .bwo_im(bwo_im), .sync_out(tw_sync), .dvalid());
+                .bwo_re(bwo_re), .bwo_im(bwo_im), .en(en), .sync_out(tw_sync), .dvalid(tw_dv));
         end else if (TWIDDLE_TYPE == TW_COEFF_1) begin : GEN_TW_COEFF_1
             twiddle_coeff_1 #(
                 .N_INPUTS(N_INPUTS), .INPUT_BIT_WIDTH(IW), .BIN_PT_IN(BP),
                 .MULT_LATENCY(MULT_LATENCY), .ADD_LATENCY(ADD_LATENCY),
-                .BRAM_LATENCY(BRAM_LATENCY), .CONV_LATENCY(CONV_LATENCY)
+                .BRAM_LATENCY(BRAM_LATENCY), .CONV_LATENCY(CONV_LATENCY), .ASYNC(ASYNC)
             ) u_twiddle (
                 .clk(clk), .ai_re(a_re), .ai_im(a_im), .bi_re(b_re), .bi_im(b_im),
                 .sync_in(sync_in), .ao_re(ao_re), .ao_im(ao_im),
-                .bwo_re(bwo_re), .bwo_im(bwo_im), .sync_out(tw_sync), .dvalid());
+                .bwo_re(bwo_re), .bwo_im(bwo_im), .en(en), .sync_out(tw_sync), .dvalid(tw_dv));
         end else if (TWIDDLE_TYPE == TW_STAGE_2) begin : GEN_TW_STAGE_2
             twiddle_stage_2 #(
                 .N_INPUTS(N_INPUTS), .FFT_SIZE(FFT_SIZE), .INPUT_BIT_WIDTH(IW),
                 .BIN_PT_IN(BP), .ADD_LATENCY(ADD_LATENCY), .MULT_LATENCY(MULT_LATENCY),
-                .BRAM_LATENCY(BRAM_LATENCY), .CONV_LATENCY(CONV_LATENCY)
+                .BRAM_LATENCY(BRAM_LATENCY), .CONV_LATENCY(CONV_LATENCY), .ASYNC(ASYNC)
             ) u_twiddle (
                 .clk(clk), .ai_re(a_re), .ai_im(a_im), .bi_re(b_re), .bi_im(b_im),
                 .sync_in(sync_in), .ao_re(ao_re), .ao_im(ao_im),
-                .bwo_re(bwo_re), .bwo_im(bwo_im), .sync_out(tw_sync), .dvo());
+                .bwo_re(bwo_re), .bwo_im(bwo_im), .dvi(en), .sync_out(tw_sync), .dvo(tw_dv));
         end else begin : GEN_TW_GENERAL
             twiddle_general #(
                 .N_INPUTS(N_INPUTS), .FFT_SIZE(FFT_SIZE), .N_COEFFS(N_COEFFS),
@@ -394,11 +399,11 @@ module butterfly_direct #(
                 .COEFF_BIT_WIDTH(COEFF_BIT_WIDTH), .MULT_LATENCY(MULT_LATENCY),
                 .ADD_LATENCY(ADD_LATENCY), .CONV_LATENCY(CONV_LATENCY),
                 .BRAM_LATENCY(BRAM_LATENCY), .QUANTIZATION(QUANTIZATION),
-                .OVERFLOW(OVERFLOW), .INIT_FILE(INIT_FILE), .PLATFORM(PLATFORM)
+                .OVERFLOW(OVERFLOW), .INIT_FILE(INIT_FILE), .PLATFORM(PLATFORM), .ASYNC(ASYNC)
             ) u_twiddle (
                 .clk(clk), .ai_re(a_re), .ai_im(a_im), .bi_re(b_re), .bi_im(b_im),
                 .sync_in(sync_in), .ao_re(ao_re), .ao_im(ao_im),
-                .bwo_re(bwo_re), .bwo_im(bwo_im), .sync_out(tw_sync), .dvalid());
+                .bwo_re(bwo_re), .bwo_im(bwo_im), .en(en), .sync_out(tw_sync), .dvalid(tw_dv));
         end
     endgenerate
 
@@ -474,5 +479,11 @@ module butterfly_direct #(
     // ── sync ─────────────────────────────────────────────────────────────────
     pipeline #(.BITWIDTH(1), .CSP_LATENCY(ADD_LATENCY + MUX_LATENCY + CONV_LATENCY)) u_sync_dly (
         .clk(clk), .din(tw_sync), .dout(sync_out));
+
+    // async: delay1, the twiddle dvalid through a free Delay of the sync latency
+    logic dv_d;
+    pipeline #(.BITWIDTH(1), .CSP_LATENCY(ADD_LATENCY + MUX_LATENCY + CONV_LATENCY)) u_dvalid_dly (
+        .clk(clk), .din(tw_dv), .dout(dv_d));
+    assign dvalid = (ASYNC != 0) ? dv_d : 1'b0;
 
 endmodule
