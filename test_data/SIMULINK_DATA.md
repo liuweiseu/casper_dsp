@@ -8,13 +8,14 @@ Which `test_data/` sets hold CSV data exported from MATLAB Simulink, and which k
 - Copied on 2026-10-14 from `/data/casper/tools/plugins-demo2/test_data` (main sets), `test_data_async/batch1` and `test_data_async/batch2` (`ASYNC` / `DVALID_EN` sets). Only the `sim_*.csv` files of a set are replaced; `params.json` and memory files (`*.mem`) stay the generator's, except for the async sets added from Simulink, which are copied whole.
 - `BasicModules/fifo` (added 2026-10-27) was exported in this repository's session, not by plugins-demo2: Simulink models of the Xilinx FIFO block driven by deterministic stimulus (Repeating Sequence Stair sources: fill past full, drain past empty, random traffic, `en` gaps and `rst` pulses), built and simulated with the matlab-tools scripts on the SNAP or RFSoC4x2 platform; every set is whole Simulink data (inputs and outputs). See its `test_data.md`.
 - `FlowControl/munge` (added 2026-10-28) was exported the same way: random `din` words built from up to 16-bit Gateway Ins (Concat) and `dout` read through 16-bit Slices, on the SNAP platform; every set is whole Simulink data.
+- `Delays/single_port_ram` sets 6–19 (added 2026-10-28) were checked in this repository's session: the generator's stimulus drove Simulink models of the Xilinx Single Port RAM (SNAP; RFSoC4x2 for Ultra RAM), and the simulated `dout` equals the generated `sim_dout.csv` bit for bit, so the CSVs are Simulink output. Sets 0–5 are the plugins-demo2 exports.
 - Sets that a documented mlib_devel bug excludes (`docs/bugs.md`, the sets `filter_bug_sets` removes) keep the generated data: their Simulink output shows the bug, while the HDL and the reference models implement the intended behaviour.
 - Each module's `test_data.md` says which of its sets are Simulink data (the bold line **CSV data exported from the corresponding MATLAB Simulink block.** and a "Simulink data:" note, or a "Sets exported from MATLAB Simulink" section for the async sets that only exist as Simulink data).
 - Regenerating a module with its generator script (`[test_data] generate = true`, or running the script) overwrites its Simulink CSVs with the reference model's output. The "Sets exported from MATLAB Simulink" sections and their `simdata` directories are not written by the generators and are kept.
 
 ## Summary
 
-366 of 424 sets (75 modules) are Simulink data.
+380 of 438 sets (75 modules) are Simulink data.
 
 ## Per module
 
@@ -53,7 +54,7 @@ Which `test_data/` sets hold CSV data exported from MATLAB Simulink, and which k
 | Delays | `Delays/dual_port_ram` | 5 | all | — |
 | Delays | `Delays/pipeline` | 5 | all | — |
 | Delays | `Delays/rom` | 5 | all | — |
-| Delays | `Delays/single_port_ram` | 6 | all | — |
+| Delays | `Delays/single_port_ram` | 20 | all | — |
 | Delays | `Delays/sync_delay` | 5 | all | — |
 | Delays | `Delays/window_delay` | 5 | all | — |
 | FFTs | `FFTs/biplex_core` | 6 | 0, 2, 4, 5 | 1, 3: mlib_devel bug 18 |

@@ -1,0 +1,8 @@
+{
+  "DATA_WIDTH": 8,
+  "ADDR_WIDTH": 4,
+  "LATENCY": 2,
+  "RST": 1,
+  "EN": 1,
+  "INIT_REG": 119
+}

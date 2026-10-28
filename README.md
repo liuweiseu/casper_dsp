@@ -40,7 +40,7 @@ The simulation is based on [Verilator](https://www.veripool.org/verilator/) and 
 | 31 | Delays | [`dual_port_ram`](docs/Delays/dual_port_ram.md) | True dual-port RAM, common clock; GENERIC / XILINX (XPM) / ALTERA (stub) |
 | 32 | Delays | [`pipeline`](docs/Delays/pipeline.md) | Register pipeline with configurable latency |
 | 33 | Delays | [`rom`](docs/Delays/rom.md) | Synchronous ROM loaded from an init file; GENERIC / XILINX (XPM) / ALTERA (stub) |
-| 34 | Delays | [`single_port_ram`](docs/Delays/single_port_ram.md) | Single-port RAM; GENERIC / XILINX (XPM) / ALTERA (stub) |
+| 34 | Delays | [`single_port_ram`](docs/Delays/single_port_ram.md) | Xilinx Single Port RAM, every mask option (memory type, write mode, latency, rst / en, init); GENERIC / XILINX (XPM) / ALTERA (stub) |
 | 35 | Delays | [`sync_delay`](docs/Delays/sync_delay.md) | Sync-pulse delay with a loadable down counter |
 | 36 | Delays | [`window_delay`](docs/Delays/window_delay.md) | Window (level) delay through two edge sync_delays |
 | 37 | FFTs | [`biplex_core`](docs/FFTs/biplex_core.md) | Streaming biplex FFT core: chain of FFT_SIZE fft_stage_n |

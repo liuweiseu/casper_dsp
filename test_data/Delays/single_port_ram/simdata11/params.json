@@ -1,0 +1,7 @@
+{
+  "DATA_WIDTH": 8,
+  "ADDR_WIDTH": 4,
+  "MEM_TYPE": 0,
+  "LATENCY": 0,
+  "INIT_FILE": "../../../test_data/Delays/single_port_ram/simdata11/ram_init.mem"
+}

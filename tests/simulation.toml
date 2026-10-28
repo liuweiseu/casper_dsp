@@ -1971,7 +1971,7 @@ INIT_FILE = "../../../test_data/Delays/rom/simdata4/rom_init.mem"
 dir = "Delays"
 top = "single_port_ram"
 test_data_script = "gen_delays_test_data.py"
-simulation_cycles = [512, 512, 256, 1024, 512, 256]
+simulation_cycles = [512, 512, 256, 1024, 512, 256, 400, 400, 400, 400, 400, 300, 400, 400, 400, 400, 400, 400, 400, 600]
 # 16 × 8
 [[simulations.parameters]]
 DATA_WIDTH = 8
@@ -2000,6 +2000,130 @@ INIT_REG = 165
 DATA_WIDTH = 6
 ADDR_WIDTH = 3
 EN = 1
+# Read After Write (mask default), rst / en, initVector
+[[simulations.parameters]]
+DATA_WIDTH = 8
+ADDR_WIDTH = 4
+WRITE_MODE = 0
+RST = 1
+EN = 1
+INIT_REG = 90
+INIT_FILE = "../../../test_data/Delays/single_port_ram/simdata6/ram_init.mem"
+# No Read On Write, rst / en, initVector
+[[simulations.parameters]]
+DATA_WIDTH = 8
+ADDR_WIDTH = 4
+WRITE_MODE = 2
+RST = 1
+EN = 1
+INIT_REG = 51
+INIT_FILE = "../../../test_data/Delays/single_port_ram/simdata7/ram_init.mem"
+# latency 2, Read Before Write, rst / en
+[[simulations.parameters]]
+DATA_WIDTH = 8
+ADDR_WIDTH = 4
+LATENCY = 2
+RST = 1
+EN = 1
+INIT_REG = 119
+# latency 3, No Read On Write, rst / en
+[[simulations.parameters]]
+DATA_WIDTH = 8
+ADDR_WIDTH = 4
+LATENCY = 3
+WRITE_MODE = 2
+RST = 1
+EN = 1
+INIT_REG = 200
+# latency 3, optimize_latency (stages 1, 2 ignore en), Read After Write
+[[simulations.parameters]]
+DATA_WIDTH = 8
+ADDR_WIDTH = 4
+LATENCY = 3
+WRITE_MODE = 0
+RST = 1
+EN = 1
+INIT_REG = 15
+OPTIMIZE_LATENCY = 1
+# Distributed memory, latency 0 (combinational read), initVector
+[[simulations.parameters]]
+DATA_WIDTH = 8
+ADDR_WIDTH = 4
+MEM_TYPE = 0
+LATENCY = 0
+INIT_FILE = "../../../test_data/Delays/single_port_ram/simdata11/ram_init.mem"
+# Distributed memory, latency 1, Read After Write, en
+[[simulations.parameters]]
+DATA_WIDTH = 8
+ADDR_WIDTH = 4
+MEM_TYPE = 0
+WRITE_MODE = 0
+EN = 1
+# Distributed memory, latency 2, en; rst checked but no port (no effect)
+[[simulations.parameters]]
+DATA_WIDTH = 10
+ADDR_WIDTH = 5
+MEM_TYPE = 0
+LATENCY = 2
+RST = 1
+EN = 1
+INIT_REG = 341
+# Ultra RAM, latency 1, rst / en (init_reg and initVector ignored)
+[[simulations.parameters]]
+DATA_WIDTH = 8
+ADDR_WIDTH = 4
+MEM_TYPE = 2
+RST = 1
+EN = 1
+INIT_REG = 68
+INIT_FILE = "../../../test_data/Delays/single_port_ram/simdata14/ram_init.mem"
+# Ultra RAM, latency 3, No Read On Write, rst / en (stages 1, 2 ignore en)
+[[simulations.parameters]]
+DATA_WIDTH = 8
+ADDR_WIDTH = 4
+MEM_TYPE = 2
+LATENCY = 3
+WRITE_MODE = 2
+RST = 1
+EN = 1
+# Ultra RAM, latency 2, Read After Write, en only
+[[simulations.parameters]]
+DATA_WIDTH = 8
+ADDR_WIDTH = 4
+MEM_TYPE = 2
+LATENCY = 2
+WRITE_MODE = 0
+EN = 1
+# depth 24 (not a power of two), latency 2, 10-word initVector
+[[simulations.parameters]]
+DATA_WIDTH = 8
+ADDR_WIDTH = 5
+DEPTH = 24
+LATENCY = 2
+RST = 1
+EN = 1
+INIT_REG = 153
+INIT_FILE = "../../../test_data/Delays/single_port_ram/simdata17/ram_init.mem"
+# latency 2, optimize_latency, No Read On Write
+[[simulations.parameters]]
+DATA_WIDTH = 8
+ADDR_WIDTH = 4
+LATENCY = 2
+WRITE_MODE = 2
+RST = 1
+EN = 1
+INIT_REG = 33
+OPTIMIZE_LATENCY = 1
+# 64 × 12, latency 4, Read After Write, rst / en, initVector
+[[simulations.parameters]]
+DATA_WIDTH = 12
+ADDR_WIDTH = 6
+LATENCY = 4
+WRITE_MODE = 0
+RST = 1
+EN = 1
+INIT_REG = 2748
+INIT_FILE = "../../../test_data/Delays/single_port_ram/simdata19/ram_init.mem"
 
 # test sync_delay
 [[simulations]]

@@ -1,0 +1,7 @@
+{
+  "DATA_WIDTH": 8,
+  "ADDR_WIDTH": 4,
+  "MEM_TYPE": 0,
+  "WRITE_MODE": 0,
+  "EN": 1
+}

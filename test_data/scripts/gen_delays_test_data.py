@@ -34,6 +34,7 @@ TEST_DATA = TEST_DATA_ROOT / CATEGORY
 # rom INIT_FILE paths are relative to the simulator's working directory,
 # which tests/test_runner.py makes tests/sim_build/<Category>/<module>/.
 ROM_INIT_REL = "../../../test_data/Delays/rom/simdata{n}/rom_init.mem"
+SPRAM_INIT_REL = "../../../test_data/Delays/single_port_ram/simdata{n}/ram_init.mem"
 
 
 # ── reference models ────────────────────────────────────────────────────────
@@ -76,27 +77,60 @@ def opt(stim, name, default, cycles):
     return stim.get(name, [default] * cycles)
 
 
-def m_single_port_ram(p, stim):
-    """Xilinx Single Port RAM, latency 1, Read Before Write (built block).
+def m_single_port_ram(p, stim, image=None):
+    """Xilinx Single Port RAM as simulated in Simulink (all mask options).
 
-    en = 0 freezes the edge (no read, no write); rst loads INIT_REG instead of
-    the read whatever en is (the built block, unlike the literal xlSPRAM.sgm
-    text), and an enabled write still happens. dout powers up to INIT_REG.
+    MEM_TYPE 0 Distributed memory / 1 Block RAM / 2 Ultra RAM, WRITE_MODE
+    0 Read After Write / 1 Read Before Write / 2 No Read On Write, LATENCY
+    pipeline stages (0: combinational read). Stage 0 takes the read word on an
+    enabled edge (No Read On Write keeps it on a write); stages 1.. shift on
+    enabled edges, or on every edge with Ultra RAM or Block RAM +
+    OPTIMIZE_LATENCY. rst acts on the last stage only, whatever en is: Block
+    RAM loads INIT_REG (also its power-on value); Ultra RAM clears it
+    (latency 1: only when enabled) and masks dout to 0 on the next cycle;
+    Distributed memory has no rst. An enabled write still happens. Ultra RAM
+    ignores the memory image. An address >= DEPTH reads 0 and does not write.
     """
     cycles = len(stim["we"])
-    mem = [0] * (1 << p["ADDR_WIDTH"])
-    dout = p.get("INIT_REG", 0)
+    depth = p.get("DEPTH", 1 << p["ADDR_WIDTH"])
+    mt, wm, lat = p.get("MEM_TYPE", 1), p.get("WRITE_MODE", 1), p.get("LATENCY", 1)
+    uram = mt == 2
+    use_rst = bool(p.get("RST")) and mt != 0
+    free = uram or (mt == 1 and p.get("OPTIMIZE_LATENCY", 0))
+    init = p.get("INIT_REG", 0) if (use_rst and not uram) else 0
+    mem = [0] * depth
+    if image and not uram:
+        mem[:len(image)] = image[:depth]
+    pipe = [0] * lat
+    if lat:
+        pipe[-1] = init
+    mask = 0
     out = []
-    rsts = opt(stim, "rst", 0, cycles) if p.get("RST") else [0] * cycles
+    rsts = opt(stim, "rst", 0, cycles) if use_rst else [0] * cycles
     ens = opt(stim, "en", 1, cycles) if p.get("EN") else [1] * cycles
     for we, addr, din, rst, en in zip(stim["we"], stim["addr"], stim["din"], rsts, ens):
-        out.append((dout,))
+        rd = mem[addr] if addr < depth else 0
+        if lat == 0:
+            out.append((rd,))
+            if we and addr < depth:
+                mem[addr] = din
+            continue
+        out.append((0 if mask else pipe[-1],))
+        new = list(pipe)
+        for k in range(1, lat):
+            if en or free:
+                new[k] = pipe[k - 1]
+        if en:
+            new[0] = rd if not we else din if wm == 0 else rd if wm == 1 else pipe[0]
+            if we and addr < depth:
+                mem[addr] = din
         if rst:
-            dout = p.get("INIT_REG", 0)
-        elif en:
-            dout = mem[addr]                # READ_FIRST: old contents
-        if en and we:
-            mem[addr] = din
+            if not uram:
+                new[-1] = init
+            elif en or lat > 1:
+                new[-1] = 0
+        mask = int(uram and rst)
+        pipe = new
     return out
 
 
@@ -211,14 +245,28 @@ def s_options(rng, p, cycles, names):
 
 def s_single_port_ram(rng, p, cycles):
     dw, aw = p["DATA_WIDTH"], p["ADDR_WIDTH"]
+    depth = p.get("DEPTH", 1 << aw)
     # write-heavy first half (fills the memory), read-heavy second half
     we = [int(rng.random() < (0.75 if i < cycles // 2 else 0.25)) for i in range(cycles)]
     s = {
         "we": we,
-        "addr": [rng.randrange(1 << aw) for _ in range(cycles)],
+        "addr": [rng.randrange(depth) for _ in range(cycles)],
         "din": [rng.randrange(1 << dw) for _ in range(cycles)],
     }
-    return dict(s, **s_options(rng, p, cycles, {"RST": "rst", "EN": "en"}))
+    s = dict(s, **s_options(rng, p, cycles, {"RST": "rst", "EN": "en"}))
+    if p.get("MEM_TYPE", 1) == 0:
+        s.pop("rst", None)        # Distributed memory has no rst port
+    return s
+
+
+def s_spram_sweep(stim, depth):
+    """Start with an enabled, reset-free read of every address in order (shows
+    the power-on contents)."""
+    for i in range(min(depth, len(stim["we"]))):
+        stim["we"][i], stim["addr"][i] = 0, i
+        for port, value in (("en", 1), ("rst", 0)):
+            if port in stim:
+                stim[port][i] = value
 
 
 def s_dual_port_ram(rng, p, cycles):
@@ -291,17 +339,21 @@ MODULES = {
     "single_port_ram": dict(
         inputs=["we", "addr", "din"], outputs=["dout"],
         stim=s_single_port_ram, model=m_single_port_ram,
-        prose="`single_port_ram` is a READ_FIRST single-port RAM with a "
-              "1-cycle registered read. The first half of each run is "
-              "write-heavy (75 % writes) to fill the memory, the second half "
-              "read-heavy (25 % writes); every write is also a "
-              "read-during-write of the same address. Sets with `RST` / `EN` "
-              "drive random `sim_rst.csv` (rare, plus one mid-run) / "
-              "`sim_en.csv` (70 % high) as the built Xilinx block (latency 1, "
-              "checked against Simulink): `en` = 0 freezes the edge, `rst` "
-              "loads `INIT_REG` whatever `en` is, and `INIT_REG` is also the "
-              "power-on output; the other sets leave the "
-              "options at 0 (not in `params.json`).",
+        prose="`single_port_ram` is the Xilinx Single Port RAM with every mask "
+              "option (memory type, write mode, latency, rst / en, "
+              "optimize_latency, depth, initial contents), modelled as the "
+              "block simulates in Simulink (see `docs/Delays/single_port_ram.md`). "
+              "The first half of each run is write-heavy (75 % writes) to fill "
+              "the memory, the second half read-heavy (25 % writes); every write "
+              "is also a read-during-write of the same address. Sets with "
+              "`RST` / `EN` drive random `sim_rst.csv` (rare, plus one "
+              "mid-run) / `sim_en.csv` (70 % high); Distributed memory sets "
+              "have no `sim_rst.csv` (the block has no rst port). Tests 6 and "
+              "later start with an enabled read of every address in order, and "
+              "those with an `INIT_FILE` load `ram_init.mem` from their "
+              "directory (random raw words, one hex word per line; a file "
+              "shorter than `DEPTH` leaves the other words 0). The other sets "
+              "leave the options at their defaults (not in `params.json`).",
         tests=[
             (P(RAM, [8, 4]), 512, "16 × 8"),
             (P(RAM, [16, 6]), 512, "64 × 16"),
@@ -310,6 +362,34 @@ MODULES = {
             (dict(P(RAM, [8, 4]), RST=1, EN=1, INIT_REG=0xA5), 512,
              "16 × 8 with rst / en ports, init_reg 0xA5"),
             (dict(P(RAM, [6, 3]), EN=1), 256, "8 × 6 with the en port only"),
+            (dict(P(RAM, [8, 4]), WRITE_MODE=0, RST=1, EN=1, INIT_REG=0x5A), 400,
+             "Read After Write (mask default), rst / en, initVector"),
+            (dict(P(RAM, [8, 4]), WRITE_MODE=2, RST=1, EN=1, INIT_REG=0x33), 400,
+             "No Read On Write, rst / en, initVector"),
+            (dict(P(RAM, [8, 4]), LATENCY=2, RST=1, EN=1, INIT_REG=0x77), 400,
+             "latency 2, Read Before Write, rst / en"),
+            (dict(P(RAM, [8, 4]), LATENCY=3, WRITE_MODE=2, RST=1, EN=1, INIT_REG=0xC8), 400,
+             "latency 3, No Read On Write, rst / en"),
+            (dict(P(RAM, [8, 4]), LATENCY=3, WRITE_MODE=0, RST=1, EN=1, INIT_REG=0x0F, OPTIMIZE_LATENCY=1), 400,
+             "latency 3, optimize_latency (stages 1, 2 ignore en), Read After Write"),
+            (dict(P(RAM, [8, 4]), MEM_TYPE=0, LATENCY=0), 300,
+             "Distributed memory, latency 0 (combinational read), initVector"),
+            (dict(P(RAM, [8, 4]), MEM_TYPE=0, WRITE_MODE=0, EN=1), 400,
+             "Distributed memory, latency 1, Read After Write, en"),
+            (dict(P(RAM, [10, 5]), MEM_TYPE=0, LATENCY=2, RST=1, EN=1, INIT_REG=0x155), 400,
+             "Distributed memory, latency 2, en; rst checked but no port (no effect)"),
+            (dict(P(RAM, [8, 4]), MEM_TYPE=2, RST=1, EN=1, INIT_REG=0x44), 400,
+             "Ultra RAM, latency 1, rst / en (init_reg and initVector ignored)"),
+            (dict(P(RAM, [8, 4]), MEM_TYPE=2, LATENCY=3, WRITE_MODE=2, RST=1, EN=1), 400,
+             "Ultra RAM, latency 3, No Read On Write, rst / en (stages 1, 2 ignore en)"),
+            (dict(P(RAM, [8, 4]), MEM_TYPE=2, LATENCY=2, WRITE_MODE=0, EN=1), 400,
+             "Ultra RAM, latency 2, Read After Write, en only"),
+            (dict(P(RAM, [8, 5]), DEPTH=24, LATENCY=2, RST=1, EN=1, INIT_REG=0x99), 400,
+             "depth 24 (not a power of two), latency 2, 10-word initVector"),
+            (dict(P(RAM, [8, 4]), LATENCY=2, WRITE_MODE=2, RST=1, EN=1, INIT_REG=0x21, OPTIMIZE_LATENCY=1), 400,
+             "latency 2, optimize_latency, No Read On Write"),
+            (dict(P(RAM, [12, 6]), LATENCY=4, WRITE_MODE=0, RST=1, EN=1, INIT_REG=0xABC), 600,
+             "64 × 12, latency 4, Read After Write, rst / en, initVector"),
         ]),
     "dual_port_ram": dict(
         inputs=["we_a", "addr_a", "din_a", "we_b", "addr_b", "din_b"],
@@ -386,6 +466,9 @@ MODULES = {
 
 # rom test 3 has no init file; the others get one
 ROM_NO_INIT = {3}
+# single_port_ram tests with an INIT_FILE: test -> number of words in the image
+# (fewer than DEPTH leaves the other words 0, as a short initVector does)
+SPRAM_INIT = {6: 16, 7: 16, 11: 16, 14: 16, 17: 10, 19: 64}
 
 
 # ── writers ─────────────────────────────────────────────────────────────────
@@ -394,6 +477,8 @@ def full_params(name, n, params):
     """Parameter set as written to params.json / simulation.toml."""
     if name == "rom":
         return dict(params, INIT_FILE="" if n in ROM_NO_INIT else ROM_INIT_REL.format(n=n))
+    if name == "single_port_ram" and n in SPRAM_INIT:
+        return dict(params, INIT_FILE=SPRAM_INIT_REL.format(n=n))
     return dict(params)
 
 
@@ -414,6 +499,15 @@ def write_module(name, spec):
                 (d / "rom_init.mem").write_text("".join(f"{v:0{digits}x}\n" for v in image))
             stim.update(s_rom_options(rng, params, cycles))
             results = m_rom(params, stim, image)
+        elif name == "single_port_ram" and n >= 6:
+            # tests 6..: optional memory image and an initial read sweep
+            dw, depth = params["DATA_WIDTH"], params.get("DEPTH", 1 << params["ADDR_WIDTH"])
+            image = None
+            if n in SPRAM_INIT:
+                image = [rng.randrange(1 << dw) for _ in range(SPRAM_INIT[n])]
+                (d / "ram_init.mem").write_text("".join(f"{v:0{(dw + 3) // 4}x}\n" for v in image))
+            s_spram_sweep(stim, depth)
+            results = m_single_port_ram(params, stim, image)
         else:
             results = spec["model"](params, stim)
         (d / "params.json").write_text(json.dumps(full_params(name, n, params), indent=2) + "\n")
@@ -424,7 +518,8 @@ def write_module(name, spec):
     (mdir / "test_data.md").write_text(test_data_md(name, spec))
 
 
-OPTION_DEFAULTS = {"ASYNC": 0, "BRAM_LATENCY": 2, "RST": 0, "EN": 0, "INIT_REG": 0, "RST_A": 0, "RST_B": 0, "EN_A": 0,
+OPTION_DEFAULTS = {"ASYNC": 0, "BRAM_LATENCY": 2, "RST": 0, "EN": 0, "INIT_REG": 0, "DEPTH": "2^ADDR_WIDTH",
+                   "MEM_TYPE": 1, "WRITE_MODE": 1, "LATENCY": 1, "OPTIMIZE_LATENCY": 0, "RST_A": 0, "RST_B": 0, "EN_A": 0,
                    "EN_B": 0, "INIT_A": 0, "INIT_B": 0}
 
 
