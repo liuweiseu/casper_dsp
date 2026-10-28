@@ -3759,6 +3759,52 @@ simulation_cycles = [257]
 OUTPUT_NUM = 4
 OUTPUT_WIDTH = 8
 
+# test munge
+[[simulations]]
+dir = "FlowControl"
+top = "munge"
+simulation_cycles = [64, 64, 64, 64, 64, 64, 64, 64]
+# tut_100g Part 2 munge: 16 x 16-bit divisions, {I, Q} halves interleaved
+[[simulations.parameters]]
+DIVISIONS = 16
+DIV_SIZE = [16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16]
+ORDER = [8, 0, 9, 1, 10, 2, 11, 3, 12, 4, 13, 5, 14, 6, 15, 7]
+# 4 x 8-bit divisions
+[[simulations.parameters]]
+DIVISIONS = 4
+DIV_SIZE = [8, 8, 8, 8]
+ORDER = [2, 0, 3, 1]
+# mask defaults: div_size [32 0 16 16], a zero-size division dropped
+[[simulations.parameters]]
+DIVISIONS = 4
+DIV_SIZE = [32, 0, 16, 16]
+ORDER = [3, 0, 1, 2]
+# unequal sizes, order repeats division 4 and leaves out 1 and 3
+[[simulations.parameters]]
+DIVISIONS = 5
+DIV_SIZE = [3, 7, 1, 12, 5]
+ORDER = [4, 4, 0, 2]
+# divisions = 1: din passed through, order ignored
+[[simulations.parameters]]
+DIVISIONS = 1
+DIV_SIZE = [10]
+ORDER = [0]
+# unequal sizes, Signed output with bin_pt 3 (bits unchanged)
+[[simulations.parameters]]
+DIVISIONS = 3
+DIV_SIZE = [4, 6, 2]
+ORDER = [1, 2, 0]
+# two zero-size divisions, both named in order (the later one first)
+[[simulations.parameters]]
+DIVISIONS = 5
+DIV_SIZE = [5, 0, 0, 9, 4]
+ORDER = [3, 4, 0, 0, 2, 1]
+# one zero-size division named in order; order repeats divisions and is longer than divisions
+[[simulations.parameters]]
+DIVISIONS = 4
+DIV_SIZE = [5, 0, 9, 4]
+ORDER = [2, 1, 0, 0, 3, 2]
+
 # ── Misc ─────────────────────────────────────────────────────────────────────
 
 # test adder_tree

@@ -30,6 +30,8 @@ MATLAB R2021a Update 8; Vivado / Model Composer 2021.1.
 | 18 | `biplex_core_init` compares the stage delay with the character code of `num2str(bram_latency)` | `biplex_core` (also in `fft_biplex_real_4x`, `fft_wideband_real`) with `delays_bit_limit ≤ 4` | Confirmed in MATLAB R2021a |
 | 19 | The `pfb_fir_real` mask Initialization does not pass `n_pol_blocks` to `pfb_fir_real_init` | `pfb_fir_real` with `n_pol_blocks > 1` | Confirmed in MATLAB R2021a |
 | 20 | `coeff_gen_init` looks up in-order coefficient lists at angles that are not the `Coeffs` twiddles | `twiddle_general` / `butterfly_direct` with an in-order list `0 … N−1` and `FFTSize − StepPeriod − log2 N ≠ 1`; `fft_direct` with `map_tail` and `LargerFFTSize = FFTSize + 1` | Confirmed in MATLAB R2021a |
+| 21 | `munge_init` builds a one-division split for a scalar `div_size` | `munge` with a scalar `div_size` (or one non-zero size) and `divisions > 1` | Confirmed in MATLAB R2021a |
+| 22 | `munge_init` deletes the order entries of zero-size divisions at stale positions | `munge` whose `order` names two or more zero-size divisions | Confirmed in MATLAB R2021a |
 
 **Environment note:** `pfb_coeff_gen_calc.m:57, 72` computes the PFB
 window through MATLAB's Python interface (`casper_library/python/window.py`).
@@ -1000,6 +1002,86 @@ the `cosin` angles with the formula for every in-order list and writes the
 exactly rounded formula values when they differ. Sets that trigger the bug
 are excluded from the Simulink comparison.
 
+## 21. munge: a scalar div_size builds a one-division split
+
+**Affected code:** `casper_library/munge_init.m` (removal of the zero
+division sizes, `divisions_mod`, and the `bus_expand` / `bus_create` it
+draws).
+
+**Symptom:** a `munge` with `divisions = 4`, `div_size = 8` and
+`order = [2 0 3 1]` fails to build: "Invalid Simulink object name:
+split/3".
+
+**Trigger:** `divisions > 1` and only one non-zero division size: a scalar
+`div_size`, or a vector with one non-zero element. The block builds only
+when `order`, without the entries naming zero-size divisions, is a single
+entry naming the non-zero division. For a scalar `div_size` that is
+`order = [0]`, and `dout` is then the MSB division.
+
+**HDL trigger:** none (`FlowControl/munge` with `DIVISIONS > 1` and a one-element `DIV_SIZE` or one non-zero element; the trigger expressions cannot index the vector parameter `DIV_SIZE`, and no `munge` set triggers it)
+
+**Root cause:**
+
+- The init removes the zero sizes (`div_size_mod = div_size(div_size ~= 0)`)
+  and sets `divisions_mod = length(div_size_mod)`. A scalar `div_size`
+  therefore gives `divisions_mod = 1`.
+- It then builds `bus_expand` in "divisions of equal size" mode with
+  `outputNum = divisions_mod` (one output) and `bus_create` with
+  `inputNum = divisions_mod` (one input).
+- It connects `split/(order(j)+1)` to `join/j` for every `order` entry.
+  Any entry other than a single `0` names a missing port.
+
+The mask help ("size in bits of each division") and the scalar case of
+`length(div_size) ~= 1` both intend a scalar to mean "every division that
+size".
+
+**Impact on casper designs:** none known; designs pass a full vector (the
+tut_100g munge uses `div_size = 16*ones(1,16)`).
+
+**Confirmed in MATLAB R2021a:** the configuration above (a former
+`munge` set 1) fails with the error quoted.
+
+**Suggested fix:** expand a scalar `div_size` to `div_size*ones(1,
+divisions)` before removing zero sizes.
+
+**HDL:** a one-element `DIV_SIZE` gives every division that size. The
+`munge` sets use full vectors.
+
+## 22. munge: zero-size order entries are deleted at stale positions
+
+**Affected code:** `casper_library/munge_init.m`, the second loop over
+`zero_i` (`indices = find(output_order == (zero_i(m)-1));
+output_order_mod(indices) = [];`).
+
+**Symptom:** `munge` with `div_size = [5 0 0 9 4]` and
+`order = [3 1 0 0 4 2]` fails to build: "Matrix index is out of range for
+deletion". If the stale positions stay in range, the block builds but
+drops the wrong `order` entries.
+
+**Trigger:** `order` names two or more zero-size divisions, and an entry
+naming an earlier-handled zero division comes before an entry naming a
+later-handled one (the zero divisions are handled from the MSB).
+
+**HDL trigger:** none (`FlowControl/munge` sets as described above; the trigger expressions cannot index the vector parameters `DIV_SIZE` / `ORDER`, and no `munge` set triggers it)
+
+**Root cause:** the positions are found in the original `output_order`,
+while the deletions are applied one zero division at a time to
+`output_order_mod`. Once one deletion has removed an entry, every later
+position is shifted by one.
+
+**Impact on casper designs:** none known; it needs several zero-size
+divisions.
+
+**Confirmed in MATLAB R2021a:** the configuration above fails with the
+error quoted. `munge` set 6 (`div_size = [5 0 0 9 4]`,
+`order = [3 4 0 0 2 1]`, the later zero division named first) builds and
+matches the intended behaviour.
+
+**Suggested fix:** delete all such entries at once, e.g.
+`output_order_mod(ismember(output_order, zero_i - 1)) = []`.
+
+**HDL:** drops every `ORDER` entry that names a zero-size division.
+
 ## How casper_dsp handles these bugs
 
 - **Mapping:** the HDL-Simulink Mapping blocks record the bugs, so that
@@ -1125,6 +1207,11 @@ are excluded from the Simulink comparison.
   `twiddle_general` sets 1 and 3, `xeng_descramble` set 2,
   `adder_subtractor` set 4 and `convert` set 4;
   the HDL tests of these sets still run.
+- **Bugs 21 and 22:** `deviations` entries on `rtl/FlowControl/munge.sv`
+  (the mapping expressions cannot index the vector parameters `DIV_SIZE`
+  and `ORDER`). The `munge` sets in `tests/simulation.toml` avoid both:
+  every `DIV_SIZE` with more than one division is a full vector, and set 6
+  names its two zero-size divisions in the order the init handles.
 - **HDL-only configurations:** HDL extensions without a Simulink
   counterpart are `unsupported` entries, and `tests/simulation.toml` lists
   no set that uses them:

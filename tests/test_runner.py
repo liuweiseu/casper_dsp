@@ -70,6 +70,12 @@ def test_data_param(value):
 test_data_param.__test__ = False   # a helper, not a pytest test
 
 
+def vector_param(values):
+    """[a, b, ...] -> "<32n>'h<a><b>...": 32-bit elements, first in the MSBs
+    (the SystemVerilog {32'd a, 32'd b, ...})."""
+    return f"{32 * len(values)}'h" + "".join(f"{v & 0xFFFFFFFF:08x}" for v in values)
+
+
 def check_test_data(cfg):
     """Fail early if the module's test data does not match its config entry.
 
@@ -197,8 +203,11 @@ def test_runner(cfg):
             extra = get_vendor_sources(platform, vendor_cfgs) if platform else []
             # cocotb's Verilator runner passes parameters as -G<name>=<value>
             # verbatim, so string parameters (e.g. INIT_FILE, PLATFORM) need
-            # explicit SystemVerilog quotes
-            hdl_params = {k: f'"{test_data_param(v)}"' if isinstance(v, str) else v
+            # explicit SystemVerilog quotes; a list (vector parameter, e.g.
+            # munge ORDER) becomes a sized literal of 32-bit elements, the
+            # first element in the MSBs
+            hdl_params = {k: f'"{test_data_param(v)}"' if isinstance(v, str)
+                          else vector_param(v) if isinstance(v, list) else v
                           for k, v in parameters[i].items()}
             runner.build(
                 sources=sources + extra,
