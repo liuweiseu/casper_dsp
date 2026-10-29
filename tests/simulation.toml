@@ -44,6 +44,50 @@ generate = false
 # [[simulations.parameters]] because every key there is passed to the DUT as
 # an HDL parameter.
 
+# ── Accumulators ─────────────────────────────────────────────────────────────
+
+# test simple_bram_vacc
+[[simulations]]
+dir = "Accumulators"
+top = "simple_bram_vacc"
+simulation_cycles = [4000, 600, 500, 800]
+# tut_spec configuration: vec_len 512, UFix_64_34 accumulator, din UFix_37_36 (power output)
+[[simulations.parameters]]
+VEC_LEN = 512
+ARITH_TYPE = 0
+N_BITS = 64
+BIN_PT = 34
+N_BITS_IN = 37
+BIN_PT_IN = 36
+TYPE_IN = 0
+# vec_len 8, Fix_16_4 accumulator, signed din Fix_10_2
+[[simulations.parameters]]
+VEC_LEN = 8
+ARITH_TYPE = 1
+N_BITS = 16
+BIN_PT = 4
+N_BITS_IN = 10
+BIN_PT_IN = 2
+TYPE_IN = 1
+# minimum vec_len 6, UFix_8_0: sums wrap
+[[simulations.parameters]]
+VEC_LEN = 6
+ARITH_TYPE = 0
+N_BITS = 8
+BIN_PT = 0
+N_BITS_IN = 8
+BIN_PT_IN = 0
+TYPE_IN = 0
+# vec_len 20, Fix_12_0 accumulator, din Fix_12_4 (fraction truncated)
+[[simulations.parameters]]
+VEC_LEN = 20
+ARITH_TYPE = 1
+N_BITS = 12
+BIN_PT = 0
+N_BITS_IN = 12
+BIN_PT_IN = 4
+TYPE_IN = 1
+
 # ── BasicModules ─────────────────────────────────────────────────────────────
 
 # test constant
@@ -4167,6 +4211,32 @@ PULSE_LEN = 8
 [[simulations.parameters]]
 PULSE_LEN = 16
 
+# test power
+[[simulations]]
+dir = "Misc"
+top = "power"
+simulation_cycles = [400, 300, 300, 300]
+# tut_spec configuration: BitWidth 18, add_latency 2, mult_latency 3
+[[simulations.parameters]]
+BIT_WIDTH = 18
+ADD_LATENCY = 2
+MULT_LATENCY = 3
+# 8-bit, add_latency 1, mult_latency 2
+[[simulations.parameters]]
+BIT_WIDTH = 8
+ADD_LATENCY = 1
+MULT_LATENCY = 2
+# 4-bit, combinational (both latencies 0): every input value
+[[simulations.parameters]]
+BIT_WIDTH = 4
+ADD_LATENCY = 0
+MULT_LATENCY = 0
+# 12-bit, add_latency 3, mult_latency 1
+[[simulations.parameters]]
+BIT_WIDTH = 12
+ADD_LATENCY = 3
+MULT_LATENCY = 1
+
 # test pulse_ext
 [[simulations]]
 dir = "Misc"
@@ -4216,6 +4286,44 @@ BITWIDTH = 16
 [[simulations.parameters]]
 PERIOD = 1024
 BITWIDTH = 32
+
+# test sync_gen
+[[simulations]]
+dir = "Misc"
+top = "sync_gen"
+simulation_cycles = [600, 600, 800, 400]
+# tut_spec configuration (period 150994944): sync edges and sync_period_var only
+[[simulations.parameters]]
+SIM_ACC_LEN = 1
+FFT_SIZE = 4096
+FFT_SIMULT_INPUTS = 8
+PFB_FIR_TAPS = 4
+REORDER_VEC = [2, 2, 9]
+SCALE = 4096
+# period 48 (constant 46)
+[[simulations.parameters]]
+SIM_ACC_LEN = 1
+FFT_SIZE = 8
+FFT_SIMULT_INPUTS = 2
+PFB_FIR_TAPS = 2
+REORDER_VEC = [2, 3]
+SCALE = 1
+# period 96 (constant 94), lcm of three reorder lengths
+[[simulations.parameters]]
+SIM_ACC_LEN = 2
+FFT_SIZE = 16
+FFT_SIMULT_INPUTS = 4
+PFB_FIR_TAPS = 1
+REORDER_VEC = [3, 4, 6]
+SCALE = 1
+# period 3 (constant 1): the shortest periods
+[[simulations.parameters]]
+SIM_ACC_LEN = 1
+FFT_SIZE = 4
+FFT_SIMULT_INPUTS = 4
+PFB_FIR_TAPS = 1
+REORDER_VEC = [1]
+SCALE = 3
 
 # ── Multipliers ──────────────────────────────────────────────────────────────
 
@@ -5078,6 +5186,70 @@ ASYNC = 1
 N_INPUTS = 3
 DATA_WIDTH = 12
 ASYNC = 1
+
+# ── Scopes ───────────────────────────────────────────────────────────────────
+
+# test bitfield_snapshot
+[[simulations]]
+dir = "Scopes"
+top = "bitfield_snapshot"
+simulation_cycles = [36000, 1500, 1500, 1200, 1500]
+# tut_spec configuration: 2^14 x 128-bit, snap_delay 2
+[[simulations.parameters]]
+IO_WIDTH = 128
+SNAP_NSAMPLES = 14
+SNAP_DATA_WIDTH = 128
+SNAP_DELAY = 2
+# 16 x 128-bit, snap_delay 2
+[[simulations.parameters]]
+IO_WIDTH = 128
+SNAP_NSAMPLES = 4
+SNAP_DATA_WIDTH = 128
+SNAP_DELAY = 2
+# 32 x 32-bit, no snap_delay
+[[simulations.parameters]]
+IO_WIDTH = 32
+SNAP_NSAMPLES = 5
+SNAP_DATA_WIDTH = 32
+SNAP_DELAY = 0
+# 8 x 8-bit, snap_delay 1, 6-bit input (zero-extended)
+[[simulations.parameters]]
+IO_WIDTH = 6
+SNAP_NSAMPLES = 3
+SNAP_DATA_WIDTH = 8
+SNAP_DELAY = 1
+# 16 x 64-bit, snap_delay 3
+[[simulations.parameters]]
+IO_WIDTH = 64
+SNAP_NSAMPLES = 4
+SNAP_DATA_WIDTH = 64
+SNAP_DELAY = 3
+
+# test snapshot
+[[simulations]]
+dir = "Scopes"
+top = "snapshot"
+simulation_cycles = [1500, 1500, 1200, 1500]
+# 16 x 128-bit
+[[simulations.parameters]]
+NSAMPLES = 4
+DATA_WIDTH = 128
+IN_WIDTH = 128
+# 32 x 32-bit
+[[simulations.parameters]]
+NSAMPLES = 5
+DATA_WIDTH = 32
+IN_WIDTH = 32
+# 8 x 8-bit
+[[simulations.parameters]]
+NSAMPLES = 3
+DATA_WIDTH = 8
+IN_WIDTH = 6
+# 16 x 64-bit
+[[simulations.parameters]]
+NSAMPLES = 4
+DATA_WIDTH = 64
+IN_WIDTH = 64
 
 # ── Templates ────────────────────────────────────────────────────────────────
 

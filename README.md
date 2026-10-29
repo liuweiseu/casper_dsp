@@ -7,79 +7,84 @@ The simulation is based on [Verilator](https://www.veripool.org/verilator/) and 
 
 | # | Category | Module | Description |
 |---|----------|--------|-------------|
-| 1 | BasicModules | [`constant`](docs/BasicModules/constant.md) | Fixed compile-time constant output |
-| 2 | BasicModules | [`counter`](docs/BasicModules/counter.md) | Configurable up/down counter with free-running and count-limit modes |
-| 3 | BasicModules | [`delay`](docs/BasicModules/delay.md) | Shift-register pipeline delay |
-| 4 | BasicModules | [`fifo`](docs/BasicModules/fifo.md) | Synchronous FIFO (Xilinx FIFO block): Standard / First Word Fall Through, optional reset, enable, count, %full and almost-empty/full ports |
-| 5 | BasicModules | [`inverter`](docs/BasicModules/inverter.md) | Bitwise inverter with optional pipeline delay |
-| 6 | BasicModules | [`logical`](docs/BasicModules/logical.md) | Bitwise logical reduction (AND/OR/XOR/etc.) with optional pipeline delay |
-| 7 | BasicModules | [`multiplexer`](docs/BasicModules/multiplexer.md) | N-input multiplexer with optional pipeline delay |
-| 8 | BasicModules | [`register`](docs/BasicModules/register.md) | Parameterized synchronous register with optional reset and enable |
-| 9 | BasicModules | [`relational`](docs/BasicModules/relational.md) | Unsigned comparator (==, !=, <, >, <=, >=) with optional pipeline delay |
-| 10 | BasicModules | [`slice`](docs/BasicModules/slice.md) | Combinational bit-field extractor |
-| 11 | Bus | [`adder_subtractor`](docs/Bus/adder_subtractor.md) | Fixed-point add/subtract with independent input formats and output requantization |
-| 12 | Bus | [`convert`](docs/Bus/convert.md) | Fixed-point format converter (quantization: truncate/round; overflow: wrap/saturate) |
-| 13 | Bus | [`multiplier`](docs/Bus/multiplier.md) | Fixed-point real multiply with output requantization |
-| 14 | Bus | [`negate`](docs/Bus/negate.md) | Two's-complement negate with output requantization |
-| 15 | Bus | [`scale`](docs/Bus/scale.md) | Multiply by a power of two with output requantization |
-| 16 | Correlator | [`auto_tap`](docs/Correlator/auto_tap.md) | First X-engine tap: autocorrelations, loop delay D, sync delay S |
-| 17 | Correlator | [`baseline_tap`](docs/Correlator/baseline_tap.md) | X-engine tap for one antenna separation: delayed antenna pair, a_end / a_ndel select |
-| 18 | Correlator | [`cmac`](docs/Correlator/cmac.md) | Complex multiply-accumulate a·conj(b) over acc_len samples with an acc_in relay |
-| 19 | Correlator | [`cross_multiplier`](docs/Correlator/cross_multiplier.md) | All-pairs x·conj(y) of aggregated complex streams, convert_of to the output format |
-| 20 | Correlator | [`dual_pol_cmac`](docs/Correlator/dual_pol_cmac.md) | Four cmacs for the XX, YY, XY, YX products of two dual-polarisation inputs |
-| 21 | Correlator | [`xeng`](docs/Correlator/xeng.md) | Windowed X-engine: auto/baseline tap chain, antenna loop, descramble, mcnt hold |
-| 22 | Correlator | [`xeng_descramble`](docs/Correlator/xeng_descramble.md) | X-engine descrambler: tap-ordered words to per-baseline elements via a dual-port RAM, narrow readout |
-| 23 | Correlator | [`xeng_descramble_4ant`](docs/Correlator/xeng_descramble_4ant.md) | 4-antenna descrambler (xeng_descramble with read-side latency 2) |
-| 24 | Correlator | [`xeng_tvg`](docs/Correlator/xeng_tvg.md) | X-engine test vector generator: pass-through, counter, constant, software-register patterns |
-| 25 | Correlator/Internal | [`cmac_acc`](docs/Correlator/Internal/cmac_acc.md) | cmac's accumulate-and-relay cell (Accumulator with reinit-on-reset, 2-cycle muxes) |
-| 26 | Correlator/Internal | [`read_ctrl`](docs/Correlator/Internal/read_ctrl.md) | xeng_descramble read pacing: narrow address every DEL+1 cycles, done latch |
-| 27 | Correlator/Internal | [`write_ctrl`](docs/Correlator/Internal/write_ctrl.md) | xeng_descramble write side: tap/line/element counters, element address map, conjugation |
-| 28 | Correlator/Internal | [`x_cast`](docs/Correlator/Internal/x_cast.md) | xeng_descramble block reversal and sign extension of the 8 fields |
-| 29 | Delays | [`delay_bram`](docs/Delays/delay_bram.md) | RAM-based long delay line (vendor RAM via single_port_ram) |
-| 30 | Delays | [`delay_srl`](docs/Delays/delay_srl.md) | Shift-register delay with optional synchronous reset and enable |
-| 31 | Delays | [`dual_port_ram`](docs/Delays/dual_port_ram.md) | True dual-port RAM, common clock; GENERIC / XILINX (XPM) / ALTERA (stub) |
-| 32 | Delays | [`pipeline`](docs/Delays/pipeline.md) | Register pipeline with configurable latency |
-| 33 | Delays | [`rom`](docs/Delays/rom.md) | Synchronous ROM loaded from an init file; GENERIC / XILINX (XPM) / ALTERA (stub) |
-| 34 | Delays | [`single_port_ram`](docs/Delays/single_port_ram.md) | Xilinx Single Port RAM, every mask option (memory type, write mode, latency, rst / en, init); GENERIC / XILINX (XPM) / ALTERA (stub) |
-| 35 | Delays | [`sync_delay`](docs/Delays/sync_delay.md) | Sync-pulse delay with a loadable down counter |
-| 36 | Delays | [`window_delay`](docs/Delays/window_delay.md) | Window (level) delay through two edge sync_delays |
-| 37 | FFTs | [`biplex_core`](docs/FFTs/biplex_core.md) | Streaming biplex FFT core: chain of FFT_SIZE fft_stage_n |
-| 38 | FFTs | [`butterfly_direct`](docs/FFTs/butterfly_direct.md) | Radix-2 butterfly (a ± b·w) with twiddle-variant selection, shift and overflow flag |
-| 39 | FFTs | [`fft_biplex_real_4x`](docs/FFTs/fft_biplex_real_4x.md) | Biplex FFT of 4·N real signals: biplex_core + bi_real_unscr_4x |
-| 40 | FFTs | [`fft_direct`](docs/FFTs/fft_direct.md) | Fully parallel radix-2 FFT stages (optionally the tail of a larger FFT) |
-| 41 | FFTs | [`fft_stage_n`](docs/FFTs/fft_stage_n.md) | One biplex FFT stage: commutator delays/muxes + butterfly_direct |
-| 42 | FFTs | [`fft_unscrambler`](docs/FFTs/fft_unscrambler.md) | square_transposer + reorder that restores natural order after fft_direct |
-| 43 | FFTs | [`fft_wideband_real`](docs/FFTs/fft_wideband_real.md) | Wideband real FFT: fft_biplex_real_4x + fft_direct + fft_unscrambler |
-| 44 | FFTs/Internal | [`bi_real_unscr_4x`](docs/FFTs/Internal/bi_real_unscr_4x.md) | Unscramble a biplex FFT of four real signals into their full spectra |
-| 45 | FFTs/Internal | [`complex_conj`](docs/FFTs/Internal/complex_conj.md) | Complex conjugate: delayed real part, negated imaginary part |
-| 46 | FFTs/Internal | [`hilbert`](docs/FFTs/Internal/hilbert.md) | Split the FFT of two real signals packed as one complex signal |
-| 47 | FFTs/Internal | [`mirror_spectrum`](docs/FFTs/Internal/mirror_spectrum.md) | Complete the upper half of four real-signal spectra by conjugate mirroring |
-| 48 | FFTs/Twiddle | [`twiddle_coeff_0`](docs/FFTs/Twiddle/twiddle_coeff_0.md) | Twiddle for coefficient 0 (w = 1) with delay matching |
-| 49 | FFTs/Twiddle | [`twiddle_coeff_1`](docs/FFTs/Twiddle/twiddle_coeff_1.md) | Twiddle for coefficient 1 (w = −j): swap re/im and negate. Not in `tests/simulation.toml`: the Simulink block cannot be built ([bugs](docs/bugs.md)) |
-| 50 | FFTs/Twiddle | [`twiddle_general`](docs/FFTs/Twiddle/twiddle_general.md) | General twiddle: bi × coefficient table (ROM, sync-reset schedule) |
-| 51 | FFTs/Twiddle | [`twiddle_pass_through`](docs/FFTs/Twiddle/twiddle_pass_through.md) | Twiddle pass-through (w = 1, zero latency) |
-| 52 | FFTs/Twiddle | [`twiddle_stage_2`](docs/FFTs/Twiddle/twiddle_stage_2.md) | Twiddle alternating w = 1 / −j for the second FFT stage |
-| 53 | FlowControl | [`bus_create`](docs/FlowControl/bus_create.md) | Pack multiple equal-width words into a single concatenated bus |
-| 54 | FlowControl | [`bus_expand`](docs/FlowControl/bus_expand.md) | Split a wide bus into an array of equal-width words |
-| 55 | FlowControl | [`munge`](docs/FlowControl/munge.md) | Split a word into divisions (any sizes) and concatenate them in a given order |
-| 56 | Misc | [`adder_tree`](docs/Misc/adder_tree.md) | Pipelined pairwise adder tree (full or user-defined precision) |
-| 57 | Misc | [`armed_trigger`](docs/Misc/armed_trigger.md) | One-shot trigger with explicit arm step |
-| 58 | Misc | [`bit_reverse`](docs/Misc/bit_reverse.md) | Combinational bit-order reversal |
-| 59 | Misc | [`convert_of`](docs/Misc/convert_of.md) | Fixed-point convert with casper overflow flag |
-| 60 | Misc | [`edge_detect`](docs/Misc/edge_detect.md) | Rising/falling/both-edge detector with configurable output polarity |
-| 61 | Misc | [`negedge_delay`](docs/Misc/negedge_delay.md) | Falling-edge stretcher (level held PULSE_LEN cycles after it drops) |
-| 62 | Misc | [`pulse_ext`](docs/Misc/pulse_ext.md) | Rising-edge triggered pulse extender |
-| 63 | Misc | [`sample_and_hold`](docs/Misc/sample_and_hold.md) | Register resampled one cycle after sync or every PERIOD cycles |
-| 64 | Multipliers | [`cmult`](docs/Multipliers/cmult.md) | casper_library cmult: packed complex multiply, optional conjugate of b, output convert |
-| 65 | Multipliers | [`complex_multiplier`](docs/Multipliers/complex_multiplier.md) | Fixed-point complex multiply, selectable 4-multiply or 3-multiply form |
-| 66 | PFBs | [`first_tap_real`](docs/PFBs/first_tap_real.md) | First PFB FIR tap: product with the lowest coefficient slice, data / sync delayed one frame |
-| 67 | PFBs | [`last_tap_real`](docs/PFBs/last_tap_real.md) | Last PFB FIR tap: product and sync for the adder tree |
-| 68 | PFBs | [`pfb_coeff_gen`](docs/PFBs/pfb_coeff_gen.md) | PFB FIR coefficients: one windowed-sinc ROM per tap, sync-reset address counter |
-| 69 | PFBs | [`pfb_fir_real`](docs/PFBs/pfb_fir_real.md) | Real-input polyphase filter bank FIR: coefficient ROMs, tap chains, adder trees |
-| 70 | PFBs | [`tap_real`](docs/PFBs/tap_real.md) | Middle PFB FIR tap: product, coefficient bus forwarded, data / sync delayed |
-| 71 | Reorder | [`barrel_switcher`](docs/Reorder/barrel_switcher.md) | Pipelined lane rotation by a select input |
-| 72 | Reorder | [`reorder`](docs/Reorder/reorder.md) | Fixed-map frame permutation (corner turn), all map orders |
-| 73 | Reorder | [`square_transposer`](docs/Reorder/square_transposer.md) | N × N block transpose with lane delays and a barrel switcher |
+| 1 | Accumulators | [`simple_bram_vacc`](docs/Accumulators/simple_bram_vacc.md) | Vector accumulator in a delay_bram, restarted by new_acc |
+| 2 | BasicModules | [`constant`](docs/BasicModules/constant.md) | Fixed compile-time constant output |
+| 3 | BasicModules | [`counter`](docs/BasicModules/counter.md) | Configurable up/down counter with free-running and count-limit modes |
+| 4 | BasicModules | [`delay`](docs/BasicModules/delay.md) | Shift-register pipeline delay |
+| 5 | BasicModules | [`fifo`](docs/BasicModules/fifo.md) | Synchronous FIFO (Xilinx FIFO block): Standard / First Word Fall Through, optional reset, enable, count, %full and almost-empty/full ports |
+| 6 | BasicModules | [`inverter`](docs/BasicModules/inverter.md) | Bitwise inverter with optional pipeline delay |
+| 7 | BasicModules | [`logical`](docs/BasicModules/logical.md) | Bitwise logical reduction (AND/OR/XOR/etc.) with optional pipeline delay |
+| 8 | BasicModules | [`multiplexer`](docs/BasicModules/multiplexer.md) | N-input multiplexer with optional pipeline delay |
+| 9 | BasicModules | [`register`](docs/BasicModules/register.md) | Parameterized synchronous register with optional reset and enable |
+| 10 | BasicModules | [`relational`](docs/BasicModules/relational.md) | Unsigned comparator (==, !=, <, >, <=, >=) with optional pipeline delay |
+| 11 | BasicModules | [`slice`](docs/BasicModules/slice.md) | Combinational bit-field extractor |
+| 12 | Bus | [`adder_subtractor`](docs/Bus/adder_subtractor.md) | Fixed-point add/subtract with independent input formats and output requantization |
+| 13 | Bus | [`convert`](docs/Bus/convert.md) | Fixed-point format converter (quantization: truncate/round; overflow: wrap/saturate) |
+| 14 | Bus | [`multiplier`](docs/Bus/multiplier.md) | Fixed-point real multiply with output requantization |
+| 15 | Bus | [`negate`](docs/Bus/negate.md) | Two's-complement negate with output requantization |
+| 16 | Bus | [`scale`](docs/Bus/scale.md) | Multiply by a power of two with output requantization |
+| 17 | Correlator | [`auto_tap`](docs/Correlator/auto_tap.md) | First X-engine tap: autocorrelations, loop delay D, sync delay S |
+| 18 | Correlator | [`baseline_tap`](docs/Correlator/baseline_tap.md) | X-engine tap for one antenna separation: delayed antenna pair, a_end / a_ndel select |
+| 19 | Correlator | [`cmac`](docs/Correlator/cmac.md) | Complex multiply-accumulate a·conj(b) over acc_len samples with an acc_in relay |
+| 20 | Correlator | [`cross_multiplier`](docs/Correlator/cross_multiplier.md) | All-pairs x·conj(y) of aggregated complex streams, convert_of to the output format |
+| 21 | Correlator | [`dual_pol_cmac`](docs/Correlator/dual_pol_cmac.md) | Four cmacs for the XX, YY, XY, YX products of two dual-polarisation inputs |
+| 22 | Correlator | [`xeng`](docs/Correlator/xeng.md) | Windowed X-engine: auto/baseline tap chain, antenna loop, descramble, mcnt hold |
+| 23 | Correlator | [`xeng_descramble`](docs/Correlator/xeng_descramble.md) | X-engine descrambler: tap-ordered words to per-baseline elements via a dual-port RAM, narrow readout |
+| 24 | Correlator | [`xeng_descramble_4ant`](docs/Correlator/xeng_descramble_4ant.md) | 4-antenna descrambler (xeng_descramble with read-side latency 2) |
+| 25 | Correlator | [`xeng_tvg`](docs/Correlator/xeng_tvg.md) | X-engine test vector generator: pass-through, counter, constant, software-register patterns |
+| 26 | Correlator/Internal | [`cmac_acc`](docs/Correlator/Internal/cmac_acc.md) | cmac's accumulate-and-relay cell (Accumulator with reinit-on-reset, 2-cycle muxes) |
+| 27 | Correlator/Internal | [`read_ctrl`](docs/Correlator/Internal/read_ctrl.md) | xeng_descramble read pacing: narrow address every DEL+1 cycles, done latch |
+| 28 | Correlator/Internal | [`write_ctrl`](docs/Correlator/Internal/write_ctrl.md) | xeng_descramble write side: tap/line/element counters, element address map, conjugation |
+| 29 | Correlator/Internal | [`x_cast`](docs/Correlator/Internal/x_cast.md) | xeng_descramble block reversal and sign extension of the 8 fields |
+| 30 | Delays | [`delay_bram`](docs/Delays/delay_bram.md) | RAM-based long delay line (vendor RAM via single_port_ram) |
+| 31 | Delays | [`delay_srl`](docs/Delays/delay_srl.md) | Shift-register delay with optional synchronous reset and enable |
+| 32 | Delays | [`dual_port_ram`](docs/Delays/dual_port_ram.md) | True dual-port RAM, common clock; GENERIC / XILINX (XPM) / ALTERA (stub) |
+| 33 | Delays | [`pipeline`](docs/Delays/pipeline.md) | Register pipeline with configurable latency |
+| 34 | Delays | [`rom`](docs/Delays/rom.md) | Synchronous ROM loaded from an init file; GENERIC / XILINX (XPM) / ALTERA (stub) |
+| 35 | Delays | [`single_port_ram`](docs/Delays/single_port_ram.md) | Xilinx Single Port RAM, every mask option (memory type, write mode, latency, rst / en, init); GENERIC / XILINX (XPM) / ALTERA (stub) |
+| 36 | Delays | [`sync_delay`](docs/Delays/sync_delay.md) | Sync-pulse delay with a loadable down counter |
+| 37 | Delays | [`window_delay`](docs/Delays/window_delay.md) | Window (level) delay through two edge sync_delays |
+| 38 | FFTs | [`biplex_core`](docs/FFTs/biplex_core.md) | Streaming biplex FFT core: chain of FFT_SIZE fft_stage_n |
+| 39 | FFTs | [`butterfly_direct`](docs/FFTs/butterfly_direct.md) | Radix-2 butterfly (a ± b·w) with twiddle-variant selection, shift and overflow flag |
+| 40 | FFTs | [`fft_biplex_real_4x`](docs/FFTs/fft_biplex_real_4x.md) | Biplex FFT of 4·N real signals: biplex_core + bi_real_unscr_4x |
+| 41 | FFTs | [`fft_direct`](docs/FFTs/fft_direct.md) | Fully parallel radix-2 FFT stages (optionally the tail of a larger FFT) |
+| 42 | FFTs | [`fft_stage_n`](docs/FFTs/fft_stage_n.md) | One biplex FFT stage: commutator delays/muxes + butterfly_direct |
+| 43 | FFTs | [`fft_unscrambler`](docs/FFTs/fft_unscrambler.md) | square_transposer + reorder that restores natural order after fft_direct |
+| 44 | FFTs | [`fft_wideband_real`](docs/FFTs/fft_wideband_real.md) | Wideband real FFT: fft_biplex_real_4x + fft_direct + fft_unscrambler |
+| 45 | FFTs/Internal | [`bi_real_unscr_4x`](docs/FFTs/Internal/bi_real_unscr_4x.md) | Unscramble a biplex FFT of four real signals into their full spectra |
+| 46 | FFTs/Internal | [`complex_conj`](docs/FFTs/Internal/complex_conj.md) | Complex conjugate: delayed real part, negated imaginary part |
+| 47 | FFTs/Internal | [`hilbert`](docs/FFTs/Internal/hilbert.md) | Split the FFT of two real signals packed as one complex signal |
+| 48 | FFTs/Internal | [`mirror_spectrum`](docs/FFTs/Internal/mirror_spectrum.md) | Complete the upper half of four real-signal spectra by conjugate mirroring |
+| 49 | FFTs/Twiddle | [`twiddle_coeff_0`](docs/FFTs/Twiddle/twiddle_coeff_0.md) | Twiddle for coefficient 0 (w = 1) with delay matching |
+| 50 | FFTs/Twiddle | [`twiddle_coeff_1`](docs/FFTs/Twiddle/twiddle_coeff_1.md) | Twiddle for coefficient 1 (w = −j): swap re/im and negate. Not in `tests/simulation.toml`: the Simulink block cannot be built ([bugs](docs/bugs.md)) |
+| 51 | FFTs/Twiddle | [`twiddle_general`](docs/FFTs/Twiddle/twiddle_general.md) | General twiddle: bi × coefficient table (ROM, sync-reset schedule) |
+| 52 | FFTs/Twiddle | [`twiddle_pass_through`](docs/FFTs/Twiddle/twiddle_pass_through.md) | Twiddle pass-through (w = 1, zero latency) |
+| 53 | FFTs/Twiddle | [`twiddle_stage_2`](docs/FFTs/Twiddle/twiddle_stage_2.md) | Twiddle alternating w = 1 / −j for the second FFT stage |
+| 54 | FlowControl | [`bus_create`](docs/FlowControl/bus_create.md) | Pack multiple equal-width words into a single concatenated bus |
+| 55 | FlowControl | [`bus_expand`](docs/FlowControl/bus_expand.md) | Split a wide bus into an array of equal-width words |
+| 56 | FlowControl | [`munge`](docs/FlowControl/munge.md) | Split a word into divisions (any sizes) and concatenate them in a given order |
+| 57 | Misc | [`adder_tree`](docs/Misc/adder_tree.md) | Pipelined pairwise adder tree (full or user-defined precision) |
+| 58 | Misc | [`armed_trigger`](docs/Misc/armed_trigger.md) | One-shot trigger with explicit arm step |
+| 59 | Misc | [`bit_reverse`](docs/Misc/bit_reverse.md) | Combinational bit-order reversal |
+| 60 | Misc | [`convert_of`](docs/Misc/convert_of.md) | Fixed-point convert with casper overflow flag |
+| 61 | Misc | [`edge_detect`](docs/Misc/edge_detect.md) | Rising/falling/both-edge detector with configurable output polarity |
+| 62 | Misc | [`negedge_delay`](docs/Misc/negedge_delay.md) | Falling-edge stretcher (level held PULSE_LEN cycles after it drops) |
+| 63 | Misc | [`power`](docs/Misc/power.md) | Power \|c\|² of a complex input (Xilinx Mults + AddSub) |
+| 64 | Misc | [`pulse_ext`](docs/Misc/pulse_ext.md) | Rising-edge triggered pulse extender |
+| 65 | Misc | [`sample_and_hold`](docs/Misc/sample_and_hold.md) | Register resampled one cycle after sync or every PERIOD cycles |
+| 66 | Misc | [`sync_gen`](docs/Misc/sync_gen.md) | Periodic / software sync pulse; swreg values as ports |
+| 67 | Multipliers | [`cmult`](docs/Multipliers/cmult.md) | casper_library cmult: packed complex multiply, optional conjugate of b, output convert |
+| 68 | Multipliers | [`complex_multiplier`](docs/Multipliers/complex_multiplier.md) | Fixed-point complex multiply, selectable 4-multiply or 3-multiply form |
+| 69 | PFBs | [`first_tap_real`](docs/PFBs/first_tap_real.md) | First PFB FIR tap: product with the lowest coefficient slice, data / sync delayed one frame |
+| 70 | PFBs | [`last_tap_real`](docs/PFBs/last_tap_real.md) | Last PFB FIR tap: product and sync for the adder tree |
+| 71 | PFBs | [`pfb_coeff_gen`](docs/PFBs/pfb_coeff_gen.md) | PFB FIR coefficients: one windowed-sinc ROM per tap, sync-reset address counter |
+| 72 | PFBs | [`pfb_fir_real`](docs/PFBs/pfb_fir_real.md) | Real-input polyphase filter bank FIR: coefficient ROMs, tap chains, adder trees |
+| 73 | PFBs | [`tap_real`](docs/PFBs/tap_real.md) | Middle PFB FIR tap: product, coefficient bus forwarded, data / sync delayed |
+| 74 | Reorder | [`barrel_switcher`](docs/Reorder/barrel_switcher.md) | Pipelined lane rotation by a select input |
+| 75 | Reorder | [`reorder`](docs/Reorder/reorder.md) | Fixed-map frame permutation (corner turn), all map orders |
+| 76 | Reorder | [`square_transposer`](docs/Reorder/square_transposer.md) | N × N block transpose with lane delays and a barrel switcher |
+| 77 | Scopes | [`bitfield_snapshot`](docs/Scopes/bitfield_snapshot.md) | bitsnap: snapshot with an input field and input delays |
+| 78 | Scopes | [`snapshot`](docs/Scopes/snapshot.md) | Software-controlled capture into a shared BRAM; ctrl / status / BRAM as ports |
 
 ## 🚀 Add new modules
 

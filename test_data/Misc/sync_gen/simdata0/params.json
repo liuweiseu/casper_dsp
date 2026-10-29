@@ -1,0 +1,12 @@
+{
+  "SIM_ACC_LEN": 1,
+  "FFT_SIZE": 4096,
+  "FFT_SIMULT_INPUTS": 8,
+  "PFB_FIR_TAPS": 4,
+  "REORDER_VEC": [
+    2,
+    2,
+    9
+  ],
+  "SCALE": 4096
+}

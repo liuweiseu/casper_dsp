@@ -1,0 +1,9 @@
+{
+  "VEC_LEN": 8,
+  "ARITH_TYPE": 1,
+  "N_BITS": 16,
+  "BIN_PT": 4,
+  "N_BITS_IN": 10,
+  "BIN_PT_IN": 2,
+  "TYPE_IN": 1
+}

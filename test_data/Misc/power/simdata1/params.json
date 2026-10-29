@@ -1,0 +1,5 @@
+{
+  "BIT_WIDTH": 8,
+  "ADD_LATENCY": 1,
+  "MULT_LATENCY": 2
+}

@@ -9,18 +9,20 @@ Which `test_data/` sets hold CSV data exported from MATLAB Simulink, and which k
 - `BasicModules/fifo` (added 2026-10-27) was exported in this repository's session, not by plugins-demo2: Simulink models of the Xilinx FIFO block driven by deterministic stimulus (Repeating Sequence Stair sources: fill past full, drain past empty, random traffic, `en` gaps and `rst` pulses), built and simulated with the matlab-tools scripts on the SNAP or RFSoC4x2 platform; every set is whole Simulink data (inputs and outputs). See its `test_data.md`.
 - `FlowControl/munge` (added 2026-10-28) was exported the same way: random `din` words built from up to 16-bit Gateway Ins (Concat) and `dout` read through 16-bit Slices, on the SNAP platform; every set is whole Simulink data.
 - `Delays/single_port_ram` sets 6–19 (added 2026-10-28) were checked in this repository's session: the generator's stimulus drove Simulink models of the Xilinx Single Port RAM (SNAP; RFSoC4x2 for Ultra RAM), and the simulated `dout` equals the generated `sim_dout.csv` bit for bit, so the CSVs are Simulink output. Sets 0–5 are the plugins-demo2 exports.
+- `Accumulators/simple_bram_vacc`, `Misc/power`, `Misc/sync_gen`, `Scopes/bitfield_snapshot` and `Scopes/snapshot` (added 2026-10-28) were exported the same way, from library blocks driven by Repeating Sequence Stair sources (SNAP platform). For `sync_gen` the swreg sim constants were replaced by sources playing the register values; for the snapshots the ctrl swreg sim port was driven and probes logged the shared_bram inputs, the status swreg input and arm_or (see their `test_data.md`).
 - Sets that a documented mlib_devel bug excludes (`docs/bugs.md`, the sets `filter_bug_sets` removes) keep the generated data: their Simulink output shows the bug, while the HDL and the reference models implement the intended behaviour.
 - Each module's `test_data.md` says which of its sets are Simulink data (the bold line **CSV data exported from the corresponding MATLAB Simulink block.** and a "Simulink data:" note, or a "Sets exported from MATLAB Simulink" section for the async sets that only exist as Simulink data).
 - Regenerating a module with its generator script (`[test_data] generate = true`, or running the script) overwrites its Simulink CSVs with the reference model's output. The "Sets exported from MATLAB Simulink" sections and their `simdata` directories are not written by the generators and are kept.
 
 ## Summary
 
-380 of 438 sets (75 modules) are Simulink data.
+401 of 459 sets (80 modules) are Simulink data.
 
 ## Per module
 
 | Category | Module | Sets | Simulink-exported sets | Generated sets (reason) |
 |---|---|---|---|---|
+| Accumulators | `Accumulators/simple_bram_vacc` | 4 | all | — |
 | BasicModules | `BasicModules/constant` | 5 | — | 0–4: testbench derives the expected output from the parameters (no CSV files); simulated in Simulink but not extracted |
 | BasicModules | `BasicModules/counter` | 14 | all | — |
 | BasicModules | `BasicModules/delay` | 5 | all | — |
@@ -82,9 +84,11 @@ Which `test_data/` sets hold CSV data exported from MATLAB Simulink, and which k
 | Misc | `Misc/convert_of` | 5 | all | — |
 | Misc | `Misc/edge_detect` | 6 | all | — |
 | Misc | `Misc/negedge_delay` | 4 | all | — |
+| Misc | `Misc/power` | 4 | all | — |
 | Misc | `Misc/pulse_ext` | 3 | all | — |
 | Misc | `Misc/ri_to_c` | 2 | all | — |
 | Misc | `Misc/sample_and_hold` | 4 | all | — |
+| Misc | `Misc/sync_gen` | 4 | all | — |
 | Multipliers | `Multipliers/cmult` | 12 | 0–9, 11 | 10: mlib_devel bug 13 |
 | Multipliers | `Multipliers/complex_multiplier` | 8 | 0, 1, 7 | 2–6: QUANTIZATION 1 / 2 have no Simulink equivalent (Complex Multiplier 6.0 offers Truncate and Random Rounding only) |
 | PFBs | `PFBs/first_tap_real` | 3 | all | — |
@@ -95,4 +99,6 @@ Which `test_data/` sets hold CSV data exported from MATLAB Simulink, and which k
 | Reorder | `Reorder/barrel_switcher` | 4 | all | — |
 | Reorder | `Reorder/reorder` | 12 | all | — |
 | Reorder | `Reorder/square_transposer` | 5 | all | — |
+| Scopes | `Scopes/bitfield_snapshot` | 5 | all | — |
+| Scopes | `Scopes/snapshot` | 4 | all | — |
 | Templates | `Templates/simple_adder` | 1 | — | all: template, no casper_library block |
