@@ -276,11 +276,12 @@ module bi_real_unscr_4x #(
     wire den_en = (AS != 0) ? den : 1'b1;
 
     // ── half-frame delays of hilbert0 and of the sync ───────────────────────
-    logic [W-1:0] h0_w [2], dly_w [2], ch_w [4];
+    logic [W-1:0] h0_w [2], h1_w [2], dly_w [2], ch_w [4];
     logic         sync_d2, ms_sync;
 
     for (genvar o = 0; o < 2; o++) begin : GEN_DELAY
         assign h0_w[o] = pack(h_re[0][o], h_im[0][o]);
+        assign h1_w[o] = pack(h_re[1][o], h_im[1][o]);
         // casper passes bram_latency only with bram_delays on (else the
         // delay_bram mask default, 2)
         if (BRAM_DELAYS != 0 || HALF > 52) begin : GEN_BRAM
@@ -321,7 +322,9 @@ module bi_real_unscr_4x #(
     assign ms_sync = (AS != 0) ? sync_dl & den : sync_dl;
 
     // channels: pol1 / pol2 = delayed hilbert0, pol3 / pol4 = hilbert1
-    assign ch_w = '{dly_w[0], dly_w[1], pack(h_re[1][0], h_im[1][0]), pack(h_re[1][1], h_im[1][1])};
+    // (function calls inside an assignment pattern trip Verilator 5.054
+    // SIDEEFFECT, so hilbert1 is packed into h1_w first)
+    assign ch_w = '{dly_w[0], dly_w[1], h1_w[0], h1_w[1]};
 
     // ── reorder_out and mirror_spectrum ─────────────────────────────────────
     logic [W-1:0] reo_out [4], reo_out_d [4];
