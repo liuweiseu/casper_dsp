@@ -1,0 +1,6 @@
+{
+  "BITWIDTH": 1,
+  "DELAY_LEN": 1,
+  "USE_ENABLE": 1,
+  "USE_RST": 1
+}

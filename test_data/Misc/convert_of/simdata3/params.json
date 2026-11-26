@@ -1,0 +1,9 @@
+{
+  "BIT_WIDTH_I": 18,
+  "BINARY_POINT_I": 16,
+  "BIT_WIDTH_O": 18,
+  "BINARY_POINT_O": 17,
+  "QUANTIZATION": 2,
+  "OVERFLOW": 1,
+  "CSP_LATENCY": 1
+}

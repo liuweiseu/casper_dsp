@@ -1,0 +1,10 @@
+{
+  "PFB_SIZE": 5,
+  "N_INPUTS": 0,
+  "N_POL_BLOCKS": 2,
+  "COEFF_BIT_WIDTH": 18,
+  "TOTAL_TAPS": 3,
+  "BIT_WIDTH_IN": 18,
+  "MULT_LATENCY": 3,
+  "BRAM_LATENCY": 1
+}

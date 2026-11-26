@@ -1,0 +1,19 @@
+{
+  "N_INPUTS": 4,
+  "FFT_SIZE": 3,
+  "N_COEFFS": 1,
+  "STEP_PERIOD": 0,
+  "INPUT_BIT_WIDTH": 8,
+  "BIN_PT_IN": 7,
+  "COEFF_BIT_WIDTH": 8,
+  "MULT_LATENCY": 0,
+  "ADD_LATENCY": 0,
+  "CONV_LATENCY": 0,
+  "BRAM_LATENCY": 1,
+  "QUANTIZATION": 1,
+  "OVERFLOW": 1,
+  "INIT_FILE": "../../../../test_data/FFTs/Twiddle/twiddle_general/simdata4/twiddle.mem",
+  "COEFFS": [
+    3
+  ]
+}

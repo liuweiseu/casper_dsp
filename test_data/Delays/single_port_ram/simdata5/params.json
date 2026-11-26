@@ -1,0 +1,5 @@
+{
+  "DATA_WIDTH": 6,
+  "ADDR_WIDTH": 3,
+  "EN": 1
+}

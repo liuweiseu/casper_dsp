@@ -1,0 +1,32 @@
+{
+  "N_INPUTS": 3,
+  "FFT_SIZE": 5,
+  "FFT_STAGE": 3,
+  "INPUT_BIT_WIDTH": 12,
+  "BIN_PT_IN": 11,
+  "COEFF_BIT_WIDTH": 12,
+  "BITGROWTH": 1,
+  "DOWNSHIFT": 0,
+  "HARDCODE_SHIFTS": 0,
+  "ADD_LATENCY": 1,
+  "MULT_LATENCY": 1,
+  "BRAM_LATENCY": 1,
+  "CONV_LATENCY": 0,
+  "QUANTIZATION": 0,
+  "OVERFLOW": 0,
+  "DELAYS_BRAM": 0,
+  "MAX_FANOUT": 2,
+  "INIT_FILE": "../../../test_data/FFTs/fft_stage_n/simdata4/twiddle.mem",
+  "COEFFS": [
+    0,
+    1,
+    2,
+    3
+  ],
+  "DERIVED": {
+    "P": 1,
+    "ND": 4,
+    "MUX_LATENCY": 1,
+    "RAM_DELAYS": 0
+  }
+}

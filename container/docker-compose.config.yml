@@ -1,0 +1,8 @@
+# Added by scripts/run-*.sh for --config / $CASPER_SIM_CONFIG: mounts the
+# chosen simulation config read-only and points tests/test_runner.py at it.
+services:
+  test-runner:
+    volumes:
+      - ${HOST_SIM_CONFIG:?HOST_SIM_CONFIG is not set (use scripts/run-*.sh --config)}:/work/sim_config.toml:ro
+    environment:
+      CASPER_SIM_CONFIG: /work/sim_config.toml

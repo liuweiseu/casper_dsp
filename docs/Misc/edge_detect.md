@@ -8,8 +8,8 @@ Detects rising edges, falling edges, or any transition on a single-bit input sig
 
 | Parameter | Default | Description |
 |-----------|---------|-------------|
-| `EDGE_TYPE` | 0 | Edge to detect: 0 = rising edge, 1 = falling edge, 2 = both edges |
-| `OUTPUT_POL` | 0 | Output polarity: 0 = active high, 1 = active low |
+| `EDGE` | 0 | Edge to detect: 0 = rising edge, 1 = falling edge, 2 = both edges |
+| `POLARITY` | 0 | Output polarity: 0 = active high, 1 = active low |
 
 ## Ports
 
@@ -23,7 +23,9 @@ Detects rising edges, falling edges, or any transition on a single-bit input sig
 
 `dout` is combinational with respect to `din` and the registered `din_prev`, so the pulse is visible in the **same clock cycle** that the transition is sampled (no extra register stage on the output).
 
-| `EDGE_TYPE` | `OUTPUT_POL` | Behaviour |
+`din_prev` powers on at 0, as in Simulink, so a `din` that is high from the first cycle counts as a rising edge and no X reaches downstream logic in 4-state simulators.
+
+| `EDGE` | `POLARITY` | Behaviour |
 |-------------|--------------|-----------|
 | 0 (rising)  | 0 (active high) | `dout` pulses high for one cycle when a 0→1 transition is sampled |
 | 0 (rising)  | 1 (active low)  | `dout` pulses low for one cycle when a 0→1 transition is sampled |

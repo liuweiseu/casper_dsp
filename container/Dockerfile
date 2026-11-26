@@ -9,10 +9,12 @@ RUN apt-get update && apt-get install -y \
     ca-certificates help2man
 
 WORKDIR /src
-# compile verilator from source code
+# compile verilator from source code; the version is pinned so that local
+# images and CI build the same Verilator (every warning fails a cocotb build)
+ARG VERILATOR_VERSION=v5.054
 RUN git clone https://github.com/verilator/verilator && \
     cd verilator && \
-    git checkout stable && \
+    git checkout ${VERILATOR_VERSION} && \
     autoconf && \
     ./configure && \
     make -j$(nproc) && \

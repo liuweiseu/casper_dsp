@@ -1,19 +1,18 @@
 import cocotb
 from cocotb.triggers import Timer
 
-from pathlib import Path
 import numpy as np
+from testbench.data_paths import find_data_dir, module_data_dir
 
-_here = Path(__file__).parent
-testdatadir = (_here / "../../../test_data" / _here.parent.name / _here.name).resolve()
+testdatadir = module_data_dir(__file__)
 
 
 @cocotb.test()
 async def module_test(dut):
     """Test ri_to_c module.
 
-    Drive re and im inputs with values from sim_in_re.csv / sim_in_im.csv and
-    verify that the packed output c == {re, im} matches sim_out.csv.
+    Drive re and im inputs with values from sim_re.csv / sim_im.csv and
+    verify that the packed output c == {re, im} matches sim_c.csv.
 
     Parameter sets:
         simdata0 : NBITS=8  — pack two 8-bit words into 16-bit complex
@@ -22,17 +21,11 @@ async def module_test(dut):
     nbits = int(dut.NBITS.value)
     cocotb.log.info(f"Testing with NBITS={nbits}")
 
-    if nbits == 8:
-        datadir = testdatadir / "simdata0"
-    elif nbits == 16:
-        datadir = testdatadir / "simdata1"
-    else:
-        cocotb.log.warning(f"No test data for NBITS={nbits}. Skipping.")
-        return
+    datadir = find_data_dir(dut, testdatadir, ["NBITS"])
 
-    sim_in_re = np.loadtxt(datadir / "sim_in_re.csv", dtype=int).tolist()
-    sim_in_im = np.loadtxt(datadir / "sim_in_im.csv", dtype=int).tolist()
-    expected  = np.loadtxt(datadir / "sim_out.csv",   dtype=int).tolist()
+    sim_in_re = np.loadtxt(datadir / "sim_re.csv", dtype=int).tolist()
+    sim_in_im = np.loadtxt(datadir / "sim_im.csv", dtype=int).tolist()
+    expected  = np.loadtxt(datadir / "sim_c.csv",   dtype=int).tolist()
     cocotb.log.info(f"Loaded {len(sim_in_re)} samples from {datadir.name}/")
 
     for i, (re_val, im_val, exp) in enumerate(zip(sim_in_re, sim_in_im, expected)):

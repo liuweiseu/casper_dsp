@@ -1,0 +1,7 @@
+{
+  "DATA_WIDTH": 12,
+  "ADDR_WIDTH": 5,
+  "EN_B": 1,
+  "RST_A": 1,
+  "INIT_A": 291
+}

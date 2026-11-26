@@ -1,0 +1,11 @@
+{
+  "N_ANTS": 5,
+  "N_SIMULTAN": 2,
+  "N_BITS": 4,
+  "ACC_LEN": 4,
+  "ADD_LATENCY": 0,
+  "MULT_LATENCY": 1,
+  "BRAM_LATENCY": 2,
+  "MULT_TYPE": 2,
+  "USE_BRAM_DELAY": 1
+}

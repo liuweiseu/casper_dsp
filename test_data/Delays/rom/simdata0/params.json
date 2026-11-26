@@ -1,0 +1,5 @@
+{
+  "DATA_WIDTH": 8,
+  "ADDR_WIDTH": 4,
+  "INIT_FILE": "../../../test_data/Delays/rom/simdata0/rom_init.mem"
+}

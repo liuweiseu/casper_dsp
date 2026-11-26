@@ -7,21 +7,84 @@ The simulation is based on [Verilator](https://www.veripool.org/verilator/) and 
 
 | # | Category | Module | Description |
 |---|----------|--------|-------------|
-| 1 | BasicModules | [`constant`](docs/BasicModules/constant.md) | Fixed compile-time constant output |
-| 2 | BasicModules | [`counter`](docs/BasicModules/counter.md) | Configurable up/down counter with free-running and count-limit modes |
-| 3 | BasicModules | [`delay`](docs/BasicModules/delay.md) | Shift-register pipeline delay |
-| 4 | BasicModules | [`inverter`](docs/BasicModules/inverter.md) | Bitwise inverter with optional pipeline delay |
-| 5 | BasicModules | [`logical`](docs/BasicModules/logical.md) | Bitwise logical reduction (AND/OR/XOR/etc.) with optional pipeline delay |
-| 6 | BasicModules | [`multiplexer`](docs/BasicModules/multiplexer.md) | N-input multiplexer with optional pipeline delay |
-| 7 | BasicModules | [`register`](docs/BasicModules/register.md) | Parameterized synchronous register with optional reset and enable |
-| 8 | BasicModules | [`relational`](docs/BasicModules/relational.md) | Unsigned comparator (==, !=, <, >, <=, >=) with optional pipeline delay |
-| 9 | BasicModules | [`slice`](docs/BasicModules/slice.md) | Combinational bit-field extractor |
-| 10 | FlowControl | [`bus_create`](docs/FlowControl/bus_create.md) | Pack multiple equal-width words into a single concatenated bus |
-| 11 | FlowControl | [`bus_expand`](docs/FlowControl/bus_expand.md) | Split a wide bus into an array of equal-width words |
-| 12 | Misc | [`armed_trigger`](docs/Misc/armed_trigger.md) | One-shot trigger with explicit arm step |
-| 13 | Misc | [`bit_reverse`](docs/Misc/bit_reverse.md) | Combinational bit-order reversal |
-| 14 | Misc | [`edge_detect`](docs/Misc/edge_detect.md) | Rising/falling/both-edge detector with configurable output polarity |
-| 15 | Misc | [`pulse_ext`](docs/Misc/pulse_ext.md) | Rising-edge triggered pulse extender |
+| 1 | Accumulators | [`simple_bram_vacc`](docs/Accumulators/simple_bram_vacc.md) | Vector accumulator in a delay_bram, restarted by new_acc |
+| 2 | BasicModules | [`constant`](docs/BasicModules/constant.md) | Fixed compile-time constant output |
+| 3 | BasicModules | [`counter`](docs/BasicModules/counter.md) | Configurable up/down counter with free-running and count-limit modes |
+| 4 | BasicModules | [`delay`](docs/BasicModules/delay.md) | Shift-register pipeline delay |
+| 5 | BasicModules | [`fifo`](docs/BasicModules/fifo.md) | Synchronous FIFO (Xilinx FIFO block): Standard / First Word Fall Through, optional reset, enable, count, %full and almost-empty/full ports |
+| 6 | BasicModules | [`inverter`](docs/BasicModules/inverter.md) | Bitwise inverter with optional pipeline delay |
+| 7 | BasicModules | [`logical`](docs/BasicModules/logical.md) | Bitwise logical reduction (AND/OR/XOR/etc.) with optional pipeline delay |
+| 8 | BasicModules | [`multiplexer`](docs/BasicModules/multiplexer.md) | N-input multiplexer with optional pipeline delay |
+| 9 | BasicModules | [`register`](docs/BasicModules/register.md) | Parameterized synchronous register with optional reset and enable |
+| 10 | BasicModules | [`relational`](docs/BasicModules/relational.md) | Unsigned comparator (==, !=, <, >, <=, >=) with optional pipeline delay |
+| 11 | BasicModules | [`slice`](docs/BasicModules/slice.md) | Combinational bit-field extractor |
+| 12 | Bus | [`adder_subtractor`](docs/Bus/adder_subtractor.md) | Fixed-point add/subtract with independent input formats and output requantization |
+| 13 | Bus | [`convert`](docs/Bus/convert.md) | Fixed-point format converter (quantization: truncate/round; overflow: wrap/saturate) |
+| 14 | Bus | [`multiplier`](docs/Bus/multiplier.md) | Fixed-point real multiply with output requantization |
+| 15 | Bus | [`negate`](docs/Bus/negate.md) | Two's-complement negate with output requantization |
+| 16 | Bus | [`scale`](docs/Bus/scale.md) | Multiply by a power of two with output requantization |
+| 17 | Correlator | [`auto_tap`](docs/Correlator/auto_tap.md) | First X-engine tap: autocorrelations, loop delay D, sync delay S |
+| 18 | Correlator | [`baseline_tap`](docs/Correlator/baseline_tap.md) | X-engine tap for one antenna separation: delayed antenna pair, a_end / a_ndel select |
+| 19 | Correlator | [`cmac`](docs/Correlator/cmac.md) | Complex multiply-accumulate a·conj(b) over acc_len samples with an acc_in relay |
+| 20 | Correlator | [`cross_multiplier`](docs/Correlator/cross_multiplier.md) | All-pairs x·conj(y) of aggregated complex streams, convert_of to the output format |
+| 21 | Correlator | [`dual_pol_cmac`](docs/Correlator/dual_pol_cmac.md) | Four cmacs for the XX, YY, XY, YX products of two dual-polarisation inputs |
+| 22 | Correlator | [`xeng`](docs/Correlator/xeng.md) | Windowed X-engine: auto/baseline tap chain, antenna loop, descramble, mcnt hold |
+| 23 | Correlator | [`xeng_descramble`](docs/Correlator/xeng_descramble.md) | X-engine descrambler: tap-ordered words to per-baseline elements via a dual-port RAM, narrow readout |
+| 24 | Correlator | [`xeng_descramble_4ant`](docs/Correlator/xeng_descramble_4ant.md) | 4-antenna descrambler (xeng_descramble with read-side latency 2) |
+| 25 | Correlator | [`xeng_tvg`](docs/Correlator/xeng_tvg.md) | X-engine test vector generator: pass-through, counter, constant, software-register patterns |
+| 26 | Correlator/Internal | [`cmac_acc`](docs/Correlator/Internal/cmac_acc.md) | cmac's accumulate-and-relay cell (Accumulator with reinit-on-reset, 2-cycle muxes) |
+| 27 | Correlator/Internal | [`read_ctrl`](docs/Correlator/Internal/read_ctrl.md) | xeng_descramble read pacing: narrow address every DEL+1 cycles, done latch |
+| 28 | Correlator/Internal | [`write_ctrl`](docs/Correlator/Internal/write_ctrl.md) | xeng_descramble write side: tap/line/element counters, element address map, conjugation |
+| 29 | Correlator/Internal | [`x_cast`](docs/Correlator/Internal/x_cast.md) | xeng_descramble block reversal and sign extension of the 8 fields |
+| 30 | Delays | [`delay_bram`](docs/Delays/delay_bram.md) | RAM-based long delay line (vendor RAM via single_port_ram) |
+| 31 | Delays | [`delay_srl`](docs/Delays/delay_srl.md) | Shift-register delay with optional synchronous reset and enable |
+| 32 | Delays | [`dual_port_ram`](docs/Delays/dual_port_ram.md) | True dual-port RAM, common clock; GENERIC / XILINX (XPM) / ALTERA (stub) |
+| 33 | Delays | [`pipeline`](docs/Delays/pipeline.md) | Register pipeline with configurable latency |
+| 34 | Delays | [`rom`](docs/Delays/rom.md) | Synchronous ROM loaded from an init file; GENERIC / XILINX (XPM) / ALTERA (stub) |
+| 35 | Delays | [`single_port_ram`](docs/Delays/single_port_ram.md) | Xilinx Single Port RAM, every mask option (memory type, write mode, latency, rst / en, init); GENERIC / XILINX (XPM) / ALTERA (stub) |
+| 36 | Delays | [`sync_delay`](docs/Delays/sync_delay.md) | Sync-pulse delay with a loadable down counter |
+| 37 | Delays | [`window_delay`](docs/Delays/window_delay.md) | Window (level) delay through two edge sync_delays |
+| 38 | FFTs | [`biplex_core`](docs/FFTs/biplex_core.md) | Streaming biplex FFT core: chain of FFT_SIZE fft_stage_n |
+| 39 | FFTs | [`butterfly_direct`](docs/FFTs/butterfly_direct.md) | Radix-2 butterfly (a ± b·w) with twiddle-variant selection, shift and overflow flag |
+| 40 | FFTs | [`fft_biplex_real_4x`](docs/FFTs/fft_biplex_real_4x.md) | Biplex FFT of 4·N real signals: biplex_core + bi_real_unscr_4x |
+| 41 | FFTs | [`fft_direct`](docs/FFTs/fft_direct.md) | Fully parallel radix-2 FFT stages (optionally the tail of a larger FFT) |
+| 42 | FFTs | [`fft_stage_n`](docs/FFTs/fft_stage_n.md) | One biplex FFT stage: commutator delays/muxes + butterfly_direct |
+| 43 | FFTs | [`fft_unscrambler`](docs/FFTs/fft_unscrambler.md) | square_transposer + reorder that restores natural order after fft_direct |
+| 44 | FFTs | [`fft_wideband_real`](docs/FFTs/fft_wideband_real.md) | Wideband real FFT: fft_biplex_real_4x + fft_direct + fft_unscrambler |
+| 45 | FFTs/Internal | [`bi_real_unscr_4x`](docs/FFTs/Internal/bi_real_unscr_4x.md) | Unscramble a biplex FFT of four real signals into their full spectra |
+| 46 | FFTs/Internal | [`complex_conj`](docs/FFTs/Internal/complex_conj.md) | Complex conjugate: delayed real part, negated imaginary part |
+| 47 | FFTs/Internal | [`hilbert`](docs/FFTs/Internal/hilbert.md) | Split the FFT of two real signals packed as one complex signal |
+| 48 | FFTs/Internal | [`mirror_spectrum`](docs/FFTs/Internal/mirror_spectrum.md) | Complete the upper half of four real-signal spectra by conjugate mirroring |
+| 49 | FFTs/Twiddle | [`twiddle_coeff_0`](docs/FFTs/Twiddle/twiddle_coeff_0.md) | Twiddle for coefficient 0 (w = 1) with delay matching |
+| 50 | FFTs/Twiddle | [`twiddle_coeff_1`](docs/FFTs/Twiddle/twiddle_coeff_1.md) | Twiddle for coefficient 1 (w = −j): swap re/im and negate. Not in `tests/simulation.toml`: the Simulink block cannot be built ([bugs](docs/bugs.md)) |
+| 51 | FFTs/Twiddle | [`twiddle_general`](docs/FFTs/Twiddle/twiddle_general.md) | General twiddle: bi × coefficient table (ROM, sync-reset schedule) |
+| 52 | FFTs/Twiddle | [`twiddle_pass_through`](docs/FFTs/Twiddle/twiddle_pass_through.md) | Twiddle pass-through (w = 1, zero latency) |
+| 53 | FFTs/Twiddle | [`twiddle_stage_2`](docs/FFTs/Twiddle/twiddle_stage_2.md) | Twiddle alternating w = 1 / −j for the second FFT stage |
+| 54 | FlowControl | [`bus_create`](docs/FlowControl/bus_create.md) | Pack multiple equal-width words into a single concatenated bus |
+| 55 | FlowControl | [`bus_expand`](docs/FlowControl/bus_expand.md) | Split a wide bus into an array of equal-width words |
+| 56 | FlowControl | [`munge`](docs/FlowControl/munge.md) | Split a word into divisions (any sizes) and concatenate them in a given order |
+| 57 | Misc | [`adder_tree`](docs/Misc/adder_tree.md) | Pipelined pairwise adder tree (full or user-defined precision) |
+| 58 | Misc | [`armed_trigger`](docs/Misc/armed_trigger.md) | One-shot trigger with explicit arm step |
+| 59 | Misc | [`bit_reverse`](docs/Misc/bit_reverse.md) | Combinational bit-order reversal |
+| 60 | Misc | [`convert_of`](docs/Misc/convert_of.md) | Fixed-point convert with casper overflow flag |
+| 61 | Misc | [`edge_detect`](docs/Misc/edge_detect.md) | Rising/falling/both-edge detector with configurable output polarity |
+| 62 | Misc | [`negedge_delay`](docs/Misc/negedge_delay.md) | Falling-edge stretcher (level held PULSE_LEN cycles after it drops) |
+| 63 | Misc | [`power`](docs/Misc/power.md) | Power \|c\|² of a complex input (Xilinx Mults + AddSub) |
+| 64 | Misc | [`pulse_ext`](docs/Misc/pulse_ext.md) | Rising-edge triggered pulse extender |
+| 65 | Misc | [`sample_and_hold`](docs/Misc/sample_and_hold.md) | Register resampled one cycle after sync or every PERIOD cycles |
+| 66 | Misc | [`sync_gen`](docs/Misc/sync_gen.md) | Periodic / software sync pulse; swreg values as ports |
+| 67 | Multipliers | [`cmult`](docs/Multipliers/cmult.md) | casper_library cmult: packed complex multiply, optional conjugate of b, output convert |
+| 68 | Multipliers | [`complex_multiplier`](docs/Multipliers/complex_multiplier.md) | Fixed-point complex multiply, selectable 4-multiply or 3-multiply form |
+| 69 | PFBs | [`first_tap_real`](docs/PFBs/first_tap_real.md) | First PFB FIR tap: product with the lowest coefficient slice, data / sync delayed one frame |
+| 70 | PFBs | [`last_tap_real`](docs/PFBs/last_tap_real.md) | Last PFB FIR tap: product and sync for the adder tree |
+| 71 | PFBs | [`pfb_coeff_gen`](docs/PFBs/pfb_coeff_gen.md) | PFB FIR coefficients: one windowed-sinc ROM per tap, sync-reset address counter |
+| 72 | PFBs | [`pfb_fir_real`](docs/PFBs/pfb_fir_real.md) | Real-input polyphase filter bank FIR: coefficient ROMs, tap chains, adder trees |
+| 73 | PFBs | [`tap_real`](docs/PFBs/tap_real.md) | Middle PFB FIR tap: product, coefficient bus forwarded, data / sync delayed |
+| 74 | Reorder | [`barrel_switcher`](docs/Reorder/barrel_switcher.md) | Pipelined lane rotation by a select input |
+| 75 | Reorder | [`reorder`](docs/Reorder/reorder.md) | Fixed-map frame permutation (corner turn), all map orders |
+| 76 | Reorder | [`square_transposer`](docs/Reorder/square_transposer.md) | N × N block transpose with lane delays and a barrel switcher |
+| 77 | Scopes | [`bitfield_snapshot`](docs/Scopes/bitfield_snapshot.md) | bitsnap: snapshot with an input field and input delays |
+| 78 | Scopes | [`snapshot`](docs/Scopes/snapshot.md) | Software-controlled capture into a shared BRAM; ctrl / status / BRAM as ports |
 
 ## 🚀 Add new modules
 
@@ -34,24 +97,72 @@ The repository uses four parallel directory trees, all mirroring `rtl/` structur
 | `test_data/` | CSV simulation input/output data |
 | `docs/` | Per-module documentation |
 
+Supporting Python scripts:
+
+| Location | Purpose |
+|----------|---------|
+| `rtl/<Category>/.../scripts/` | Generators a module **needs to be used**, e.g. [rtl/FFTs/Twiddle/scripts/gen_twiddle_coeffs.py](rtl/FFTs/Twiddle/scripts/gen_twiddle_coeffs.py) writes the coefficient table (`.mem`) that `twiddle_general` loads through `INIT_FILE` |
+| `test_data/scripts/` | Test data generators: reference models that write `test_data/<Category>/<module>/` (inputs, expected outputs, `params.json`, `test_data.md`). Each accepts `--module <name>` / `--list` and prints the module's `simulation.toml` entry |
+| `testbench/csv_ports.py` | Shared test data loader: `load_rows` / `load_packed` read a port's CSV file(s) by port name |
+| `tools/` | Developer utilities outside the simulation flow (not copied into the test container), e.g. [tools/check_simulink_mapping.py](tools/check_simulink_mapping.py) (see *HDL-Simulink Mapping* below) |
+
 ### Steps
 
 1. **RTL** — add the Verilog/SystemVerilog file under `rtl/<Category>/`.  
-   Example: [rtl/Templates/simple_adder.v](rtl/Templates/simple_adder.v)
+   Example: [rtl/Templates/simple_adder.v](rtl/Templates/simple_adder.v)  
+   Name the parameters after the Simulink block's mask variables in upper case (camelCase → UPPER_SNAKE, e.g. `csp_latency` → `CSP_LATENCY`, `DelayLen` → `DELAY_LEN`), and record the differences from the Simulink block in an HDL-Simulink Mapping section (see below).
 
-2. **Test data** — create `test_data/<Category>/<module>/` and place CSV files there (e.g. `sim_in.csv`, `sim_out.csv`). For multiple parameter sets use subdirectories `simdata0/`, `simdata1/`, …
+2. **Test data** — create `test_data/<Category>/<module>/` and place CSV files there, one signal per file and one value per line. Each file is named `sim_<port>.csv` after the DUT port it drives or checks (e.g. `sim_din.csv`, `sim_dout.csv`); an array port gets one file per element, `sim_din0.csv`, `sim_din1.csv`, … (file j = `din[j]`). For multiple parameter sets use subdirectories `simdata0/`, `simdata1/`, …
+   The data can be imported (e.g. exported from MATLAB) or produced by a generator script in `test_data/scripts/` (see *Test data generation* below).
 
 3. **Testbench** — create `testbench/<Category>/<module>/test_<module>.py`.  
-   Derive the data path dynamically from `__file__` so no path is hardcoded:
+   Get the data path from `testbench/data_paths.py`, so no path is hardcoded and an external test data root (see *Test data and config location* below) is honoured:
    ```python
-   _here = Path(__file__).parent
-   testdatadir = (_here / "../../../test_data" / _here.parent.name / _here.name).resolve()
+   from testbench.data_paths import module_data_dir
+   testdatadir = module_data_dir(__file__)
    ```
    Example: [testbench/Templates/simple_adder/test_simple_adder.py](testbench/Templates/simple_adder/test_simple_adder.py)
 
 4. **Simulation config** — add a `[[simulations]]` entry to `tests/simulation.toml`. (See the `Simulation Config` section below.)
 
 5. **Documentation** — create `docs/<Category>/<module>.md` describing the module's function, parameters, and ports.
+
+## 🔗 HDL-Simulink Mapping
+Each module that has a Simulink counterpart (a casper_library block, or a Xilinx System Generator block for the primitives) records every difference from it in its RTL header comment, as TOML between two markers:
+```systemverilog
+// @simulink-mapping begin
+// block = 'casper_library_misc.slx/edge_detect'
+// deviations = []
+//
+// [params.EDGE]
+// mask = 'edge'
+// type = 'popup'
+// [params.EDGE.values]
+// 0 = 'Rising'
+// 1 = 'Falling'
+// 2 = 'Both'
+// ...
+// [hdl_only]
+// [mask_missing]
+// [ports]
+// [ports.renamed]
+// din = 'in'
+// ...
+// @simulink-mapping end
+```
+Fields: `block` (library file / block), `deviations` (behavioural differences), `params` (numeric HDL value → mask option text, verbatim; for a free-text mask field, an optional `expr` such as `'2**ADDR_WIDTH'`, a Verilog-syntax expression over the module's parameters that gives the mask value, or a `template` string with `{expr}` fields such as `'{ACC_LEN}*1'`), `mask_set` (mask parameters that no HDL parameter maps to, set from a fixed `value`, an `expr`, a `template` string with `{expr}` fields, `from_mem` = the HDL parameter naming a `$readmemh` file, `from_params_json` = a field of the test set's `simdataN/params.json` (either may have an `else` fallback), or `manual` = how to obtain a per-configuration value that is filled in by hand), `hdl_only` / `mask_missing` (parameters on one side only, with the reason), `break_link` (a reason; exporters then place an unlinked copy of the block, `LinkStatus` `'inactive'`, instead of a library link), `unsupported` (parameter combinations Simulink cannot build: a `when` expression and a `reason`; exporters skip them), `ports` (`renamed` HDL → Simulink, `missing`, `extra`, `order`).
+
+[tools/check_simulink_mapping.py](tools/check_simulink_mapping.py) validates every block and can export them:
+```bash
+python3 tools/check_simulink_mapping.py                            # check; exit code 1 on errors
+python3 tools/check_simulink_mapping.py --dump                     # print all blocks as JSON {rtl path: block}
+                                                                   # (each also gets hdl_defaults: the RTL parameter defaults)
+python3 tools/check_simulink_mapping.py --dump -o out/mapping.json # save the JSON to a file
+python3 tools/check_simulink_mapping.py -o out/check.txt           # save the check report
+```
+With `-o`, missing parent directories are created and only a one-line summary is printed.
+
+Library bugs found while building the Simulink models from these blocks are listed in [docs/bugs.md](docs/bugs.md).
 
 ## 📦 Run Simulation
 ### Requirements
@@ -66,13 +177,53 @@ Here is an example about testing `bus_create` module with different sets of para
 [[simulations]]
 dir = "FlowControl"
 top = "bus_create"
+simulation_cycles = [513, 513]
 [[simulations.parameters]]
 NBITS = 8
-NINPUTS = 2
+INPUT_NUM = 2
 [[simulations.parameters]]
 NBITS = 10
-NINPUTS = 4
+INPUT_NUM = 4
 ```
+Every key of a `[[simulations.parameters]]` block is passed to the DUT as an HDL parameter. `simulation_cycles` is informational (the test runner does not read it): the number of clock cycles each test runs, one value per `[[simulations.parameters]]` block in the same order, or a single integer for an entry without parameter blocks.
+
+### Test data generation
+The `[test_data]` table in `tests/simulation.toml` decides whether the tests run on `test_data/` as it is, or regenerate it first with the scripts in `test_data/scripts/`:
+```[toml]
+[test_data]
+generate = false        # true: regenerate before testing
+
+[[simulations]]
+dir = "Bus"
+top = "convert"
+test_data_script = "gen_fixed_point_test_data.py"   # generator of this module's data
+# generate_test_data = false                        # per-module override of [test_data] generate
+```
+- `generate = false` (default): every module uses its committed / imported test data.
+- `generate = true`: before a module's tests, `tests/test_runner.py` runs `test_data/scripts/<test_data_script> --module <top>`, so only that module's data is rewritten. Entries without `test_data_script` (e.g. MATLAB-exported data) are never regenerated.
+- `generate_test_data` on a `[[simulations]]` entry overrides the global switch for that module, e.g. to keep your own imported data while the rest is regenerated.
+- Generation writes into the test container's copy of `test_data/`; the repository's `test_data/` is not modified. To update the repository, run the script directly, e.g. `python3 test_data/scripts/gen_fixed_point_test_data.py --module convert`.
+
+### Test data and config location
+By default the tests use `tests/simulation.toml` and the repository's `test_data/` (the copies built into the test image). Either can be replaced, independently:
+
+| What | Command-line option | Environment variable | Default |
+|------|---------------------|----------------------|---------|
+| Simulation config | `--config FILE` | `CASPER_SIM_CONFIG` | `tests/simulation.toml` |
+| Test data root | `--test-data DIR` | `CASPER_TEST_DATA` | `test_data/` |
+
+```
+./scripts/run-local-test.sh --test-data /data/my_test_data
+./scripts/run-module-test.sh --config /data/my_sim.toml --test-data /data/my_test_data FFTs/fft_direct
+CASPER_TEST_DATA=/data/my_test_data ./scripts/run-local-test.sh
+```
+- The command-line option wins over the environment variable, which wins over the default. The scripts print which config and test data they use, and where each choice came from.
+- Paths are host paths. The scripts mount the file / directory read-only into the container (`container/docker-compose.config.yml`, `container/docker-compose.testdata.yml`) and set the variables there, so no image rebuild is needed for other data.
+- The test data root must be laid out exactly like `test_data/` (`<Category>/<module>/…`) and hold every module the config lists. A module whose directory is missing, or whose `simdataN/` subdirectories do not match the number of `[[simulations.parameters]]` blocks, fails with a message naming the path.
+- Memory-file parameters in the config (`INIT_FILE`, `COEFF_DIR`, `MEM_DIR`, … written as `../…/test_data/…`) are redirected to the chosen root.
+- An external test data root is read-only: test data generation (`[test_data] generate`) cannot be combined with it, and the test stops with an error if both are set.
+- When running `pytest` directly (inside the container or elsewhere), the same two environment variables apply, with paths valid where `pytest` runs.
+
 ### Local simulation
 
 **Run all tests:**

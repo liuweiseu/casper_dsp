@@ -1,6 +1,12 @@
 # ri_to_c test data
 
-Each subdirectory corresponds to one parameter set. Input files are `sim_in_re.csv` (real part) and `sim_in_im.csv` (imaginary part); `sim_out.csv` holds the expected packed output `{re, im}`.
+Each subdirectory corresponds to one parameter set. Input files are `sim_re.csv` (real part) and `sim_im.csv` (imaginary part); `sim_c.csv` holds the expected packed output `{re, im}`.
+
+Every `simdataN/` holds a `params.json` with the DUT parameters of that set; the testbench selects the set whose `params.json` matches the DUT (`find_data_dir` in `testbench/data_paths.py`).
+
+**CSV data exported from the corresponding MATLAB Simulink block.**
+
+Simulink data: the `sim_*.csv` files of sets 0, 1 were exported from Simulink models of the block (MATLAB R2021a, System Generator; plugins-demo2 export flow with its own random stimulus) and copied here on 2026-10-14; `params.json` (and any `.mem` files) are the generator's. Regenerating the module with its script replaces the exported CSVs with the reference model's output.
 
 | Test # | Directory | NBITS | Cycles | Description |
 |--------|-----------|-------|--------|-------------|

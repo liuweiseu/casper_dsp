@@ -1,0 +1,10 @@
+{
+  "N_INPUTS": 1,
+  "FFT_SIZE": 5,
+  "INPUT_BIT_WIDTH": 18,
+  "BIN_PT_IN": 17,
+  "ADD_LATENCY": 1,
+  "MULT_LATENCY": 2,
+  "BRAM_LATENCY": 2,
+  "CONV_LATENCY": 2
+}

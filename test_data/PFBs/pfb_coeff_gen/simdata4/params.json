@@ -1,0 +1,13 @@
+{
+  "PFB_SIZE": 3,
+  "COEFF_BIT_WIDTH": 10,
+  "TOTAL_TAPS": 3,
+  "WINDOW_TYPE": "rectwin",
+  "BRAM_LATENCY": 1,
+  "N_INPUTS": 1,
+  "NPUT": 1,
+  "FWIDTH": 2.0,
+  "FAN_LATENCY": 1,
+  "DIN_WIDTH": 7,
+  "COEFF_DIR": "../../../test_data/PFBs/pfb_coeff_gen/simdata4/"
+}

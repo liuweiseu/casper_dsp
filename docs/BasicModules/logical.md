@@ -16,12 +16,14 @@ purely combinational. All pipeline stages are initialized to zero.
 | `NINPUTS` | 2       | Number of input signals to reduce |
 | `LATENCY` | 1       | Pipeline stages on output; `0` = combinational pass-through |
 | `FUNC`    | 0       | Operation: `0`=AND, `1`=NAND, `2`=OR, `3`=NOR, `4`=XOR, `5`=XNOR |
+| `USE_ENABLE` | 0       | `1` = the pipeline registers update only when `en` is high (Xilinx "Provide enable port"); no effect when `LATENCY = 0` |
 
 ## Ports
 
 | Port   | Direction | Width               | Description |
 |--------|-----------|---------------------|-------------|
 | `clk`  | input     | 1                   | Clock signal (unused when `LATENCY = 0`) |
+| `en`   | input     | 1                   | Pipeline enable (used when `USE_ENABLE = 1`; default 1, may be left unconnected) |
 | `din`  | input     | `NBITS` × `NINPUTS` | Unpacked array of `NINPUTS` words, each `NBITS` wide |
 | `dout` | output    | `NBITS`             | Reduced output, delayed by `LATENCY` clock cycles |
 
@@ -33,4 +35,5 @@ bitwise inversion to the final accumulated value.
 
 For `LATENCY > 0`, the result is registered through a `LATENCY`-stage shift
 register (identical structure to the `delay` module). The first `LATENCY` output
-samples are zero due to pipeline initialization.
+samples are zero due to pipeline initialization. With `USE_ENABLE = 1` the
+shift register holds while `en` is low.

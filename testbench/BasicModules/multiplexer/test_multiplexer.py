@@ -2,11 +2,16 @@ import cocotb
 from cocotb.clock import Clock
 from cocotb.triggers import RisingEdge, Timer
 
-from pathlib import Path
 import numpy as np
 
-_here = Path(__file__).parent
-testdatadir = (_here / "../../../test_data" / _here.parent.name / _here.name).resolve()
+from testbench.csv_ports import load_rows
+from testbench.data_paths import find_data_dir, module_data_dir
+
+testdatadir = module_data_dir(__file__)
+
+
+# Parameters matched against simdataN/params.json
+PARAMS = ['NBITS', 'NINPUTS', 'LATENCY', 'USE_ENABLE']
 
 
 @cocotb.test()
@@ -17,7 +22,7 @@ async def module_test(dut):
     For LATENCY>=1 (pipelined): drives inputs before each rising edge,
     reads dout after the edge (pre-edge read convention).
 
-    sim_out[i] = dout value before clock edge i (LATENCY>=1), or the
+    sim_dout[i] = dout value before clock edge i (LATENCY>=1), or the
     immediate combinational result (LATENCY=0).
 
     Parameter sets:
@@ -25,6 +30,8 @@ async def module_test(dut):
         simdata1 : NBITS=8, NINPUTS=4, LATENCY=1
         simdata2 : NBITS=8, NINPUTS=2, LATENCY=0 (combinational)
         simdata3 : NBITS=8, NINPUTS=2, LATENCY=2
+        simdata4 : NBITS=8, NINPUTS=4, LATENCY=2, USE_ENABLE=1 (en driven
+                   from sim_en.csv)
     """
     nbits   = int(dut.NBITS.value)
     ninputs = int(dut.NINPUTS.value)
@@ -33,40 +40,27 @@ async def module_test(dut):
         f"Testing with NBITS={nbits}, NINPUTS={ninputs}, LATENCY={latency}"
     )
 
-    if   nbits == 8 and ninputs == 2 and latency == 1:
-        datadir = testdatadir / "simdata0"
-    elif nbits == 8 and ninputs == 4 and latency == 1:
-        datadir = testdatadir / "simdata1"
-    elif nbits == 8 and ninputs == 2 and latency == 0:
-        datadir = testdatadir / "simdata2"
-    elif nbits == 8 and ninputs == 2 and latency == 2:
-        datadir = testdatadir / "simdata3"
-    else:
-        cocotb.log.warning(
-            f"No test data for NBITS={nbits}, NINPUTS={ninputs}, "
-            f"LATENCY={latency}. Skipping."
-        )
-        return
+    datadir = find_data_dir(dut, testdatadir, PARAMS)
 
-    sim_inputs = [
-        np.loadtxt(datadir / f"sim_in{k}.csv", dtype=int).tolist()
-        for k in range(ninputs)
-    ]
+    # sim_din<j>.csv = din[j]; row i = [din[0], ..., din[NINPUTS-1]]
+    sim_din  = load_rows(datadir, "din")
     sim_sel  = np.loadtxt(datadir / "sim_sel.csv",  dtype=int).tolist()
-    expected = np.loadtxt(datadir / "sim_out.csv",  dtype=int).tolist()
+    expected = np.loadtxt(datadir / "sim_dout.csv",  dtype=int).tolist()
+    en_file  = datadir / "sim_en.csv"
+    sim_en   = np.loadtxt(en_file, dtype=int).tolist() if en_file.exists() else None
 
     cocotb.log.info(f"Loaded {len(expected)} test vectors from {datadir.name}/")
 
     if latency == 0:
         for i in range(len(expected)):
             # cocotb/Verilator unpacked-array convention: list[k] → din[k] (direct mapping)
-            dut.din.value = [sim_inputs[k][i] for k in range(ninputs)]
+            dut.din.value = sim_din[i]
             dut.sel.value = sim_sel[i]
             await Timer(1, units="ns")
             actual = int(dut.dout.value)
             assert actual == expected[i], (
                 f"Index {i}: sel={sim_sel[i]}, "
-                f"inputs={[sim_inputs[k][i] for k in range(ninputs)]} "
+                f"din={sim_din[i]} "
                 f"→ expected dout={expected[i]}, got {actual}"
             )
     else:
@@ -74,13 +68,15 @@ async def module_test(dut):
         cocotb.start_soon(clock.start())
         for i in range(len(expected)):
             # cocotb/Verilator unpacked-array convention: list[k] → din[k] (direct mapping)
-            dut.din.value = [sim_inputs[k][i] for k in range(ninputs)]
+            dut.din.value = sim_din[i]
             dut.sel.value = sim_sel[i]
+            if sim_en is not None:
+                dut.en.value = sim_en[i]
             await RisingEdge(dut.clk)
             actual = int(dut.dout.value)
             assert actual == expected[i], (
                 f"Index {i}: sel={sim_sel[i]}, "
-                f"inputs={[sim_inputs[k][i] for k in range(ninputs)]} "
+                f"din={sim_din[i]} "
                 f"→ expected dout={expected[i]}, got {actual}"
             )
 

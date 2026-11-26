@@ -1,0 +1,10 @@
+{
+  "DATA_WIDTH": 12,
+  "ADDR_WIDTH": 6,
+  "LATENCY": 4,
+  "WRITE_MODE": 0,
+  "RST": 1,
+  "EN": 1,
+  "INIT_REG": 2748,
+  "INIT_FILE": "../../../test_data/Delays/single_port_ram/simdata19/ram_init.mem"
+}

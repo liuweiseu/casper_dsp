@@ -23,7 +23,7 @@ None.
 
 | Submodule | Role |
 |-----------|------|
-| `edge_detect` (EDGE_TYPE=0, OUTPUT_POL=0) | Detects rising edge of `arm`; 1-cycle active-high pulse drives the register reset |
+| `edge_detect` (EDGE=0, POLARITY=0) | Detects rising edge of `arm`; 1-cycle active-high pulse drives the register reset |
 | `register` (BITWIDTH=1, USE_RST=1, USE_ENABLE=1, INIT_VAL=1) | Holds the armed state; reset to 1 by `arm` edge, cleared to 0 by `trig_out` feedback |
 | `logical` (FUNC=AND, NINPUTS=2, LATENCY=0) | Computes `trig_out = trig_in AND armed`; output is fed back to register enable |
 

@@ -2,12 +2,11 @@ import cocotb
 from cocotb.clock import Clock
 from cocotb.triggers import RisingEdge
 
-from pathlib import Path
 import numpy as np
+from testbench.data_paths import find_data_dir, module_data_dir
 
-# testdatadir points to the corresponding test_data subdirectory
-_here = Path(__file__).parent
-testdatadir = (_here / "../../../test_data" / _here.parent.name / _here.name).resolve()
+# test data of this module: $CASPER_TEST_DATA or test_data/, same path as below testbench/
+testdatadir = module_data_dir(__file__)
 
 
 @cocotb.test()
@@ -15,7 +14,7 @@ async def module_test(dut):
     """Test register module.
 
     Drives d (and conditionally en/rst) before each rising edge and compares q
-    against the expected value in simdata<N>/sim_out.csv after the edge.
+    against the expected value in simdata<N>/sim_q.csv after the edge.
 
     Parameter sets:
         simdata0 : USE_RST=1, USE_ENABLE=1, INIT_VAL=0,  BITWIDTH=4 — reset + enable, reset to 0
@@ -37,27 +36,10 @@ async def module_test(dut):
         f"USE_ENABLE={use_enable}, INIT_VAL={init_val}"
     )
 
-    if   use_rst == 1 and use_enable == 1 and init_val == 0:
-        datadir = testdatadir / "simdata0"
-    elif use_rst == 1 and use_enable == 0 and init_val == 0:
-        datadir = testdatadir / "simdata1"
-    elif use_rst == 0 and use_enable == 1:
-        datadir = testdatadir / "simdata2"
-    elif use_rst == 0 and use_enable == 0:
-        datadir = testdatadir / "simdata3"
-    elif use_rst == 1 and use_enable == 1 and init_val == 7:
-        datadir = testdatadir / "simdata4"
-    elif use_rst == 1 and use_enable == 0 and init_val == 10:
-        datadir = testdatadir / "simdata5"
-    else:
-        cocotb.log.warning(
-            f"No test data for USE_RST={use_rst}, USE_ENABLE={use_enable}, "
-            f"INIT_VAL={init_val}. Skipping."
-        )
-        return
+    datadir = find_data_dir(dut, testdatadir, ["BITWIDTH", "USE_RST", "USE_ENABLE", "INIT_VAL"])
 
     sim_d    = np.loadtxt(datadir / "sim_d.csv",   dtype=int).tolist()
-    expected = np.loadtxt(datadir / "sim_out.csv", dtype=int).tolist()
+    expected = np.loadtxt(datadir / "sim_q.csv", dtype=int).tolist()
 
     sim_rst = np.loadtxt(datadir / "sim_rst.csv", dtype=int).tolist() if use_rst    else None
     sim_en  = np.loadtxt(datadir / "sim_en.csv",  dtype=int).tolist() if use_enable else None

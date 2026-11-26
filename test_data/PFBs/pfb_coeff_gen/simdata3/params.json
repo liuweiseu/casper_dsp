@@ -1,0 +1,13 @@
+{
+  "PFB_SIZE": 6,
+  "COEFF_BIT_WIDTH": 16,
+  "TOTAL_TAPS": 8,
+  "WINDOW_TYPE": "blackman",
+  "BRAM_LATENCY": 3,
+  "N_INPUTS": 2,
+  "NPUT": 3,
+  "FWIDTH": 0.8,
+  "FAN_LATENCY": 2,
+  "DIN_WIDTH": 10,
+  "COEFF_DIR": "../../../test_data/PFBs/pfb_coeff_gen/simdata3/"
+}

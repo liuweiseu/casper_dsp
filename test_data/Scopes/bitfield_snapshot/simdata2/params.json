@@ -1,0 +1,6 @@
+{
+  "IO_WIDTH": 32,
+  "SNAP_NSAMPLES": 5,
+  "SNAP_DATA_WIDTH": 32,
+  "SNAP_DELAY": 0
+}

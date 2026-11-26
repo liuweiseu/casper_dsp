@@ -1,0 +1,5 @@
+{
+  "BIT_WIDTH_IN": 18,
+  "COEFF_BIT_WIDTH": 18,
+  "MULT_LATENCY": 3
+}

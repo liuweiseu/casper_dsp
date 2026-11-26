@@ -2,11 +2,10 @@ import cocotb
 from cocotb.clock import Clock
 from cocotb.triggers import RisingEdge
 
-from pathlib import Path
 import numpy as np
+from testbench.data_paths import find_data_dir, module_data_dir
 
-_here = Path(__file__).parent
-testdatadir = (_here / "../../../test_data" / _here.parent.name / _here.name).resolve()
+testdatadir = module_data_dir(__file__)
 
 
 @cocotb.test()
@@ -30,15 +29,7 @@ async def module_test(dut):
     pulse_len = int(dut.PULSE_LEN.value)
     cocotb.log.info(f"Testing with PULSE_LEN={pulse_len}")
 
-    if   pulse_len == 3:
-        datadir = testdatadir / "simdata0"
-    elif pulse_len == 5:
-        datadir = testdatadir / "simdata1"
-    elif pulse_len == 4:
-        datadir = testdatadir / "simdata2"
-    else:
-        cocotb.log.warning(f"No test data for PULSE_LEN={pulse_len}. Skipping.")
-        return
+    datadir = find_data_dir(dut, testdatadir, ["PULSE_LEN"])
 
     sim_in  = np.loadtxt(datadir / "sim_in.csv",  dtype=int).tolist()
     sim_out = np.loadtxt(datadir / "sim_out.csv", dtype=int).tolist()

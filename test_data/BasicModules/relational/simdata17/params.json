@@ -1,0 +1,7 @@
+{
+  "NBITS": 5,
+  "COMP": 3,
+  "LATENCY": 2,
+  "SIGNED": 1,
+  "USE_ENABLE": 1
+}

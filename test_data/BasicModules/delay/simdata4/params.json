@@ -1,0 +1,6 @@
+{
+  "LATENCY": 1,
+  "BITWIDTH": 3,
+  "USE_RST": 1,
+  "USE_ENABLE": 0
+}

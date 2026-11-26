@@ -1,0 +1,29 @@
+{
+  "N_INPUTS": 3,
+  "BIPLEX": 1,
+  "FFT_SIZE": 4,
+  "N_COEFFS": 4,
+  "COEFF_0": 0,
+  "COEFF_1": 1,
+  "STEP_PERIOD": 0,
+  "COEFF_BIT_WIDTH": 12,
+  "INPUT_BIT_WIDTH": 10,
+  "BIN_PT_IN": 9,
+  "BITGROWTH": 0,
+  "DOWNSHIFT": 0,
+  "HARDCODE_SHIFTS": 1,
+  "ADD_LATENCY": 0,
+  "MULT_LATENCY": 0,
+  "BRAM_LATENCY": 1,
+  "CONV_LATENCY": 0,
+  "QUANTIZATION": 0,
+  "OVERFLOW": 0,
+  "MAX_FANOUT": 4,
+  "INIT_FILE": "../../../test_data/FFTs/butterfly_direct/simdata6/twiddle.mem",
+  "COEFFS": [
+    0,
+    1,
+    2,
+    3
+  ]
+}

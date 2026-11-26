@@ -1,0 +1,7 @@
+{
+  "NUM_ANTS": 4,
+  "N_BITS": 8,
+  "ACC_LEN": 32,
+  "DEMUX_FACTOR": 4,
+  "RAM_LATENCY": 1
+}

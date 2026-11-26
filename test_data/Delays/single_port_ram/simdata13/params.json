@@ -1,0 +1,9 @@
+{
+  "DATA_WIDTH": 10,
+  "ADDR_WIDTH": 5,
+  "MEM_TYPE": 0,
+  "LATENCY": 2,
+  "RST": 1,
+  "EN": 1,
+  "INIT_REG": 341
+}

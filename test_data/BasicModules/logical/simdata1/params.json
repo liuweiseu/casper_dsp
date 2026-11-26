@@ -1,0 +1,7 @@
+{
+  "NBITS": 4,
+  "NINPUTS": 2,
+  "LATENCY": 1,
+  "FUNC": 1,
+  "USE_ENABLE": 0
+}

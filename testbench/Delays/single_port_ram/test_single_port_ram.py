@@ -1,0 +1,69 @@
+import cocotb
+from cocotb.clock import Clock
+from cocotb.triggers import RisingEdge
+
+import json
+import numpy as np
+from testbench.data_paths import module_data_dir
+
+testdatadir = module_data_dir(__file__)
+
+# Integer parameters used to match the DUT against simdataN/params.json
+PARAMS = ['DATA_WIDTH', 'ADDR_WIDTH', 'DEPTH']
+# CSV name (sim_<name>.csv) -> DUT port
+INPUTS = {'we': 'we', 'addr': 'addr', 'din': 'din'}
+# optional rst / en options: parameters (default when missing from
+# params.json) and input ports (sim_<name>.csv only in sets that use them)
+OPTION_DEFAULTS = {'RST': 0, 'EN': 0, 'INIT_REG': 0, 'MEM_TYPE': 1, 'WRITE_MODE': 1, 'LATENCY': 1,
+                   'OPTIMIZE_LATENCY': 0}
+OPTIONAL_INPUTS = {'rst': 'rst', 'en': 'en'}
+OUTPUTS = {'dout': 'dout'}
+
+
+def find_datadir(dut):
+    """Return the simdataN directory whose integer parameters match the DUT."""
+    dut_params = {name: int(getattr(dut, name).value) for name in PARAMS + list(OPTION_DEFAULTS)}
+    for d in sorted(testdatadir.glob("simdata*")):
+        p = dict(OPTION_DEFAULTS, **json.loads((d / "params.json").read_text()))
+        p.setdefault('DEPTH', 1 << p['ADDR_WIDTH'])
+        if {k: p[k] for k in dut_params} == dut_params:
+            return d, dut_params
+    return None, dut_params
+
+
+@cocotb.test()
+async def module_test(dut):
+    """Test single_port_ram module (PLATFORM = "GENERIC").
+
+    Each simdataN/params.json holds one parameter set (see test_data.md);
+    the memory image of a set with INIT_FILE is simdataN/ram_init.mem.
+    sim_<output>.csv[i] = output read after clock edge i (pre-edge read
+    convention), so the first latency values are the power-on state. With
+    LATENCY = 0 the output is combinational and is read after the edge too:
+    the inputs of cycle i are still applied then.
+    """
+    clock = Clock(dut.clk, 10, unit="ns")
+    cocotb.start_soon(clock.start())
+
+    datadir, dut_params = find_datadir(dut)
+    cocotb.log.info(f"Testing with {dut_params}")
+    assert datadir is not None, f"no simdataN/params.json in {testdatadir} matches {dut_params}"
+
+    inputs = dict(INPUTS, **{k: v for k, v in OPTIONAL_INPUTS.items() if (datadir / f"sim_{k}.csv").exists()})
+    stim = {k: np.loadtxt(datadir / f"sim_{k}.csv", dtype=int).tolist() for k in inputs}
+    expected = {k: np.loadtxt(datadir / f"sim_{k}.csv", dtype=int).tolist() for k in OUTPUTS}
+    cycles = len(next(iter(expected.values())))
+    cocotb.log.info(f"Loaded {cycles} cycles from {datadir.name}")
+
+    for i in range(cycles):
+        for k, port in inputs.items():
+            getattr(dut, port).value = stim[k][i]
+        await RisingEdge(dut.clk)
+        for k, port in OUTPUTS.items():
+            actual = int(getattr(dut, port).value)
+            assert actual == expected[k][i], (
+                f"Index {i}: inputs={ {k: stim[k][i] for k in inputs} } "
+                f"→ expected {port}={expected[k][i]}, got {actual}"
+            )
+
+    cocotb.log.info(f"module_test PASSED — {cycles} cycles verified")

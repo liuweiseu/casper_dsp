@@ -2,11 +2,10 @@ import cocotb
 from cocotb.clock import Clock
 from cocotb.triggers import RisingEdge, Timer
 
-from pathlib import Path
 import numpy as np
+from testbench.data_paths import find_data_dir, module_data_dir
 
-_here = Path(__file__).parent
-testdatadir = (_here / "../../../test_data" / _here.parent.name / _here.name).resolve()
+testdatadir = module_data_dir(__file__)
 
 EQ = 0
 NE = 1
@@ -14,6 +13,11 @@ LT = 2
 GT = 3
 LE = 4
 GE = 5
+
+# Parameters matched against simdataN/params.json
+# (a key missing from an older params.json takes its PARAM_DEFAULTS value)
+PARAMS = ['NBITS', 'COMP', 'LATENCY', 'SIGNED', 'USE_ENABLE']
+PARAM_DEFAULTS = {'USE_ENABLE': 0}
 
 
 @cocotb.test()
@@ -36,6 +40,8 @@ async def module_test(dut):
         simdata5 : COMP=5(ge), NBITS=4, LATENCY=1
         simdata6 : COMP=2(lt), NBITS=4, LATENCY=0 (combinational)
         simdata7 : COMP=0(eq), NBITS=8, LATENCY=2 (multi-stage pipeline)
+        simdata8+ : SIGNED / USE_ENABLE sets, matched by params.json (see
+                    test_data.md); en driven from sim_en.csv when present
     """
     nbits   = int(dut.NBITS.value)
     comp    = int(dut.COMP.value)
@@ -44,32 +50,13 @@ async def module_test(dut):
         f"Testing with NBITS={nbits}, COMP={comp}, LATENCY={latency}"
     )
 
-    if   comp == EQ and nbits == 4 and latency == 1:
-        datadir = testdatadir / "simdata0"
-    elif comp == NE and nbits == 4 and latency == 1:
-        datadir = testdatadir / "simdata1"
-    elif comp == LT and nbits == 4 and latency == 1:
-        datadir = testdatadir / "simdata2"
-    elif comp == GT and nbits == 4 and latency == 1:
-        datadir = testdatadir / "simdata3"
-    elif comp == LE and nbits == 4 and latency == 1:
-        datadir = testdatadir / "simdata4"
-    elif comp == GE and nbits == 4 and latency == 1:
-        datadir = testdatadir / "simdata5"
-    elif comp == LT and nbits == 4 and latency == 0:
-        datadir = testdatadir / "simdata6"
-    elif comp == EQ and nbits == 8 and latency == 2:
-        datadir = testdatadir / "simdata7"
-    else:
-        cocotb.log.warning(
-            f"No test data for COMP={comp}, NBITS={nbits}, "
-            f"LATENCY={latency}. Skipping."
-        )
-        return
+    datadir = find_data_dir(dut, testdatadir, PARAMS, PARAM_DEFAULTS)
 
     sim_a   = np.loadtxt(datadir / "sim_a.csv",   dtype=int).tolist()
     sim_b   = np.loadtxt(datadir / "sim_b.csv",   dtype=int).tolist()
     sim_out = np.loadtxt(datadir / "sim_out.csv", dtype=int).tolist()
+    en_file = datadir / "sim_en.csv"
+    sim_en  = np.loadtxt(en_file, dtype=int).tolist() if en_file.exists() else None
     cocotb.log.info(f"Loaded {len(sim_out)} test vectors from {datadir.name}/")
 
     if latency == 0:
@@ -88,6 +75,8 @@ async def module_test(dut):
         for i in range(len(sim_out)):
             dut.a.value = sim_a[i]
             dut.b.value = sim_b[i]
+            if sim_en is not None:
+                dut.en.value = sim_en[i]
             await RisingEdge(dut.clk)
             actual = int(dut.out.value)
             assert actual == sim_out[i], (

@@ -2,12 +2,11 @@ import cocotb
 from cocotb.clock import Clock
 from cocotb.triggers import RisingEdge
 
-from pathlib import Path
 import numpy as np
+from testbench.data_paths import find_data_dir, module_data_dir
 
-# testdatadir points to the corresponding test_data subdirectory
-_here = Path(__file__).parent
-testdatadir = (_here / "../../../test_data" / _here.parent.name / _here.name).resolve()
+# test data of this module: $CASPER_TEST_DATA or test_data/, same path as below testbench/
+testdatadir = module_data_dir(__file__)
 
 # Must match localparam values in counter.sv
 FREE_RUNNING = 0
@@ -15,13 +14,21 @@ COUNT_LIMIT  = 1
 DIR_UP       = 0
 DIR_DOWN     = 1
 
+DIR_UP_DOWN  = 2
+
+# Parameters matched against simdataN/params.json. A key missing from an
+# older params.json takes its default from PARAM_DEFAULTS.
+PARAMS = ['COUNTER_TYPE', 'NBITS', 'COUNT_TO_VAL', 'COUNT_DIR', 'INIT_VAL', 'STEP',
+          'ENABLE_SYNC_RST', 'ENABLE_ENABLE', 'RST_VAL', 'ENABLE_LOAD']
+PARAM_DEFAULTS = {'ENABLE_LOAD': 0}
+
 
 @cocotb.test()
 async def module_test(dut):
     """Test counter module.
 
     Each clock cycle the simulated dout is read and compared against the
-    expected value in simdata<N>/sim_out.csv.
+    expected value in simdata<N>/sim_dout.csv.
 
     Parameter sets:
         simdata0 : COUNTER_TYPE=0(free_running), COUNT_DIR=0(up),   NBITS=8, STEP=1, INIT_VAL=0,   COUNT_TO_VAL=0
@@ -29,6 +36,10 @@ async def module_test(dut):
         simdata2 : COUNTER_TYPE=0(free_running), COUNT_DIR=1(down), NBITS=8, STEP=1, INIT_VAL=255, COUNT_TO_VAL=0
         simdata3 : COUNTER_TYPE=1(count_limit),  COUNT_DIR=0(up),   NBITS=8, STEP=1, INIT_VAL=0,   COUNT_TO_VAL=20
         simdata4 : COUNTER_TYPE=1(count_limit),  COUNT_DIR=1(down), NBITS=8, STEP=1, INIT_VAL=20,  COUNT_TO_VAL=0
+        simdata5-9 : RST_VAL / ENABLE_SYNC_RST / ENABLE_ENABLE sets, matched by
+                     params.json; rst and enable driven from sim_rst/sim_enable.csv
+        simdata10-13 : COUNT_DIR=2 (up port) / ENABLE_LOAD sets, matched by
+                     params.json; load, din and up driven as well
     """
     clock = Clock(dut.clk, 10, units="ns")
     cocotb.start_soon(clock.start())
@@ -45,32 +56,30 @@ async def module_test(dut):
         f"COUNTER_TYPE={counter_type}, COUNT_DIR={count_dir}"
     )
 
-    if   counter_type == FREE_RUNNING and count_dir == DIR_UP   and step == 1 and init_val == 0   and count_to_val == 0:
-        datadir = testdatadir / "simdata0"   # free_running, up, step=1
-    elif counter_type == FREE_RUNNING and count_dir == DIR_UP   and step == 3 and init_val == 0   and count_to_val == 0:
-        datadir = testdatadir / "simdata1"   # free_running, up, step=3
-    elif counter_type == FREE_RUNNING and count_dir == DIR_DOWN and step == 1 and init_val == 255 and count_to_val == 0:
-        datadir = testdatadir / "simdata2"   # free_running, down, step=1
-    elif counter_type == COUNT_LIMIT  and count_dir == DIR_UP   and step == 1 and init_val == 0   and count_to_val == 20:
-        datadir = testdatadir / "simdata3"   # count_limit, up
-    elif counter_type == COUNT_LIMIT  and count_dir == DIR_DOWN and step == 1 and init_val == 20  and count_to_val == 0:
-        datadir = testdatadir / "simdata4"   # count_limit, down
-    else:
-        cocotb.log.warning(
-            f"No test data for COUNTER_TYPE={counter_type}, COUNT_DIR={count_dir}, "
-            f"STEP={step}, INIT_VAL={init_val}, COUNT_TO_VAL={count_to_val}. Skipping."
-        )
-        return
+    datadir = find_data_dir(dut, testdatadir, PARAMS, PARAM_DEFAULTS)
+    await run_driven(dut, datadir)
 
-    expected_results = np.loadtxt(datadir / "sim_out.csv", dtype=int).tolist()
-    cocotb.log.info(f"Loaded {len(expected_results)} expected values from {datadir.name}/sim_out.csv")
+
+async def run_driven(dut, datadir):
+    """Drive rst/enable (and load/din/up when present) from CSV before each
+    edge, compare dout after it."""
+    expected_results = np.loadtxt(datadir / "sim_dout.csv", dtype=int).tolist()
+    inputs = {}
+    for port in ["rst", "enable", "load", "din", "up"]:
+        f = datadir / f"sim_{port}.csv"
+        if f.exists():
+            inputs[port] = np.loadtxt(f, dtype=int).tolist()
+    cocotb.log.info(f"Loaded {len(expected_results)} cycles from {datadir.name} "
+                    f"(driving {', '.join(inputs)})")
 
     for i, expected in enumerate(expected_results):
+        for port, vals in inputs.items():
+            getattr(dut, port).value = vals[i]
         await RisingEdge(dut.clk)
         actual = int(dut.dout.value)
+        drv = ", ".join(f"{port}={vals[i]}" for port, vals in inputs.items())
         assert actual == expected, (
-            f"Cycle {i}: expected dout={expected} ({hex(expected)}), "
-            f"got {actual} ({hex(actual)})"
+            f"Cycle {i}: {drv}, expected dout={expected}, got {actual}"
         )
 
     cocotb.log.info(f"module_test PASSED — {len(expected_results)} cycles verified")

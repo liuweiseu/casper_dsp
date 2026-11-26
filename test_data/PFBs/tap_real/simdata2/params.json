@@ -1,0 +1,9 @@
+{
+  "MULT_LATENCY": 3,
+  "COEFF_WIDTH": 10,
+  "COEFF_FRAC_WIDTH": 9,
+  "DELAY": 32,
+  "DATA_WIDTH": 12,
+  "BRAM_LATENCY": 2,
+  "N_COEFFS": 5
+}

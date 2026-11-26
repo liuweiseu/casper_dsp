@@ -1,0 +1,6 @@
+{
+  "BITWIDTH": 4,
+  "USE_RST": 1,
+  "USE_ENABLE": 0,
+  "INIT_VAL": 10
+}

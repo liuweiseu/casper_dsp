@@ -1,0 +1,7 @@
+{
+  "N_INPUTS": 1,
+  "BIT_WIDTH": 18,
+  "BIN_PT_IN": 17,
+  "ADD_LATENCY": 1,
+  "CONV_LATENCY": 1
+}

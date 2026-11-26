@@ -8,11 +8,11 @@ Reverses the bit order of the input word. The most significant bit of the input 
 
 | Parameter | Default | Description |
 |-----------|---------|-------------|
-| `NBITS` | 8 | Bit width of the input and output |
+| `N_BITS` | 8 | Bit width of the input and output |
 
 ## Ports
 
 | Port | Direction | Width | Description |
 |------|-----------|-------|-------------|
-| `din` | input | `NBITS` | Input data |
-| `dout` | output | `NBITS` | Bit-reversed output data |
+| `din` | input | `N_BITS` | Input data |
+| `dout` | output | `N_BITS` | Bit-reversed output data |

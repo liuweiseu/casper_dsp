@@ -2,15 +2,17 @@
 
 ## Description
 
-A parameterized synchronous register. On each rising clock edge the output is updated according to the active combination of `USE_RST` and `USE_ENABLE`. When neither feature is needed the module becomes a plain D flip-flop array that latches the input every cycle.
+A parameterized synchronous register. On each rising clock edge the output is updated according to the active combination of `USE_RST` and `USE_ENABLE`. When neither feature is needed the module becomes a plain D flip-flop array that latches the input every cycle. This is the default, as in the Xilinx Register block, where both ports are off by default.
+
+The behaviour matches the Sysgen block model (`data/sysgen/block_models/xlRegister.sgm`): `rst` loads `INIT_VAL` and takes priority over `en`. The power-on value is also `INIT_VAL`.
 
 ## Parameters
 
 | Parameter    | Default | Description |
 |--------------|---------|-------------|
 | `BITWIDTH`   | 1       | Data bit width |
-| `USE_RST`    | 1       | `1` = include synchronous reset logic (`rst` pin loads `INIT_VAL` when asserted); `0` = reset pin is ignored |
-| `USE_ENABLE` | 1       | `1` = include enable logic (`en` pin must be asserted to latch input data); `0` = enable pin is ignored and data is latched every cycle |
+| `USE_RST`    | 0       | `1` = include synchronous reset logic (`rst` pin loads `INIT_VAL` when asserted); `0` = reset pin is ignored |
+| `USE_ENABLE` | 0       | `1` = include enable logic (`en` pin must be asserted to latch input data); `0` = enable pin is ignored and data is latched every cycle |
 | `INIT_VAL`   | 0       | Value loaded into `q` when `rst` is asserted. Only the lower `BITWIDTH` bits are used |
 
 ## Ports

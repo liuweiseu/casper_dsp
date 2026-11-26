@@ -24,6 +24,28 @@
 //
 // counter counts up freely; relational stops it (enable=0) once cnt reaches
 // PULSE_LEN.  The same signal drives 'out'.
+//
+// ── HDL-Simulink Mapping ─────────────────────────────────────────────────────
+// Differences between this HDL and its Simulink block (casper_library
+// or Xilinx blockset). Machine-readable: the lines between the
+// @simulink-mapping markers are TOML after removing the leading "// "
+// (checked by tools/check_simulink_mapping.py). Fields: block,
+// deviations, params (numeric HDL value -> mask option text, verbatim),
+// hdl_only, mask_missing, ports (renamed HDL -> Simulink, missing,
+// extra).
+// @simulink-mapping begin
+// block = 'casper_library_misc.slx/pulse_ext'
+// deviations = []
+//
+// [hdl_only]
+//
+// [mask_missing]
+//
+// [ports]
+// [ports.renamed]
+// [ports.missing]
+// [ports.extra]
+// @simulink-mapping end
 
 module pulse_ext #(
     parameter int PULSE_LEN = 4
@@ -41,13 +63,13 @@ module pulse_ext #(
     logic [NBITS_CNT-1:0] cnt_out;
 
     // ── edge_detect ───────────────────────────────────────────────────────────
-    // EDGE_TYPE=0 : detect rising edges only
-    // OUTPUT_POL=0: active-high output
+    // EDGE=0     : detect rising edges only
+    // POLARITY=0 : active-high output
     // 'trig' is high for exactly one cycle after each rising edge of 'in'.
     // It is connected to counter.rst to clear the counter and restart the count.
     edge_detect #(
-        .EDGE_TYPE (0),
-        .OUTPUT_POL(0)
+        .EDGE (0),
+        .POLARITY(0)
     ) u_edge_detect (
         .clk(clk),
         .din(in),
